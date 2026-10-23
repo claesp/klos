@@ -70,6 +70,10 @@ run_builder() {
 	podman image exists "$IMAGE" || die "no builder image; run './klos bootstrap'"
 	set -- --rm --init -v "$TOP:/klos:Z" -w /klos \
 		-e KLOS_JOBS="${KLOS_JOBS:-$(nproc)}" "$@"
+	for v in KLOS_VERSION KLOS_RESUME KLOS_TEST_VERBOSE SOURCE_DATE_EPOCH; do
+		eval "val=\${$v:-}"
+		[ -n "$val" ] && set -- -e "$v=$val" "$@"
+	done
 	[ "$net" = no ] && set -- --network=none "$@"
 	[ "$kvm" = yes ] && [ -e /dev/kvm ] && set -- --device /dev/kvm "$@"
 	[ -t 0 ] && set -- -it "$@"

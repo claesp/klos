@@ -1,0 +1,29 @@
+# The container runtime daemon for Kubernetes (CRI). Static Go binaries.
+[package]
+name = "containerd"
+version = "2.4.2"
+summary = "Container runtime daemon"
+license = "Apache-2.0"
+homepage = "https://containerd.io/"
+implicit-deps = false
+host-depends = ["go"]
+depends = ["crun"]
+options = { no-strip = true }
+# GitHub makes the source archive from the signed tag v2.4.2.
+
+[[source]]
+url = "https://github.com/containerd/containerd/archive/refs/tags/v2.4.2.tar.gz"
+filename = "containerd-2.4.2.tar.gz"
+sha256 = "02cbbecd0ef78a521d124afa791b843ba5458ef206e1f7f017999ff45c80c0b4"
+
+[build]
+script = '''
+kgoenv
+pkg=github.com/containerd/containerd/v2
+ld="-s -w -buildid= -X $pkg/version.Version=v$PKGVER -X $pkg/version.Revision=klos -X $pkg/version.Package=$pkg"
+tags="no_btrfs no_devmapper no_zfs no_aufs"
+mkdir -p "$DESTDIR/usr/bin"
+go build -tags "$tags" -ldflags "$ld" -o "$DESTDIR/usr/bin/containerd" ./cmd/containerd
+go build -tags "$tags" -ldflags "$ld" -o "$DESTDIR/usr/bin/containerd-shim-runc-v2" ./cmd/containerd-shim-runc-v2
+go build -tags "$tags" -ldflags "$ld" -o "$DESTDIR/usr/bin/ctr" ./cmd/ctr
+'''

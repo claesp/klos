@@ -61,6 +61,8 @@ func main() {
 		err = cmdBootSetup(args)
 	case "install-service":
 		err = cmdInstallService(args)
+	case "run-env":
+		err = cmdRunEnv(args)
 	case "-h", "--help", "help":
 		usage()
 	default:

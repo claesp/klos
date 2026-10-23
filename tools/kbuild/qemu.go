@@ -210,13 +210,9 @@ func cmdTest(args []string) {
 	// Two versions: the installed version and the update.
 	v1 := VERSION
 	v2 := VERSION + ".1"
-	if !exists(filepath.Join(outDir(flavor), "build.json")) {
-		buildImage(flavor)
-	}
+	buildImage(flavor)
 	VERSION = v2
-	if !exists(filepath.Join(outDir(flavor), "build.json")) {
-		buildImage(flavor)
-	}
+	buildImage(flavor)
 	update := filepath.Join(outDir(flavor), fmt.Sprintf("klos-%s-%s.tar", flavor, v2))
 	VERSION = v1
 

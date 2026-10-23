@@ -18,7 +18,7 @@ import (
 func extractTarball(tarball, dest string, excludes []string) {
 	mkdirAll(dest)
 	args := []string{"tar", "-xf", tarball, "-C", dest, "--no-same-owner",
-		"--delay-directory-restore"}
+		"--delay-directory-restore", "--warning=no-timestamp"}
 	if strings.HasSuffix(tarball, ".zst") {
 		args = append(args, "--zstd")
 	}
@@ -38,6 +38,23 @@ func hostRoot(name string) string {
 	if !exists(filepath.Join(root, ".done")) {
 		removeAll(filepath.Dir(root))
 		extractTarball(pkgTarball(name), root, nil)
+		writeFile(filepath.Join(root, ".done"), "", 0o644)
+	}
+	return root
+}
+
+// toolchainRoot returns a directory with the packages llvm and compiler-rt
+// together, because Clang finds its builtins relative to its own path.
+func toolchainRoot() string {
+	a, b := pkgMeta("llvm"), pkgMeta("compiler-rt")
+	if a == nil || b == nil {
+		die("the toolchain (llvm, compiler-rt) is not built")
+	}
+	root := filepath.Join(WORK, "host", "toolchain", a.Input[:12]+"-"+b.Input[:12])
+	if !exists(filepath.Join(root, ".done")) {
+		removeAll(filepath.Dir(root))
+		extractTarball(pkgTarball("llvm"), root, nil)
+		extractTarball(pkgTarball("compiler-rt"), root, nil)
 		writeFile(filepath.Join(root, ".done"), "", 0o644)
 	}
 	return root
@@ -107,11 +124,11 @@ func buildEnv(r *Recipe, bdir, sysroot string) []string {
 		"BUILD_TRIPLE":      buildTriple,
 		"DESTDIR":           filepath.Join(bdir, "dest"),
 		"SYSROOT":           sysroot,
-		"HOST_CC":           "gcc",
-		"HOST_CXX":          "g++",
-		"CC_FOR_BUILD":      "gcc",
-		"CXX_FOR_BUILD":     "g++",
-		"BUILD_CC":          "gcc",
+		"HOST_CC":           "/usr/bin/gcc",
+		"HOST_CXX":          "/usr/bin/g++",
+		"CC_FOR_BUILD":      "/usr/bin/gcc",
+		"CXX_FOR_BUILD":     "/usr/bin/g++",
+		"BUILD_CC":          "/usr/bin/gcc",
 		"GOCACHE":           filepath.Join(bdir, "gocache"),
 		"GOPATH":            filepath.Join(bdir, "gopath"),
 		"GOFLAGS":           "-mod=vendor -trimpath -buildvcs=false",
@@ -126,8 +143,12 @@ func buildEnv(r *Recipe, bdir, sysroot string) []string {
 		env["PREFIX"] = "/" + toolchainPrefix
 		return envList(env)
 	}
+	if !contains(r.HostDepends, "compiler-rt") {
+		// A target package without compiled code (for example headers or data).
+		return envList(env)
+	}
 
-	tc := filepath.Join(hostRoot("llvm"), toolchainPrefix)
+	tc := filepath.Join(toolchainRoot(), toolchainPrefix)
 	tcbin := filepath.Join(tc, "bin")
 	env["TOOLCHAIN"] = tc
 	prefixMap := fmt.Sprintf("-ffile-prefix-map=%s/src=/usr/src/%s", bdir, r.Name)
@@ -223,6 +244,10 @@ cpp_link_args = %[6]s
 		"CMAKE_TOOLCHAIN_FILE": cmakeTC,
 		"MESON_CROSS_FILE":     mesonCross,
 		"PKG_CONFIG":           "pkg-config",
+		// The builder has no g++. Build-time C++ helpers use the KLOS
+		// toolchain, linked static so that they run in the builder.
+		"HOST_CXX":      bindir + "/c++ -static",
+		"CXX_FOR_BUILD": bindir + "/c++ -static",
 	} {
 		env[k] = v
 	}
@@ -254,7 +279,7 @@ func extractSources(r *Recipe, srcdir string) string {
 			}
 			mkdirAll(dest)
 			before := dirNames(dest)
-			run(Cmd{Args: []string{"tar", "-xf", p, "-C", dest, "--no-same-owner"}})
+			run(Cmd{Args: []string{"tar", "-xf", p, "-C", dest, "--no-same-owner", "--warning=no-timestamp"}})
 			if i == 0 && s.Dest == "" {
 				var added []string
 				for n := range dirNames(dest) {
@@ -409,6 +434,9 @@ func scanELF(dir string) (provides, needed map[string]bool) {
 		}
 		if so, err := f.DynString(elf.DT_SONAME); err == nil && len(so) > 0 {
 			provides[so[0]] = true
+		} else if f.Type == elf.ET_DYN && filepath.Dir(p) == filepath.Join(dir, "usr/lib") {
+			// A library without a soname (for example musl libc.so).
+			provides[filepath.Base(p)] = true
 		}
 		if libs, err := f.DynString(elf.DT_NEEDED); err == nil {
 			for _, l := range libs {
@@ -452,25 +480,44 @@ func buildOne(r *Recipe) {
 	ih := inputHash(r)
 	logf("build %s %s (%s)", r.Name, r.FullVersion(), ih[:12])
 	bdir := filepath.Join(WORK, "build", r.Name)
-	removeAll(bdir)
 	dest := filepath.Join(bdir, "dest")
 	sysroot := filepath.Join(bdir, "sysroot")
-	mkdirAll(dest)
-	mkdirAll(sysroot)
 	var sysPkgs []string
 	if len(r.BuildDepends) > 0 {
 		sysPkgs = runtimeClosure(r.BuildDepends)
 	}
-	for _, n := range sysPkgs {
-		extractTarball(pkgTarball(n), sysroot, nil)
+	// KLOS_RESUME=1 runs the script again in the source tree of a failed
+	// build (for development only: the sources and patches are not new).
+	resume := os.Getenv("KLOS_RESUME") == "1" && exists(filepath.Join(bdir, "S"))
+	var S string
+	if resume {
+		b, err := os.ReadFile(filepath.Join(bdir, "S"))
+		check(err)
+		S = string(b)
+		logf("resume the build in %s", rel(S))
+		removeAll(dest)
+		removeAll(filepath.Join(bdir, "bin"))
+		removeAll(filepath.Join(bdir, "home"))
+		removeAll(filepath.Join(bdir, "tmp"))
+		mkdirAll(dest)
+	} else {
+		removeAll(bdir)
+		mkdirAll(dest)
+		mkdirAll(sysroot)
+		for _, n := range sysPkgs {
+			extractTarball(pkgTarball(n), sysroot, nil)
+		}
 	}
 	env := buildEnv(r, bdir, sysroot)
-	S := extractSources(r, filepath.Join(bdir, "src"))
-	patches, _ := filepath.Glob(filepath.Join(r.Dir, "*.patch"))
-	sort.Strings(patches)
-	for _, p := range patches {
-		logf("apply %s", filepath.Base(p))
-		run(Cmd{Args: []string{"patch", "-p1", "-N", "-i", p}, Dir: S, Quiet: true})
+	if !resume {
+		S = extractSources(r, filepath.Join(bdir, "src"))
+		patches, _ := filepath.Glob(filepath.Join(r.Dir, "*.patch"))
+		sort.Strings(patches)
+		for _, p := range patches {
+			logf("apply %s", filepath.Base(p))
+			run(Cmd{Args: []string{"patch", "-p1", "-N", "-i", p}, Dir: S, Quiet: true})
+		}
+		writeFile(filepath.Join(bdir, "S"), S, 0o644)
 	}
 	env = append(env, "S="+S)
 	script := r.Build.Script

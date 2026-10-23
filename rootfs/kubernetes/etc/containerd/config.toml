@@ -1,0 +1,20 @@
+# containerd for Kubernetes: the CRI plugin with crun and the CNI plugins.
+version = 3
+root = "/var/lib/containerd"
+state = "/run/containerd"
+
+[grpc]
+  address = "/run/containerd/containerd.sock"
+
+[plugins."io.containerd.cri.v1.runtime"]
+  enable_selinux = false
+  [plugins."io.containerd.cri.v1.runtime".containerd]
+    default_runtime_name = "crun"
+    [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.crun]
+      runtime_type = "io.containerd.runc.v2"
+      [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.crun.options]
+        BinaryName = "/usr/bin/crun"
+        SystemdCgroup = false
+  [plugins."io.containerd.cri.v1.runtime".cni]
+    bin_dirs = ["/usr/lib/cni"]
+    conf_dir = "/etc/cni/net.d"

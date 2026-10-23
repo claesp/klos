@@ -1,0 +1,8 @@
+type = process
+command = /usr/bin/containerd
+depends-on = early-setup
+depends-on = nftables
+restart = true
+smooth-recovery = true
+log-type = file
+logfile = /var/log/containerd.log

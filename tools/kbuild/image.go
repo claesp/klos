@@ -149,7 +149,40 @@ func assembleRootfs(m *Manifest, rootfs string) []string {
 	for _, d := range m.Rootfs.Dirs {
 		mkdirAll(filepath.Join(rootfs, d))
 	}
+	checkScripts(m, rootfs)
 	return pkgs
+}
+
+// checkScripts stops the build if the image has an executable script that
+// the manifest does not allow. KLOS has no interpreted programs, except the
+// shell for administrators and the scripts in [rootfs] scripts.
+func checkScripts(m *Manifest, rootfs string) {
+	var bad []string
+	filepath.Walk(rootfs, func(p string, info os.FileInfo, err error) error {
+		check(err)
+		if !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 {
+			return nil
+		}
+		f, err := os.Open(p)
+		check(err)
+		head := make([]byte, 2)
+		n, _ := f.Read(head)
+		f.Close()
+		if n == 2 && string(head) == "#!" {
+			r, _ := filepath.Rel(rootfs, p)
+			for _, pat := range m.Rootfs.Scripts {
+				if ok, _ := path.Match(pat, r); ok {
+					return nil
+				}
+			}
+			bad = append(bad, r)
+		}
+		return nil
+	})
+	if len(bad) > 0 {
+		sort.Strings(bad)
+		die("the image has scripts that the manifest does not allow:\n  %s", strings.Join(bad, "\n  "))
+	}
 }
 
 func writeAccounts(m *Manifest, rootfs string) {
@@ -243,6 +276,13 @@ func signingKey() (ed25519.PrivateKey, string) {
 // and the shared libraries that it needs.
 func addELF(c *cpioWriter, rootfs, rel string, seen map[string]bool) {
 	rel = strings.TrimPrefix(path.Clean("/"+rel), "/")
+	// Use the real directory (for example usr/lib, not lib): the cpio
+	// order is sorted, so a path through a symlink can come too early.
+	if real, err := filepath.EvalSymlinks(filepath.Join(rootfs, path.Dir(rel))); err == nil {
+		if r, err := filepath.Rel(rootfs, real); err == nil && !strings.HasPrefix(r, "..") {
+			rel = path.Join(r, path.Base(rel))
+		}
+	}
 	if seen[rel] {
 		return
 	}

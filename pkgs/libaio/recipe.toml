@@ -1,0 +1,19 @@
+# Linux asynchronous I/O library. LVM needs it.
+[package]
+name = "libaio"
+version = "0.3.113"
+summary = "Linux asynchronous I/O library"
+license = "LGPL-2.1-or-later"
+homepage = "https://codeberg.org/jmoyer/libaio"
+# Upstream publishes a SHA-512 value (libaio-0.3.113.tar.gz.sha512sum),
+# but no signature. The SHA-512 value agreed with this file.
+
+[[source]]
+url = "https://codeberg.org/jmoyer/libaio/releases/download/libaio-0.3.113/libaio-0.3.113.tar.gz"
+sha256 = "2c44d1c5fd0d43752287c9ae1eb9c023f04ef848ea8d4aafa46e9aedb678200b"
+
+[build]
+script = '''
+kmake CC=cc AR=llvm-ar RANLIB=llvm-ranlib prefix=/usr libdir=/usr/lib
+make prefix=/usr libdir=/usr/lib DESTDIR="$DESTDIR" install
+'''

@@ -1,0 +1,22 @@
+# KLOS Kubernetes node: the server base with containerd, crun, the CNI
+# plugins, crictl, kubelet, kubeadm and kubectl. Read docs/kubernetes.md.
+include = ["base"]
+
+[flavor]
+name = "kubernetes"
+description = "Kubernetes node for KVM virtual machines"
+slot-size = "1G"
+
+[kernel]
+config = ["kvm-guest", "kubernetes"]
+cmdline = ["console=tty0", "console=ttyS0,115200"]
+
+[packages]
+install = ["containerd", "crun", "cni-plugins", "cri-tools", "kubernetes"]
+
+[services]
+enable = ["containerd", "kubelet"]
+
+[rootfs]
+overlays = ["kubernetes"]
+dirs = ["etc/cni/net.d", "etc/kubernetes/manifests"]

@@ -2,13 +2,14 @@
 # Helper functions for recipe build scripts. kbuild loads this file first.
 # The environment comes from kbuild: S, DESTDIR, SYSROOT, TARGET, JOBS, ...
 
-# Run an autoconf "configure" script for the target.
+# Run an autoconf "configure" script for the target. --with-sysroot stops
+# libtool from linking with the libraries of the builder when it relinks.
 kconfigure() {
 	"${CONFIGURE:-./configure}" \
 		--build="$BUILD_TRIPLE" --host="$TARGET" \
 		--prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--sbindir=/usr/bin --libexecdir=/usr/lib --mandir=/usr/share/man \
-		--disable-nls "$@"
+		--with-sysroot="$SYSROOT" --disable-nls "$@"
 }
 
 kmake() {
@@ -51,4 +52,11 @@ kninja_install() {
 # Install a file with a mode: kinstall MODE SOURCE DEST
 kinstall() {
 	install -D -m "$1" "$2" "$DESTDIR$3"
+}
+
+# Set up the Go toolchain (host package "go") for a static Go build.
+kgoenv() {
+	export PATH="$HOST_GO/opt/klos/go/bin:$PATH"
+	export CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v2
+	export GOFLAGS="-mod=vendor -trimpath -buildvcs=false"
 }

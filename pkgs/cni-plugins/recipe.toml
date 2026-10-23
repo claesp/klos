@@ -1,0 +1,27 @@
+# The reference CNI network plugins. Static Go binaries in /usr/lib/cni.
+[package]
+name = "cni-plugins"
+version = "1.9.1"
+summary = "Container network interface plugins"
+license = "Apache-2.0"
+homepage = "https://www.cni.dev/"
+implicit-deps = false
+host-depends = ["go"]
+options = { no-strip = true }
+# GitHub makes the source archive from the signed tag v1.9.1.
+
+[[source]]
+url = "https://github.com/containernetworking/plugins/archive/refs/tags/v1.9.1.tar.gz"
+filename = "cni-plugins-1.9.1.tar.gz"
+sha256 = "34bd82d47e981940751619c9cc44c095bb90bfcaf8d71865cbb822c37690a764"
+
+[build]
+script = '''
+kgoenv
+ld="-s -w -buildid= -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion=v$PKGVER"
+mkdir -p "$DESTDIR/usr/lib/cni"
+for p in bridge host-local loopback portmap bandwidth firewall ptp vlan macvlan ipvlan tuning static host-device; do
+	dir=$(ls -d plugins/*/"$p")
+	go build -ldflags "$ld" -o "$DESTDIR/usr/lib/cni/$p" "./$dir"
+done
+'''

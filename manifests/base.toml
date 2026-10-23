@@ -34,6 +34,9 @@ enable = ["early-setup", "nftables", "dhcpcd", "chronyd", "sshd",
 
 [rootfs]
 overlays = ["base"]
+# dhcpcd runs this shell script to write /etc/resolv.conf. It is the only
+# script in the base system.
+scripts = ["usr/lib/dhcpcd/dhcpcd-run-hooks"]
 
 # These programs (and the libraries that they need) go into the initramfs.
 [initramfs]

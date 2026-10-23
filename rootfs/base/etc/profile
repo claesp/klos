@@ -1,4 +1,4 @@
 export PATH=/usr/local/bin:/usr/bin
-export PAGER=less
 umask 022
-if [ "$(id -u)" = 0 ]; then PS1='\h:\w# '; else PS1='\h:\w$ '; fi
+HOSTNAME=$(hostname)
+if [ "$(id -u)" = 0 ]; then PS1="$HOSTNAME:\$PWD# "; else PS1="$HOSTNAME:\$PWD\$ "; fi

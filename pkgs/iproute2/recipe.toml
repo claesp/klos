@@ -18,7 +18,7 @@ key = ["iproute2"]
 script = '''
 ./configure --prefix=/usr --libbpf_force=off --color=auto
 # Build only the tools that KLOS uses.
-kmake CC=cc HOSTCC=gcc SUBDIRS="lib ip misc bridge"
+kmake CC=cc HOSTCC="$HOST_CC" SUBDIRS="lib ip misc bridge"
 make DESTDIR="$DESTDIR" PREFIX=/usr SBINDIR=/usr/bin SUBDIRS="lib ip misc bridge" install
-rm -rf "$DESTDIR/usr/share/bash-completion"
+rm -rf "$DESTDIR/usr/share/bash-completion" "$DESTDIR/usr/bin/routel"
 '''

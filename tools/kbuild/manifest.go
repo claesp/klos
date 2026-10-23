@@ -45,6 +45,9 @@ type Manifest struct {
 	Rootfs struct {
 		Overlays []string `toml:"overlays"`
 		Dirs     []string `toml:"dirs"`
+		// Scripts are the executable scripts ("#!") that the image can
+		// have. kbuild stops for all other scripts.
+		Scripts []string `toml:"scripts"`
 	} `toml:"rootfs"`
 	Initramfs struct {
 		Files []string `toml:"files"`
@@ -81,6 +84,7 @@ func (m *Manifest) merge(o *Manifest) {
 	m.Services.Enable = appendUniq(m.Services.Enable, o.Services.Enable)
 	m.Rootfs.Overlays = appendUniq(m.Rootfs.Overlays, o.Rootfs.Overlays)
 	m.Rootfs.Dirs = appendUniq(m.Rootfs.Dirs, o.Rootfs.Dirs)
+	m.Rootfs.Scripts = appendUniq(m.Rootfs.Scripts, o.Rootfs.Scripts)
 	m.Initramfs.Files = appendUniq(m.Initramfs.Files, o.Initramfs.Files)
 	for _, u := range o.Users {
 		m.Users = append(m.Users, u)

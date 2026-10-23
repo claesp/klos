@@ -100,8 +100,10 @@ func loadRecipe(path string) *Recipe {
 				r.BuildDepends = append(r.BuildDepends, d)
 			}
 		}
-		if !contains(r.HostDepends, "llvm") {
-			r.HostDepends = append(r.HostDepends, "llvm")
+		for _, h := range []string{"llvm", "compiler-rt"} {
+			if !contains(r.HostDepends, h) {
+				r.HostDepends = append(r.HostDepends, h)
+			}
 		}
 	}
 	for _, s := range r.Source {

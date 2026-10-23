@@ -13,11 +13,11 @@ sha256 = "44e2bab43dfe2c171743297631ce558c6d9ed38b87a66fd751cef617574b375e"
 
 [build]
 script = '''
-make allnoconfig KCONFIG_ALLCONFIG="$FILESDIR/toybox.config" HOSTCC=gcc
+make allnoconfig KCONFIG_ALLCONFIG="$FILESDIR/toybox.config" HOSTCC="$HOST_CC"
 # Each selected command must be in the final configuration.
 grep '^CONFIG_' "$FILESDIR/toybox.config" | while read -r line; do
 	grep -qx "$line" .config || { echo "missing: $line"; exit 1; }
 done
-make -j"$JOBS" V=1 HOSTCC=gcc CC=cc STRIP=llvm-strip toybox
+make -j"$JOBS" V=1 HOSTCC="$HOST_CC" CC=cc STRIP=llvm-strip toybox
 make install_flat PREFIX="$DESTDIR/usr/bin"
 '''

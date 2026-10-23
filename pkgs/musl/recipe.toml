@@ -5,7 +5,7 @@ summary = "The C standard library"
 license = "MIT"
 homepage = "https://musl.libc.org/"
 implicit-deps = false
-host-depends = ["llvm"]
+host-depends = ["llvm", "compiler-rt"]
 
 [[source]]
 url = "https://musl.libc.org/releases/musl-1.2.6.tar.gz"

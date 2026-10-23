@@ -1,0 +1,30 @@
+# kubelet, kubeadm and kubectl, from the official source tarball of the
+# Kubernetes release (dl.k8s.io publishes the SHA-256 value).
+[package]
+name = "kubernetes"
+version = "1.37.1"
+summary = "Kubernetes node components: kubelet, kubeadm, kubectl"
+license = "Apache-2.0"
+homepage = "https://kubernetes.io/"
+implicit-deps = false
+host-depends = ["go"]
+depends = ["containerd", "cri-tools", "cni-plugins"]
+options = { no-strip = true }
+
+[[source]]
+url = "https://dl.k8s.io/v1.37.1/kubernetes-src.tar.gz"
+filename = "kubernetes-src-1.37.1.tar.gz"
+sha256 = "d58492a058ac7cb1db0829a9e12317024f48d4bcbf56344b32b11276f9bdc2cf"
+
+[build]
+script = '''
+kgoenv
+v=k8s.io/component-base/version
+ld="-s -w -buildid= -X $v.gitVersion=v$PKGVER -X $v.gitMajor=1 -X $v.gitMinor=37 \
+	-X $v.gitTreeState=clean -X $v.buildDate=1970-01-01T00:00:00Z \
+	-X k8s.io/client-go/pkg/version.gitVersion=v$PKGVER"
+mkdir -p "$DESTDIR/usr/bin"
+for c in kubelet kubeadm kubectl; do
+	go build -ldflags "$ld" -o "$DESTDIR/usr/bin/$c" "./cmd/$c"
+done
+'''

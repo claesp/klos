@@ -1,10 +1,11 @@
-# The KLOS cross toolchain. It runs in the builder and makes code for
-# the KLOS target (x86_64-unknown-linux-musl). The bootstrap compiler
-# (Alpine clang) compiles it. The toolchain then compiles all target code.
+# The KLOS cross toolchain, part 1: Clang, lld and the LLVM tools. It runs in
+# the builder and makes code for the KLOS target (x86_64-unknown-linux-musl).
+# The bootstrap compiler (Alpine clang) compiles it. Part 2 is the package
+# compiler-rt. kbuild puts the two packages together in one directory.
 [package]
 name = "llvm"
 version = "23.1.4"
-summary = "Clang, lld and LLVM tools, with compiler-rt builtins for the target"
+summary = "Clang, lld and LLVM tools"
 license = "Apache-2.0 WITH LLVM-exception"
 homepage = "https://llvm.org/"
 kind = "host"
@@ -14,14 +15,6 @@ url = "https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.4/llv
 sha256 = "819ecf7351f1a66f76b2d701d8942faaf5faeb324cb90c9d5b090de142434bb2"
 signature = "https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.4/llvm-project-23.1.4.src.tar.xz.sig"
 key = ["llvm"]
-
-# The musl headers are necessary to compile the compiler-rt builtins.
-[[source]]
-url = "https://musl.libc.org/releases/musl-1.2.6.tar.gz"
-sha256 = "d585fd3b613c66151fc3249e8ed44f77020cb5e6c1e635a616d3f9f82460512a"
-signature = "https://musl.libc.org/releases/musl-1.2.6.tar.gz.asc"
-key = ["musl"]
-dest = "musl"
 
 [build]
 script = '''
@@ -49,43 +42,4 @@ cmake -S llvm -B build -G Ninja \
 ninja -C build -j"$JOBS"
 DESTDIR="$DESTDIR" ninja -C build install
 
-TC="$DESTDIR$PREFIX"
-RES=$("$TC/bin/clang" -print-resource-dir)
-
-# Stage 2: compiler-rt builtins and crtbegin/crtend for the target.
-make -C "$S/musl/musl-1.2.6" ARCH=x86_64 prefix=/usr DESTDIR="$S/hdr" install-headers
-cmake -S runtimes -B build-rt -G Ninja \
-	-DLLVM_ENABLE_RUNTIMES=compiler-rt \
-	-DCMAKE_BUILD_TYPE=Release \
-	-DCMAKE_INSTALL_PREFIX="$RES" \
-	-DCMAKE_C_COMPILER="$TC/bin/clang" \
-	-DCMAKE_CXX_COMPILER="$TC/bin/clang++" \
-	-DCMAKE_ASM_COMPILER="$TC/bin/clang" \
-	-DCMAKE_AR="$TC/bin/llvm-ar" -DCMAKE_NM="$TC/bin/llvm-nm" \
-	-DCMAKE_RANLIB="$TC/bin/llvm-ranlib" \
-	-DCMAKE_C_COMPILER_TARGET="$TARGET" \
-	-DCMAKE_CXX_COMPILER_TARGET="$TARGET" \
-	-DCMAKE_ASM_COMPILER_TARGET="$TARGET" \
-	-DCMAKE_SYSROOT="$S/hdr" \
-	-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
-	-DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON \
-	-DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON \
-	-DCOMPILER_RT_BUILD_BUILTINS=ON \
-	-DCOMPILER_RT_BUILD_CRT=ON \
-	-DCOMPILER_RT_BUILD_SANITIZERS=OFF \
-	-DCOMPILER_RT_BUILD_XRAY=OFF \
-	-DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
-	-DCOMPILER_RT_BUILD_PROFILE=OFF \
-	-DCOMPILER_RT_BUILD_MEMPROF=OFF \
-	-DCOMPILER_RT_BUILD_ORC=OFF \
-	-DCOMPILER_RT_BUILD_CTX_PROFILE=OFF \
-	-DCOMPILER_RT_BUILD_GWP_ASAN=OFF \
-	-DCOMPILER_RT_USE_BUILTINS_LIBRARY=ON
-ninja -C build-rt -j"$JOBS"
-ninja -C build-rt install
-
-# The paths below must exist, or target links fail later.
-B=$("$TC/bin/clang" --target="$TARGET" -rtlib=compiler-rt -print-libgcc-file-name)
-test -f "$B"
-test -f "$(dirname "$B")/clang_rt.crtbegin.o"
 '''

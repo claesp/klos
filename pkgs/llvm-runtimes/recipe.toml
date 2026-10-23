@@ -7,7 +7,7 @@ summary = "libc++, libc++abi and libunwind"
 license = "Apache-2.0 WITH LLVM-exception"
 homepage = "https://libcxx.llvm.org/"
 implicit-deps = false
-host-depends = ["llvm"]
+host-depends = ["llvm", "compiler-rt"]
 build-depends = ["filesystem", "linux-headers", "musl"]
 
 [[source]]
@@ -19,6 +19,8 @@ key = ["llvm"]
 [build]
 script = '''
 # libunwind and libc++ do not exist yet, so do not link them by default.
+# STATIC_LIBRARY try-compiles do not link, so set the checks that musl
+# fails (thread_atexit, libatomic) by hand.
 export LDFLAGS="$LDFLAGS -unwindlib=none"
 CMAKE_SOURCE=runtimes kcmake \
 	-DCMAKE_BUILD_TYPE=Release \
@@ -29,6 +31,10 @@ CMAKE_SOURCE=runtimes kcmake \
 	-DLIBCXX_USE_COMPILER_RT=ON \
 	-DLIBCXXABI_USE_COMPILER_RT=ON \
 	-DLIBCXXABI_USE_LLVM_UNWINDER=ON \
+	-DLIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL=OFF \
+	-DLIBCXX_HAS_ATOMIC_LIB=OFF \
+	-DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON \
+	-DLIBCXXABI_ENABLE_STATIC_UNWINDER=ON \
 	-DLIBUNWIND_USE_COMPILER_RT=ON \
 	-DLIBCXX_INCLUDE_BENCHMARKS=OFF \
 	-DLIBCXX_INCLUDE_TESTS=OFF \

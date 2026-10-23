@@ -223,7 +223,7 @@ func cmdInstall(args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := run("mkfs.vfat", "-F", "32", "-n", "KLOS-ESP", esp.Dev); err != nil {
+	if err := run("mkfs.fat", "-F", "32", "-n", "KLOS-ESP", esp.Dev); err != nil {
 		return err
 	}
 	fmt.Println("encrypt the disk (LUKS2, argon2id)")

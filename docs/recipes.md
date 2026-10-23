@@ -1,0 +1,109 @@
+# Package recipes
+
+Each package has a directory `pkgs/<name>/` with the file `recipe.toml`.
+The directory can also have patches (`*.patch`) and other files that the
+build script uses (`$FILESDIR`).
+
+## Example
+
+```toml
+[package]
+name = "zlib"
+version = "1.3.2"
+release = 1
+summary = "Deflate compression library"
+license = "Zlib"
+homepage = "https://zlib.net/"
+
+[[source]]
+url = "https://zlib.net/zlib-1.3.2.tar.xz"
+sha256 = "d7a0654783a4da529d1bb793b7ad9c3318020af77667bcae35f95d0e42a792f3"
+signature = "https://zlib.net/zlib-1.3.2.tar.xz.asc"
+key = ["zlib-madler"]
+
+[build]
+script = '''
+CHOST="$TARGET" ./configure --prefix=/usr --libdir=/usr/lib --shared
+kmake
+make DESTDIR="$DESTDIR" install
+'''
+```
+
+## The [package] table
+
+| Key | Meaning |
+|-----|---------|
+| `name` | The package name. It must be the same as the directory name. |
+| `version` | The upstream version. |
+| `release` | The KLOS release of this version (default 1). Increase it when you change the recipe but not the version. |
+| `summary`, `license`, `homepage` | Information. Use SPDX names for `license`. |
+| `kind` | `target` (default): the package is for KLOS. `host`: the package is a build tool that runs in the builder (for example the toolchain). |
+| `depends` | Runtime dependencies that kbuild cannot find from the ELF files (for example a program that another program starts). |
+| `build-depends` | Target packages in the sysroot for the build. |
+| `host-depends` | Host packages for the build. The variable `HOST_<NAME>` is the root directory of each one. |
+| `implicit-deps` | `false` removes the default dependencies (see below). |
+| `local-source` | A directory in this repository with the source code (for example `src/klos`). |
+| `options` | See below. |
+
+Each target package has these default dependencies: the build dependencies
+`filesystem`, `linux-headers`, `musl` and `llvm-runtimes`, and the host
+dependency `llvm`.
+
+## The [package.options] table
+
+| Key | Meaning |
+|-----|---------|
+| `cflags`, `ldflags` | Flags that kbuild adds to the default flags. |
+| `keep-docs` | Do not remove `/usr/share/doc` and `/usr/share/info`. |
+| `no-strip` | Do not strip the ELF files. |
+| `keep-empty-dirs` | Do not remove empty directories. |
+| `allow-unresolved` | Do not stop for a library that no package supplies. |
+
+## The [[source]] tables
+
+| Key | Meaning |
+|-----|---------|
+| `url` | The official download address. |
+| `sha256` | The SHA-256 value of the file. It is mandatory. |
+| `signature` | The address of the signature file, if upstream signs the release. |
+| `signature-type` | `pgp` (default) or `minisign`. |
+| `signed-content` | `uncompressed` if the signature is for the `.tar` file in a `.tar.xz` file (kernel.org does this). |
+| `key` | A list of key names in `keys/` (`keys/<name>.asc`). |
+| `filename` | A different file name in the cache. |
+| `extract` | `false` copies the file into the source directory and does not extract it. |
+| `dest` | Extract into this subdirectory of the source directory. |
+
+The first source that is an archive sets the start directory `$S` of the
+build script.
+
+## The build script
+
+The script runs in `$S` with `bash -e -u -o pipefail`. It must install the
+files into `$DESTDIR`. These variables are available:
+
+| Variable | Value |
+|----------|-------|
+| `S` | The source directory. |
+| `DESTDIR` | The installation directory. |
+| `SYSROOT` | The sysroot with the build dependencies. |
+| `TARGET` | `x86_64-unknown-linux-musl` |
+| `JOBS` | The number of parallel jobs. |
+| `FILESDIR` | The recipe directory. |
+| `CC`, `CXX`, `AR`, `LD`, ... | The KLOS toolchain (Clang, lld, LLVM tools). |
+| `CFLAGS`, `CXXFLAGS`, `LDFLAGS` | The default flags (`config/klos.toml`). |
+| `CMAKE_TOOLCHAIN_FILE`, `MESON_CROSS_FILE` | Cross files for CMake and Meson. |
+| `HOST_<NAME>` | The root directory of each host dependency. |
+
+These helper functions are available for target packages
+(`tools/recipe-lib.sh`): `kconfigure`, `kmake`, `kcmake`, `kmeson`, `kninja`,
+`kninja_install` and `kinstall`.
+
+## Rules
+
+- Use only the official release files of the upstream project.
+- Add the signature and the key if upstream signs its releases. Read
+  [sources-and-keys.md](sources-and-keys.md).
+- Disable optional features that KLOS does not use. Each feature is more
+  code that can have errors.
+- Do not install setuid or setgid programs.
+- Write a comment at the top of the recipe if the package is not obvious.

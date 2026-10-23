@@ -16,20 +16,25 @@ key = ["util-linux-kzak"]
 [build]
 script = '''
 kconfigure --bindir=/usr/bin --disable-static \
-	--disable-all-programs \
-	--enable-libuuid --enable-libblkid --enable-libmount \
-	--enable-libsmartcols --enable-libfdisk \
-	--enable-blkid --enable-mount --enable-losetup --enable-lsblk \
-	--enable-findmnt --enable-wipefs --enable-sfdisk --enable-fdisk \
-	--enable-nsenter --enable-unshare --enable-fstrim --enable-mkswap \
-	--enable-swapon --enable-flock --enable-uuidgen --enable-blkdiscard \
-	--enable-switch_root --enable-pivot_root \
 	--disable-makeinstall-chown --disable-makeinstall-setuid \
+	--disable-makeinstall-tty-setgid --disable-use-tty-group \
 	--disable-bash-completion --disable-poman --disable-liblastlog2 \
+	--disable-pam-lastlog2 --disable-login --disable-su --disable-sulogin \
+	--disable-runuser --disable-chfn-chsh --disable-newgrp --disable-wall \
+	--disable-mesg --disable-write --disable-agetty --disable-uuidd \
+	--disable-pylibmount --disable-asciidoc \
 	--without-python --without-systemd --without-udev --without-ncurses \
 	--without-ncursesw --without-tinfo --without-readline --without-libz \
-	--without-cap-ng --without-btrfs --without-sqlite3 --without-econf \
+	--without-cap-ng --without-btrfs --without-econf \
 	--without-selinux --without-audit --without-user --without-cryptsetup
 kmake
 make DESTDIR="$DESTDIR" install
+# Keep only these commands. toybox supplies the other basic commands.
+keep="blkid blkdiscard fdisk sfdisk findmnt flock fstrim losetup lsblk mkswap \
+	mount umount nsenter unshare swapon swapoff switch_root pivot_root \
+	uuidgen wipefs findfs partx setpriv"
+for f in "$DESTDIR"/usr/bin/* "$DESTDIR"/usr/sbin/* "$DESTDIR"/bin/* "$DESTDIR"/sbin/*; do
+	[ -e "$f" ] || [ -L "$f" ] || continue
+	case " $(echo $keep) " in *" ${f##*/} "*) ;; *) rm -f "$f" ;; esac
+done
 '''

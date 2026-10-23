@@ -13,7 +13,7 @@ key = ["zlib-madler"]
 
 [build]
 script = '''
-CHOST="$TARGET" ./configure --prefix=/usr --libdir=/usr/lib --shared
-kmake
-make DESTDIR="$DESTDIR" install
+kcmake -DZLIB_BUILD_TESTING=OFF -DZLIB_BUILD_STATIC=ON -DZLIB_BUILD_SHARED=ON
+kninja
+kninja_install
 '''

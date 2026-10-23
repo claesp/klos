@@ -97,8 +97,8 @@ func readKconfig(path string) map[string]string {
 }
 
 func newKernelBuild(flavor string) *kernelBuild {
-	build([]string{"llvm"}, false)
-	llvm := filepath.Join(hostRoot("llvm"), toolchainPrefix, "bin")
+	build([]string{"llvm", "compiler-rt"}, false)
+	llvm := filepath.Join(toolchainRoot(), toolchainPrefix, "bin")
 	stamp := time.Unix(SDE, 0).UTC().Format("Mon Jan 2 15:04:05 UTC 2006")
 	kb := &kernelBuild{
 		flavor: flavor,
@@ -158,6 +158,11 @@ func (kb *kernelBuild) hasModules() bool {
 // stage1 compiles the kernel and installs the modules into rootfs.
 func (kb *kernelBuild) stage1(rootfs string) {
 	logf("kernel: compile for %s", kb.flavor)
+	// The .config of an earlier build can name an initramfs file that does
+	// not exist now. An empty file is an empty list for the kernel build.
+	if src := strings.Trim(readKconfig(filepath.Join(kb.obj, ".config"))["CONFIG_INITRAMFS_SOURCE"], `"`); src != "" && !exists(src) {
+		writeFile(src, "", 0o644)
+	}
 	kb.make("bzImage")
 	if kb.hasModules() {
 		kb.make("modules")
@@ -166,14 +171,22 @@ func (kb *kernelBuild) stage1(rootfs string) {
 }
 
 // link makes the final EFI binary with the initramfs and command line.
-func (kb *kernelBuild) link(cpio, cmdline, out string) {
+func (kb *kernelBuild) link(src, cmdline, out string) {
 	cfg := filepath.Join(kb.obj, ".config")
+	// A fixed path: the .config of the next build refers to it.
+	cpio := filepath.Join(kb.obj, "klos-initramfs.cpio")
+	copyFile(src, cpio)
 	sc := filepath.Join(kb.src, "scripts", "config")
 	run(Cmd{Args: []string{sc, "--file", cfg,
 		"--enable", "CMDLINE_BOOL", "--set-str", "CMDLINE", cmdline,
 		"--enable", "CMDLINE_OVERRIDE",
-		"--set-str", "INITRAMFS_SOURCE", cpio}})
+		"--set-str", "INITRAMFS_SOURCE", cpio,
+		"--enable", "INITRAMFS_COMPRESSION_ZSTD"}})
 	kb.make("olddefconfig")
+	got := readKconfig(cfg)
+	if got["CONFIG_INITRAMFS_COMPRESSION_ZSTD"] != "y" || got["CONFIG_CMDLINE_OVERRIDE"] != "y" {
+		die("kernel: the initramfs or command line options did not apply")
+	}
 	kb.make("bzImage")
 	copyFile(filepath.Join(kb.obj, "arch", "x86", "boot", "bzImage"), out)
 }

@@ -1,0 +1,22 @@
+[package]
+name = "libcap"
+version = "2.78"
+summary = "POSIX capabilities library"
+license = "BSD-3-Clause OR GPL-2.0-only"
+homepage = "https://sites.google.com/site/fullycapable/"
+
+[[source]]
+url = "https://cdn.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.78.tar.xz"
+sha256 = "0d621e562fd932ccf67b9660fb018e468a683d7b827541df27813228c996bb11"
+signature = "https://cdn.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.78.tar.sign"
+signed-content = "uncompressed"
+key = ["libcap-morgan"]
+
+[build]
+script = '''
+opts="CC=cc BUILD_CC="$BUILD_CC" AR=llvm-ar RANLIB=llvm-ranlib prefix=/usr lib=lib \
+	sbindir=bin RAISE_SETFCAP=no GOLANG=no PAM_CAP=no SHARED=yes \
+	COPTS=-O2 LDFLAGS=$LDFLAGS"
+make -j"$JOBS" $opts
+make $opts DESTDIR="$DESTDIR" install
+'''

@@ -16,7 +16,7 @@ script = '''
 ./configure --prefix=/usr --sbindir=/usr/bin --mandir=/usr/share/man \
 	--syscontrolsocket=/run/dinitctl \
 	--platform=Linux --enable-shutdown \
-	CXX=c++ CXX_FOR_BUILD=g++ CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
+	CXX=c++ CXX_FOR_BUILD="$CXX_FOR_BUILD" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
 	CXXFLAGS_FOR_BUILD="-O2" LDFLAGS_FOR_BUILD=""
 kmake
 make DESTDIR="$DESTDIR" install

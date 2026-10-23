@@ -23,4 +23,8 @@ kconfigure --enable-elf-shlibs --disable-libuuid --disable-libblkid \
 	--with-systemd-unit-dir=no --with-udev-rules-dir=no
 kmake
 make DESTDIR="$DESTDIR" install install-libs
+# Remove the shell scripts and the build tools (compile_et, mk_cmds).
+rm -f "$DESTDIR"/usr/*bin/e2scrub "$DESTDIR"/usr/*bin/e2scrub_all \
+	"$DESTDIR"/usr/*bin/compile_et "$DESTDIR"/usr/*bin/mk_cmds
+rm -rf "$DESTDIR/usr/lib/e2fsprogs" "$DESTDIR/etc/e2scrub.conf"
 '''
