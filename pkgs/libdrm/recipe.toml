@@ -1,0 +1,19 @@
+[package]
+name = "libdrm"
+version = "2.4.134"
+summary = "Direct rendering manager library"
+license = "MIT"
+homepage = "https://gitlab.freedesktop.org/mesa/drm"
+
+[[source]]
+url = "https://dri.freedesktop.org/libdrm/libdrm-2.4.134.tar.xz"
+sha256 = "ac5e74d157830eb8bee44c6a6bf3ad49774ef0dd2a72bdad74a8f20308b52a95"
+signature = "https://dri.freedesktop.org/libdrm/libdrm-2.4.134.tar.xz.sig"
+key = ["freedesktop-emersion"]
+
+[build]
+script = '''
+kmeson -Dintel=disabled -Dradeon=disabled -Damdgpu=enabled -Dnouveau=disabled -Dvmwgfx=disabled -Domap=disabled -Dexynos=disabled -Dfreedreno=disabled -Dtegra=disabled -Dvc4=disabled -Detnaviv=disabled -Dtests=false -Dman-pages=disabled -Dvalgrind=disabled -Dcairo-tests=disabled -Dudev=false
+kninja
+kninja_install
+'''

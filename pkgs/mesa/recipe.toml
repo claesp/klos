@@ -1,0 +1,34 @@
+# The first KLOS Mesa has the software renderer (softpipe) and the virtio
+# GPU driver (virgl). The hardware drivers (iris, radeonsi) and llvmpipe
+# need LLVM for the target; read docs/status.md.
+[package]
+name = "mesa"
+version = "26.2.5"
+summary = "OpenGL and EGL graphics drivers"
+license = "MIT"
+homepage = "https://mesa3d.org/"
+build-depends = ["libdrm", "wayland", "wayland-protocols", "expat", "zlib", "zstd"]
+host-depends = ["python-build-modules"]
+
+[package.options]
+run-tools = ["wayland-scanner"]
+
+[[source]]
+url = "https://archive.mesa3d.org/mesa-26.2.5.tar.xz"
+sha256 = "794b3d1729075dae7ebd47c7283b7ca0cdb5dec668f7f11cc0a5d82f6138a0a5"
+signature = "https://archive.mesa3d.org/mesa-26.2.5.tar.xz.sig"
+key = ["mesa-release"]
+
+[build]
+script = '''
+export PYTHONPATH="$HOST_PYTHON_BUILD_MODULES/opt/klos/toolchain/python"
+kmeson -Dplatforms=wayland -Dgallium-drivers=softpipe,virgl -Dvulkan-drivers= \
+	-Dllvm=disabled -Dglx=disabled -Degl=enabled -Dgbm=enabled -Dgles1=disabled \
+	-Dgles2=enabled -Dopengl=true -Dvalgrind=disabled -Dlibunwind=disabled \
+	-Dzstd=enabled -Dexpat=enabled -Dbuild-tests=false -Dvideo-codecs= \
+	-Dgallium-va=disabled -Dgallium-vdpau=disabled -Dgallium-rusticl=false \
+	-Dmicrosoft-clc=disabled -Dintel-clc=disabled -Dlmsensors=disabled \
+	-Dselinux=false -Dxmlconfig=disabled -Dgallium-extra-hud=false
+kninja
+kninja_install
+'''

@@ -1,0 +1,19 @@
+[package]
+name = "libevdev"
+version = "1.14.0"
+summary = "Linux input event device library"
+license = "MIT"
+homepage = "https://www.freedesktop.org/wiki/Software/libevdev/"
+
+[[source]]
+url = "https://www.freedesktop.org/software/libevdev/libevdev-1.14.0.tar.xz"
+sha256 = "5a0966c7110648665983848bad696c7acba614a2160d2865d535397101007332"
+signature = "https://www.freedesktop.org/software/libevdev/libevdev-1.14.0.tar.xz.sig"
+key = ["libevdev-whot"]
+
+[build]
+script = '''
+kmeson -Dtests=disabled -Ddocumentation=disabled
+kninja
+kninja_install
+'''

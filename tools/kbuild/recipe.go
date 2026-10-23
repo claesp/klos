@@ -33,6 +33,9 @@ type Options struct {
 	AllowUnresolved bool   `toml:"allow-unresolved"`
 	CFlags          string `toml:"cflags"`
 	LDFlags         string `toml:"ldflags"`
+	// RunTools are programs in the sysroot (/usr/bin) that the build runs,
+	// for example wayland-scanner. kbuild makes a wrapper for each one.
+	RunTools []string `toml:"run-tools"`
 }
 
 type Recipe struct {

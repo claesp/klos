@@ -1,0 +1,37 @@
+# KLOS desktop: a Wayland desktop with the sway compositor and the foot
+# terminal. The kernel has modules for hardware. Read docs/desktop.md.
+include = ["base"]
+
+[flavor]
+name = "desktop"
+description = "Wayland desktop (sway)"
+slot-size = "2G"
+
+[kernel]
+config = ["desktop"]
+# The last console is /dev/console. A desktop has a screen.
+cmdline = ["console=ttyS0,115200", "console=tty0"]
+
+[packages]
+install = ["kmod", "seatd", "mesa", "sway", "swaybg", "foot", "font-dejavu",
+  "xkeyboard-config"]
+
+[services]
+enable = ["devd", "seatd"]
+
+[rootfs]
+overlays = ["desktop"]
+# Build tools of glib (Python scripts). The OS does not need them.
+exclude = ["usr/bin/glib-mkenums", "usr/bin/glib-genmarshal",
+  "usr/bin/gdbus-codegen", "usr/bin/gtester-report", "usr/share/glib-2.0/codegen/*",
+  "usr/share/glib-2.0/gdb/*", "usr/share/gdb/*"]
+
+[[groups]]
+name = "audio"
+gid = 29
+[[groups]]
+name = "video"
+gid = 44
+[[groups]]
+name = "input"
+gid = 97

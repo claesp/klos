@@ -9,6 +9,8 @@
 //	klos bless                mark the running version as good
 //	klos rollback             start the previous version on the next boot
 //	klos install              install KLOS on a disk (installer only)
+//	klos devd                 load modules for devices (desktop flavor)
+//	klos run-env              start a program with arguments from env files
 //
 // Read docs/updates.md and docs/boot.md.
 package main
@@ -63,6 +65,8 @@ func main() {
 		err = cmdInstallService(args)
 	case "run-env":
 		err = cmdRunEnv(args)
+	case "devd":
+		err = cmdDevd(args)
 	case "-h", "--help", "help":
 		usage()
 	default:

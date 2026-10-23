@@ -1,0 +1,22 @@
+[package]
+name = "wayland"
+version = "1.26.0"
+summary = "Wayland protocol libraries and scanner"
+license = "MIT"
+homepage = "https://wayland.freedesktop.org/"
+build-depends = ["expat", "libffi"]
+
+[[source]]
+url = "https://gitlab.freedesktop.org/wayland/wayland/-/releases/1.26.0/downloads/wayland-1.26.0.tar.xz"
+sha256 = "64176eaa46e4969903e286f8e5ef8331affc17fdf03ac9b58381d2b23162b7a3"
+signature = "https://gitlab.freedesktop.org/wayland/wayland/-/releases/1.26.0/downloads/wayland-1.26.0.tar.xz.sig"
+key = ["freedesktop-emersion"]
+
+[build]
+script = '''
+# Build the scanner for the builder first (static), then the libraries.
+kmeson -Ddocumentation=false -Dtests=false -Ddtd_validation=false
+kninja
+kninja_install
+sed -i 's|^wayland_scanner=.*|wayland_scanner=wayland-scanner|' "$DESTDIR/usr/lib/pkgconfig/wayland-scanner.pc"
+'''

@@ -105,8 +105,8 @@ func listTarball(tb string) []string {
 	return files
 }
 
-func excluded(p string) bool {
-	for _, pat := range CONFIG.Image.Exclude {
+func excluded(p string, extra []string) bool {
+	for _, pat := range append(append([]string{}, CONFIG.Image.Exclude...), extra...) {
 		if ok, _ := path.Match(pat, p); ok {
 			return true
 		}
@@ -127,7 +127,7 @@ func assembleRootfs(m *Manifest, rootfs string) []string {
 			die("package %s is a host package; it cannot be in an image", p)
 		}
 		for _, f := range listTarball(pkgTarball(p)) {
-			if excluded(f) {
+			if excluded(f, m.Rootfs.Exclude) {
 				continue
 			}
 			if o, ok := owners[f]; ok {
@@ -137,7 +137,7 @@ func assembleRootfs(m *Manifest, rootfs string) []string {
 		}
 	}
 	for _, p := range pkgs {
-		extractTarball(pkgTarball(p), rootfs, CONFIG.Image.Exclude)
+		extractTarball(pkgTarball(p), rootfs, append(append([]string{}, CONFIG.Image.Exclude...), m.Rootfs.Exclude...))
 	}
 	for _, o := range m.Rootfs.Overlays {
 		src := filepath.Join(TOP, "rootfs", o)
@@ -390,8 +390,6 @@ func buildImage(flavor string) *BuildRecord {
 	kb := newKernelBuild(flavor)
 	kb.configure(m)
 	kb.stage1(rootfs)
-	rec.Kernel = kb.release()
-	rec.KernelConfig = sha256File(filepath.Join(kb.obj, ".config"))
 
 	logf("image %s: make the erofs image", flavor)
 	img := filepath.Join(iw, "root.img")
@@ -432,6 +430,8 @@ func buildImage(flavor string) *BuildRecord {
 	efiLive := filepath.Join(iw, "klos-live.efi")
 	kb.link(cpio, cmdline+" klos.mode=installed", efi)
 	kb.link(cpio, cmdline+" klos.mode=live", efiLive)
+	rec.Kernel = kb.release()
+	rec.KernelConfig = sha256File(filepath.Join(kb.obj, ".config"))
 
 	od := outDir(flavor)
 	removeAll(od)

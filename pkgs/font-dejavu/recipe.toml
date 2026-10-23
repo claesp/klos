@@ -1,0 +1,19 @@
+[package]
+name = "font-dejavu"
+version = "2.37"
+summary = "DejaVu fonts"
+license = "Bitstream-Vera"
+homepage = "https://dejavu-fonts.github.io/"
+implicit-deps = false
+# Upstream does not sign this release. The SHA-256 is pinned.
+
+[[source]]
+url = "https://github.com/dejavu-fonts/dejavu-fonts/releases/download/version_2_37/dejavu-fonts-ttf-2.37.tar.bz2"
+sha256 = "fa9ca4d13871dd122f61258a80d01751d603b4d3ee14095d65453b4e846e17d7"
+
+[build]
+script = '''
+mkdir -p "$DESTDIR/usr/share/fonts/dejavu" "$DESTDIR/usr/share/fontconfig/conf.avail"
+install -m 0644 ttf/*.ttf "$DESTDIR/usr/share/fonts/dejavu/"
+install -m 0644 fontconfig/*.conf "$DESTDIR/usr/share/fontconfig/conf.avail/"
+'''

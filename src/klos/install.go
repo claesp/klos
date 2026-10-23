@@ -35,6 +35,9 @@ type installConfig struct {
 	Hostname      string
 	RootPassword  string // a crypt(3) hash, or empty to lock the password
 	SSHKey        string // an authorized_keys line for root
+	User          string // a normal user (UID 1000), optional
+	UserPassword  string // a crypt(3) hash for the user
+	UserSSHKey    string // an authorized_keys line for the user
 	PowerOff      bool
 	ReservedSlots int
 }
@@ -71,6 +74,12 @@ func readInstallConfig(path string) (*installConfig, error) {
 			c.RootPassword = v
 		case "root_ssh_key":
 			c.SSHKey = v
+		case "user":
+			c.User = v
+		case "user_password_hash":
+			c.UserPassword = v
+		case "user_ssh_key":
+			c.UserSSHKey = v
 		case "poweroff":
 			c.PowerOff = v == "yes"
 		case "reserved_slots":
@@ -371,6 +380,11 @@ func setupVar(c *installConfig) error {
 			return err
 		}
 	}
+	if c.User != "" {
+		if err := addUser(c, mnt, upper); err != nil {
+			return err
+		}
+	}
 	if c.SSHKey != "" {
 		d := filepath.Join(mnt, "roothome/.ssh")
 		if err := os.MkdirAll(d, 0o700); err != nil {
@@ -381,4 +395,81 @@ func setupVar(c *installConfig) error {
 		}
 	}
 	return nil
+}
+
+// addUser adds the normal user (UID and GID 1000) to the /etc overlay upper
+// layer, and makes the home directory /var/home/<user>. The user gets the
+// groups in /usr/lib/klos/user-groups (a list that the flavor supplies).
+func addUser(c *installConfig, mnt, upper string) error {
+	name := c.User
+	for _, r := range name {
+		if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '-' || r == '_') {
+			return fmt.Errorf("bad user name %q", name)
+		}
+	}
+	const id = 1000
+	edit := func(file string, mode os.FileMode, change func([]string) []string) error {
+		src := filepath.Join(upper, file)
+		b, err := os.ReadFile(src)
+		if err != nil {
+			b, err = os.ReadFile(filepath.Join("/etc", file))
+			if err != nil {
+				return err
+			}
+		}
+		lines := strings.Split(strings.TrimRight(string(b), "\n"), "\n")
+		lines = change(lines)
+		return os.WriteFile(src, []byte(strings.Join(lines, "\n")+"\n"), mode)
+	}
+	groups := map[string]bool{}
+	if b, err := os.ReadFile("/usr/lib/klos/user-groups"); err == nil {
+		for _, g := range strings.Fields(string(b)) {
+			groups[g] = true
+		}
+	}
+	if err := edit("passwd", 0o644, func(l []string) []string {
+		return append(l, fmt.Sprintf("%s:x:%d:%d:%s:/home/%s:/bin/sh", name, id, id, name, name))
+	}); err != nil {
+		return err
+	}
+	if err := edit("group", 0o644, func(l []string) []string {
+		for i, line := range l {
+			f := strings.Split(line, ":")
+			if len(f) == 4 && groups[f[0]] {
+				if f[3] == "" {
+					f[3] = name
+				} else {
+					f[3] += "," + name
+				}
+				l[i] = strings.Join(f, ":")
+			}
+		}
+		return append(l, fmt.Sprintf("%s:x:%d:", name, id))
+	}); err != nil {
+		return err
+	}
+	pw := c.UserPassword
+	if pw == "" {
+		pw = "!"
+	}
+	if err := edit("shadow", 0o600, func(l []string) []string {
+		return append(l, fmt.Sprintf("%s:%s:0::::::", name, pw))
+	}); err != nil {
+		return err
+	}
+	home := filepath.Join(mnt, "home", name)
+	if err := os.MkdirAll(home, 0o700); err != nil {
+		return err
+	}
+	if c.UserSSHKey != "" {
+		if err := os.MkdirAll(filepath.Join(home, ".ssh"), 0o700); err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(home, ".ssh/authorized_keys"), []byte(c.UserSSHKey+"\n"), 0o600); err != nil {
+			return err
+		}
+		os.Chown(filepath.Join(home, ".ssh"), id, id)
+		os.Chown(filepath.Join(home, ".ssh/authorized_keys"), id, id)
+	}
+	return os.Chown(home, id, id)
 }

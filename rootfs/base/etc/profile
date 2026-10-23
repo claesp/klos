@@ -2,3 +2,7 @@ export PATH=/usr/local/bin:/usr/bin
 umask 022
 HOSTNAME=$(hostname)
 if [ "$(id -u)" = 0 ]; then PS1="$HOSTNAME:\$PWD# "; else PS1="$HOSTNAME:\$PWD\$ "; fi
+for f in /etc/profile.d/*.sh; do
+	[ -r "$f" ] && . "$f"
+done
+unset f

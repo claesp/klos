@@ -1,0 +1,20 @@
+# libinput and wlroots need the libudev API. libudev-zero supplies it
+# without a udev daemon. It reads the device information from sysfs.
+[package]
+name = "libudev-zero"
+version = "1.0.5"
+summary = "libudev replacement without a udev daemon"
+license = "ISC"
+homepage = "https://github.com/illiliti/libudev-zero"
+# Upstream does not sign this release. The SHA-256 is pinned.
+
+[[source]]
+url = "https://github.com/illiliti/libudev-zero/archive/refs/tags/1.0.5.tar.gz"
+filename = "libudev-zero-1.0.5.tar.gz"
+sha256 = "bf4372f79ddbe6b0e266a3d2994ffac7018a7edf4f87632aecb5176565d96138"
+
+[build]
+script = '''
+kmake PREFIX=/usr LIBDIR=/usr/lib CC=cc AR=llvm-ar
+make PREFIX=/usr LIBDIR=/usr/lib DESTDIR="$DESTDIR" install-shared
+'''

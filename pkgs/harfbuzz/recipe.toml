@@ -1,0 +1,22 @@
+[package]
+name = "harfbuzz"
+version = "15.0.0"
+summary = "Text shaping library"
+license = "MIT"
+homepage = "https://harfbuzz.github.io/"
+build-depends = ["freetype", "glib"]
+# Upstream does not sign this release. The SHA-256 is pinned.
+
+[package.options]
+run-tools = ["glib-mkenums"]
+
+[[source]]
+url = "https://github.com/harfbuzz/harfbuzz/releases/download/15.0.0/harfbuzz-15.0.0.tar.xz"
+sha256 = "968536e9abd782f07f7954044c0c4020199fcdd39b41d221ec42d2a3be4a44df"
+
+[build]
+script = '''
+kmeson -Dfreetype=enabled -Dglib=enabled -Dgobject=enabled -Dicu=disabled -Dcairo=disabled -Dchafa=disabled -Dtests=disabled -Ddocs=disabled -Dintrospection=disabled -Dutilities=disabled -Dbenchmark=disabled
+kninja
+kninja_install
+'''

@@ -1,0 +1,22 @@
+# GitLab makes the archive from the signed tag 1.32.0.
+[package]
+name = "libinput"
+version = "1.32.0"
+summary = "Input device library"
+license = "MIT"
+homepage = "https://gitlab.freedesktop.org/libinput/libinput"
+build-depends = ["libudev-zero", "mtdev", "libevdev"]
+# Upstream does not sign this release. The SHA-256 is pinned.
+
+[[source]]
+url = "https://gitlab.freedesktop.org/libinput/libinput/-/archive/1.32.0/libinput-1.32.0.tar.gz"
+sha256 = "7dd6c1ca964c86eb6810ccd6639cda634e68bdca43bf3afec39e94e942fac8d4"
+
+[build]
+script = '''
+kmeson -Dlibwacom=false -Ddebug-gui=false -Dtests=false -Ddocumentation=false -Dudev-dir=/usr/lib/udev -Dlua-plugins=disabled
+kninja
+kninja_install
+# Remove the Python helper tools.
+rm -rf "$DESTDIR/usr/lib/libinput" "$DESTDIR/usr/bin/libinput"
+'''

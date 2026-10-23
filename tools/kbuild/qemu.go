@@ -175,9 +175,17 @@ func (v *vm) sh(command string, timeout time.Duration) string {
 	return m[1]
 }
 
-func (v *vm) unlockAndLogin(version string) {
+func (v *vm) unlock() {
 	v.expect(`Passphrase for /dev/\S+: `, 3*time.Minute)
 	v.send(testPassphrase + "\n")
+}
+
+func (v *vm) unlockAndLogin(version string) {
+	v.unlock()
+	v.login(version)
+}
+
+func (v *vm) login(version string) {
 	v.expect(`login: `, 3*time.Minute)
 	v.send("root\n")
 	v.expect(`Password: `, 30*time.Second)
@@ -263,9 +271,12 @@ func cmdTest(args []string) {
 
 	logf("test 3: update to %s", v2)
 	vm2.send("klos update -reboot /dev/vdb\n")
-	vm2.expect(`trial boot of `+regexp.QuoteMeta(v2), 5*time.Minute)
-	vm2.unlockAndLogin(v2)
-	vm2.sh("test -f /run/klos/trial", 30*time.Second)
+	vm2.expect(`the next boot is a trial boot of `+regexp.QuoteMeta(v2), 5*time.Minute)
+	// klos bless runs when sshd starts, so it can be complete before the
+	// login. The console message of /init shows the trial boot.
+	vm2.unlock()
+	vm2.expect(`klos-init: trial boot of `+regexp.QuoteMeta(v2), 5*time.Minute)
+	vm2.login(v2)
 	vm2.waitBlessed(v2)
 	vm2.sh("test ! -f /run/klos/trial && test -f /etc/klos-test-file", 30*time.Second)
 	logf("test 3: the update, the trial boot and the bless are good; /etc changes are kept")

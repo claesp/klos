@@ -1,0 +1,8 @@
+# Load kernel modules for devices and send device events to libudev-zero.
+type = process
+command = /usr/bin/klos devd
+depends-on = early-setup
+restart = true
+smooth-recovery = true
+log-type = file
+logfile = /var/log/devd.log

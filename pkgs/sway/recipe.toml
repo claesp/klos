@@ -1,0 +1,24 @@
+[package]
+name = "sway"
+version = "1.12"
+summary = "Tiling Wayland compositor"
+license = "MIT"
+homepage = "https://swaywm.org/"
+build-depends = ["wlroots", "wayland", "wayland-protocols", "libxkbcommon", "libinput", "libevdev", "pcre2", "json-c", "pango", "cairo", "glib", "harfbuzz", "fribidi", "fontconfig", "freetype", "pixman", "libpng", "libdrm", "mesa", "seatd", "libdisplay-info", "libudev-zero", "mtdev", "expat", "libffi", "zlib", "zstd", "xkeyboard-config"]
+
+[package.options]
+run-tools = ["wayland-scanner"]
+
+[[source]]
+url = "https://github.com/swaywm/sway/releases/download/1.12/sway-1.12.tar.gz"
+sha256 = "a7b1becc217433c11c6284d36bcea0687b87b77b0ed26a384565292ec321f2b1"
+signature = "https://github.com/swaywm/sway/releases/download/1.12/sway-1.12.tar.gz.sig"
+key = ["freedesktop-emersion"]
+
+[build]
+script = '''
+kmeson -Dman-pages=disabled -Dgdk-pixbuf=disabled -Dtray=disabled -Dfish-completions=false -Dzsh-completions=false -Dbash-completions=false -Dsd-bus-provider=auto -Dswaybar=true -Dswaynag=true
+kninja
+kninja_install
+rm -f "$DESTDIR/usr/bin/grimshot"
+'''

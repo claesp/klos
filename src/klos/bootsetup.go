@@ -62,6 +62,7 @@ func cmdBootSetup(args []string) error {
 	note(setHostname())
 	note(loopbackUp())
 	note(machineID())
+	note(userRuntimeDirs())
 	if _, err := os.Stat("/usr/bin/ssh-keygen"); err == nil {
 		key := "/etc/ssh/ssh_host_ed25519_key"
 		if _, err := os.Stat(key); err != nil {
@@ -233,6 +234,35 @@ func loopbackUp() error {
 	*(*uint16)(unsafe.Pointer(&ifr[16])) = flags | syscall.IFF_UP
 	if _, _, e := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.SIOCSIFFLAGS, uintptr(unsafe.Pointer(&ifr[0]))); e != 0 {
 		return fmt.Errorf("lo: %v", e)
+	}
+	return nil
+}
+
+// userRuntimeDirs makes /run/user/<uid> (XDG_RUNTIME_DIR) for each normal
+// user (UID 1000 to 59999). KLOS has no login daemon that does this.
+func userRuntimeDirs() error {
+	b, err := os.ReadFile("/etc/passwd")
+	if err != nil {
+		return err
+	}
+	for _, l := range strings.Split(string(b), "\n") {
+		f := strings.Split(l, ":")
+		if len(f) < 4 {
+			continue
+		}
+		uid, err1 := strconv.Atoi(f[2])
+		gid, err2 := strconv.Atoi(f[3])
+		if err1 != nil || err2 != nil || uid < 1000 || uid >= 60000 {
+			continue
+		}
+		d := fmt.Sprintf("/run/user/%d", uid)
+		if err := os.MkdirAll(d, 0o700); err != nil {
+			return err
+		}
+		os.Chmod(d, 0o700)
+		if err := os.Chown(d, uid, gid); err != nil {
+			return err
+		}
 	}
 	return nil
 }

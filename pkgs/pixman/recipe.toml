@@ -1,0 +1,20 @@
+# Upstream signs a .sha512 file (pixman-0.46.4.tar.xz.sha512.asc). kbuild
+# does not check that format yet, so the SHA-256 is pinned.
+[package]
+name = "pixman"
+version = "0.46.4"
+summary = "Pixel manipulation library"
+license = "MIT"
+homepage = "https://pixman.org/"
+# Upstream does not sign this release. The SHA-256 is pinned.
+
+[[source]]
+url = "https://cairographics.org/releases/pixman-0.46.4.tar.xz"
+sha256 = "a098c33924754ad43f981b740f6d576c70f9ed1006e12221b1845431ebce1239"
+
+[build]
+script = '''
+kmeson -Dtests=disabled -Dgtk=disabled -Dlibpng=disabled -Ddemos=disabled
+kninja
+kninja_install
+'''

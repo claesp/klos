@@ -1,0 +1,24 @@
+[package]
+name = "foot"
+version = "1.28.0"
+summary = "Wayland terminal emulator"
+license = "MIT"
+homepage = "https://codeberg.org/dnkl/foot"
+build-depends = ["fcft", "tllist", "wayland", "wayland-protocols", "libxkbcommon", "pixman", "fontconfig", "freetype", "utf8proc", "libpng", "expat", "libffi", "zlib", "xkeyboard-config"]
+
+[package.options]
+run-tools = ["wayland-scanner"]
+
+[[source]]
+url = "https://codeberg.org/dnkl/foot/releases/download/1.28.0/foot-1.28.0.tar.gz"
+sha256 = "ee73c292a4b457004b38c2df178eac025ab0b849fdd9e13253c1f8b5cf110710"
+signature = "https://codeberg.org/dnkl/foot/releases/download/1.28.0/foot-1.28.0.tar.gz.sig"
+key = ["dnkl"]
+
+[build]
+script = '''
+kmeson -Ddocs=disabled -Dterminfo=disabled -Dthemes=true -Dtests=false -Dime=true -Dgrapheme-clustering=enabled
+kninja
+kninja_install
+rm -rf "$DESTDIR/usr/share/zsh" "$DESTDIR/usr/share/fish" "$DESTDIR/usr/share/bash-completion"
+'''

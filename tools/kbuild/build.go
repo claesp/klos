@@ -186,6 +186,10 @@ exec /usr/bin/pkgconf "$@"
 `, sysroot))
 	symlink("pkg-config", filepath.Join(bindir, target+"-pkg-config"))
 
+	for _, t := range r.Options.RunTools {
+		writeRunTool(bindir, sysroot, t)
+	}
+
 	cmakeTC := filepath.Join(bdir, "toolchain.cmake")
 	writeFile(cmakeTC, fmt.Sprintf(`set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_PROCESSOR x86_64)
@@ -252,6 +256,29 @@ cpp_link_args = %[6]s
 		env[k] = v
 	}
 	return envList(env)
+}
+
+// writeRunTool makes a wrapper that runs a target program of the sysroot in
+// the builder. A script runs with the interpreter of the builder. An ELF
+// program runs with the KLOS dynamic linker and the sysroot libraries.
+func writeRunTool(bindir, sysroot, tool string) {
+	prog := filepath.Join(sysroot, "usr/bin", tool)
+	b, err := os.ReadFile(prog)
+	if err != nil {
+		die("run-tools: %s is not in the sysroot", tool)
+	}
+	var w string
+	if len(b) > 2 && string(b[:2]) == "#!" {
+		line := strings.Fields(strings.SplitN(string(b[2:]), "\n", 2)[0])
+		interp := filepath.Base(line[0])
+		if interp == "env" && len(line) > 1 {
+			interp = line[1]
+		}
+		w = fmt.Sprintf("#!/bin/sh\nexec %s \"%s\" \"$@\"\n", interp, prog)
+	} else {
+		w = fmt.Sprintf("#!/bin/sh\nexec \"%[1]s/usr/lib/libc.so\" --library-path \"%[1]s/usr/lib\" \"%[2]s\" \"$@\"\n", sysroot, prog)
+	}
+	writeExec(filepath.Join(bindir, tool), w)
 }
 
 func envList(m map[string]string) []string {

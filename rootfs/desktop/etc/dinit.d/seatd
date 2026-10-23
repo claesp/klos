@@ -1,0 +1,10 @@
+# Seat management: seatd opens the graphics and input devices for the
+# users in the group "video".
+type = process
+command = /usr/bin/seatd -g video
+depends-on = early-setup
+waits-for = devd
+restart = true
+smooth-recovery = true
+log-type = file
+logfile = /var/log/seatd.log

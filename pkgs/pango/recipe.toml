@@ -1,0 +1,24 @@
+# GNOME publishes the SHA-256 values (pango-1.58.2.sha256sum), not
+# signatures. The values agree.
+[package]
+name = "pango"
+version = "1.58.2"
+summary = "Text layout library"
+license = "LGPL-2.1-or-later"
+homepage = "https://gitlab.gnome.org/GNOME/pango"
+build-depends = ["glib", "harfbuzz", "fribidi", "cairo", "fontconfig", "freetype", "pixman", "libpng", "expat", "zlib"]
+# Upstream does not sign this release. The SHA-256 is pinned.
+
+[package.options]
+run-tools = ["glib-mkenums", "glib-genmarshal", "glib-compile-resources"]
+
+[[source]]
+url = "https://download.gnome.org/sources/pango/1.58/pango-1.58.2.tar.xz"
+sha256 = "342385b6ca3b7c73455d7c80a13b7dbe4489e00bc3bd4c5bd6ed4dce421e374a"
+
+[build]
+script = '''
+kmeson -Dintrospection=disabled -Dbuild-testsuite=false -Dbuild-examples=false -Dxft=disabled -Ddocumentation=false -Dman-pages=false -Dfontconfig=enabled -Dfreetype=enabled -Dcairo=enabled -Dlibthai=disabled -Dsysprof=disabled
+kninja
+kninja_install
+'''

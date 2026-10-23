@@ -1,0 +1,38 @@
+musl declares stdin, stdout and stderr as const, and its streams cannot be
+replaced. Compile the glibc-only stream buffering code only for glibc
+(the same change as the Alpine Linux package).
+
+--- a/lib/commands/toolcontext.c	2026-09-30 11:19:39.000000000 +0200
++++ b/lib/commands/toolcontext.c	2026-10-24 01:41:57.343455572 +0200
+@@ -1684,6 +1684,7 @@
+ 	reset_lvm_errno(1);
+ 
+ 	/* Set in/out stream buffering before glibc */
++#ifdef __GLIBC__
+ 	if (set_buffering
+ 	    && !cmd->running_on_valgrind /* Skipping within valgrind execution. */
+ #ifdef SYS_gettid
+@@ -1727,6 +1728,7 @@
+ 	} else if (!set_buffering)
+ 		/* Without buffering, must not use stdin/stdout */
+ 		init_silent(1);
++#endif
+ 
+ 	/*
+ 	 * Environment variable LVM_SYSTEM_DIR overrides this below.
+@@ -2065,6 +2067,7 @@
+ 	if (cmd->cft_def_hash)
+ 		dm_hash_destroy(cmd->cft_def_hash);
+ 
++#ifdef __GLIBC__
+ 	if (!cmd->running_on_valgrind && cmd->linebuffer) {
+ 		int flags;
+ 		/* Reset stream buffering to defaults */
+@@ -2088,6 +2091,7 @@
+ 
+ 		free(cmd->linebuffer);
+ 	}
++#endif
+ 
+ 	destroy_config_context(cmd);
+ 

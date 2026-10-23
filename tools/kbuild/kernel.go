@@ -155,8 +155,12 @@ func (kb *kernelBuild) hasModules() bool {
 	return readKconfig(filepath.Join(kb.obj, ".config"))["CONFIG_MODULES"] == "y"
 }
 
-// stage1 compiles the kernel and installs the modules into rootfs.
+// stage1 compiles the kernel and installs the modules into rootfs. A kernel
+// without modules needs no stage 1: the final link compiles everything.
 func (kb *kernelBuild) stage1(rootfs string) {
+	if !kb.hasModules() {
+		return
+	}
 	logf("kernel: compile for %s", kb.flavor)
 	// The .config of an earlier build can name an initramfs file that does
 	// not exist now. An empty file is an empty list for the kernel build.
@@ -164,9 +168,18 @@ func (kb *kernelBuild) stage1(rootfs string) {
 		writeFile(src, "", 0o644)
 	}
 	kb.make("bzImage")
-	if kb.hasModules() {
-		kb.make("modules")
-		kb.make("INSTALL_MOD_PATH="+filepath.Join(rootfs, "usr"), "INSTALL_MOD_STRIP=1", "modules_install")
+	kb.make("modules")
+	// depmod comes from the image (package kmod). It runs with the KLOS
+	// dynamic linker, because the builder has no kmod.
+	depmod := filepath.Join(kb.obj, "klos-depmod")
+	writeExec(depmod, fmt.Sprintf("#!/bin/sh\nexec \"%[1]s/usr/lib/libc.so\" --library-path \"%[1]s/usr/lib\" \"%[1]s/usr/bin/depmod\" \"$@\"\n", rootfs))
+	if !exists(filepath.Join(rootfs, "usr/bin/depmod")) {
+		die("the flavor has kernel modules, but no kmod package")
+	}
+	kb.make("INSTALL_MOD_PATH="+rootfs, "KERNEL_MODULE_DIRECTORY=/usr/lib/modules",
+		"INSTALL_MOD_STRIP=1", "DEPMOD="+depmod, "modules_install")
+	if !exists(filepath.Join(rootfs, "usr/lib/modules", kb.release(), "modules.dep")) {
+		die("depmod did not make modules.dep")
 	}
 }
 

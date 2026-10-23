@@ -1,0 +1,20 @@
+[package]
+name = "freetype"
+version = "2.15.0"
+summary = "Font rendering library"
+license = "FTL OR GPL-2.0-or-later"
+homepage = "https://freetype.org/"
+build-depends = ["zlib", "libpng"]
+
+[[source]]
+url = "https://download.savannah.gnu.org/releases/freetype/freetype-2.15.0.tar.xz"
+sha256 = "93cd47eb719c325107f2d3cf087d06299e944c3b48a40b55537302304dea1dd5"
+signature = "https://download.savannah.gnu.org/releases/freetype/freetype-2.15.0.tar.xz.sig"
+key = ["freetype-wl"]
+
+[build]
+script = '''
+kmeson -Dharfbuzz=disabled -Dpng=enabled -Dzlib=enabled -Dbzip2=disabled -Dbrotli=disabled
+kninja
+kninja_install
+'''

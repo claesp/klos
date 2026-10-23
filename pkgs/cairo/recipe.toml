@@ -1,0 +1,19 @@
+[package]
+name = "cairo"
+version = "1.18.4"
+summary = "2D graphics library"
+license = "LGPL-2.1-only OR MPL-1.1"
+homepage = "https://cairographics.org/"
+build-depends = ["pixman", "freetype", "fontconfig", "libpng", "zlib", "glib", "expat"]
+# Upstream does not sign this release. The SHA-256 is pinned.
+
+[[source]]
+url = "https://cairographics.org/releases/cairo-1.18.4.tar.xz"
+sha256 = "445ed8208a6e4823de1226a74ca319d3600e83f6369f99b14265006599c32ccb"
+
+[build]
+script = '''
+kmeson -Dtests=disabled -Dxlib=disabled -Dxcb=disabled -Dquartz=disabled -Dfreetype=enabled -Dfontconfig=enabled -Dpng=enabled -Dglib=enabled -Dspectre=disabled -Dsymbol-lookup=disabled -Dzlib=enabled -Dlzo=disabled -Dgtk_doc=false
+kninja
+kninja_install
+'''
