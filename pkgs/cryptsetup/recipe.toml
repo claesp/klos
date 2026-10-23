@@ -1,0 +1,27 @@
+# LUKS2 disk encryption and dm-verity tools. The crypto back end is the
+# Linux kernel crypto API, so there is no OpenSSL dependency.
+[package]
+name = "cryptsetup"
+version = "2.8.8"
+summary = "Disk encryption (LUKS2) and dm-verity tools"
+license = "GPL-2.0-or-later"
+homepage = "https://gitlab.com/cryptsetup/cryptsetup"
+build-depends = ["util-linux", "lvm2", "json-c", "popt"]
+
+[[source]]
+url = "https://cdn.kernel.org/pub/linux/utils/cryptsetup/v2.8/cryptsetup-2.8.8.tar.xz"
+sha256 = "3acfa685f2dd7fcc832e0b77bc7093aa7da554a51ce8dafbb4138eaa854eee35"
+signature = "https://cdn.kernel.org/pub/linux/utils/cryptsetup/v2.8/cryptsetup-2.8.8.tar.sign"
+signed-content = "uncompressed"
+key = ["cryptsetup-mbroz"]
+
+[build]
+script = '''
+kconfigure --disable-static --with-crypto_backend=kernel \
+	--disable-ssh-token --disable-external-tokens --disable-asciidoc \
+	--disable-selinux --disable-udev --disable-libargon2 --enable-internal-argon2 \
+	--disable-fips --disable-pwquality --disable-passwdqc \
+	--with-tmpfilesdir=no
+kmake
+make DESTDIR="$DESTDIR" install
+'''

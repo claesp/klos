@@ -1,0 +1,23 @@
+# Basic commands. toybox.config selects the commands (no setuid commands).
+[package]
+name = "toybox"
+version = "0.8.15"
+summary = "Basic command line tools in one binary"
+license = "0BSD"
+homepage = "https://landley.net/toybox/"
+# Upstream does not sign releases. The SHA-256 is pinned.
+
+[[source]]
+url = "https://landley.net/toybox/downloads/toybox-0.8.15.tar.gz"
+sha256 = "44e2bab43dfe2c171743297631ce558c6d9ed38b87a66fd751cef617574b375e"
+
+[build]
+script = '''
+make allnoconfig KCONFIG_ALLCONFIG="$FILESDIR/toybox.config" HOSTCC=gcc
+# Each selected command must be in the final configuration.
+grep '^CONFIG_' "$FILESDIR/toybox.config" | while read -r line; do
+	grep -qx "$line" .config || { echo "missing: $line"; exit 1; }
+done
+make -j"$JOBS" V=1 HOSTCC=gcc CC=cc STRIP=llvm-strip toybox
+make install_flat PREFIX="$DESTDIR/usr/bin"
+'''

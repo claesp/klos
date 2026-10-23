@@ -1,0 +1,8 @@
+type = process
+command = /usr/bin/chronyd -d -u chrony
+depends-on = early-setup
+waits-for = dhcpcd
+restart = true
+smooth-recovery = true
+log-type = file
+logfile = /var/log/chronyd.log

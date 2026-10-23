@@ -1,0 +1,7 @@
+# The firewall starts before the network.
+type = scripted
+command = /usr/bin/nft -f /etc/nftables.conf
+stop-command = /usr/bin/nft flush ruleset
+depends-on = early-setup
+log-type = file
+logfile = /var/log/nftables.log

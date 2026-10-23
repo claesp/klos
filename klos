@@ -1,0 +1,108 @@
+#!/bin/sh
+# klos - host entry point for the KLOS build system.
+#
+# The host needs only: podman, curl, gpg (gpgv), sha256sum.
+# All other work runs in the bootstrap builder container.
+set -eu
+
+TOP=$(cd "$(dirname "$0")" && pwd)
+. "$TOP/builder/alpine.conf"
+IMAGE="localhost/klos-builder:$ALPINE_VERSION"
+
+die() { echo "klos: $*" >&2; exit 1; }
+
+usage() {
+	cat <<USAGE
+Usage: ./klos <command> [arguments]
+
+Host commands:
+  bootstrap            Verify Alpine and build the bootstrap builder image.
+  shell                Open a shell in the builder (no network).
+  keygen               Make a development key pair for update bundles.
+
+Build commands (run in the builder):
+  fetch <target>...    Download and verify sources (uses the network).
+  build <pkg>...       Build packages and their dependencies.
+  image <flavor>       Build the OS image, kernel and update bundle.
+  installer <flavor>   Build a bootable installer disk image.
+  lock <flavor>        Write manifests/<flavor>.lock from current outputs.
+  verify <flavor>      Build again and compare with the lock file.
+  test <flavor>        Install the flavor in QEMU and run the boot tests.
+  qemu <flavor>        Boot an installed test disk in QEMU (interactive).
+  list                 Show all recipes.
+
+Read docs/building.md for more information.
+USAGE
+}
+
+verify_alpine() {
+	cache="$TOP/cache/builder"
+	mkdir -p "$cache"
+	tarball="$cache/alpine-minirootfs-$ALPINE_VERSION.tar.gz"
+	[ -f "$tarball" ] || curl -fL -o "$tarball.part" "$ALPINE_URL" && \
+		{ [ -f "$tarball" ] || mv "$tarball.part" "$tarball"; }
+	[ -f "$tarball.asc" ] || curl -fL -o "$tarball.asc" "$ALPINE_URL.asc"
+	echo "$ALPINE_SHA256  $tarball" | sha256sum -c - >/dev/null \
+		|| die "SHA-256 mismatch for $tarball"
+	gnupghome=$(mktemp -d)
+	trap 'rm -rf "$gnupghome"' EXIT
+	gpg --homedir "$gnupghome" --quiet --batch --import "$TOP/keys/$ALPINE_KEY.asc" 2>/dev/null
+	gpg --homedir "$gnupghome" --batch --export "$ALPINE_KEY_FPR" > "$gnupghome/ring.gpg"
+	gpgv --keyring "$gnupghome/ring.gpg" "$tarball.asc" "$tarball" 2>/dev/null \
+		|| die "OpenPGP signature check failed for $tarball"
+	echo "klos: verified $(basename "$tarball") (SHA-256 and signature)"
+}
+
+cmd_bootstrap() {
+	verify_alpine
+	ctx=$(mktemp -d)
+	cp "$TOP/builder/Containerfile" "$TOP/builder/packages.txt" "$ctx/"
+	cp "$TOP/cache/builder/alpine-minirootfs-$ALPINE_VERSION.tar.gz" "$ctx/alpine-minirootfs.tar.gz"
+	podman build --build-arg ALPINE_BRANCH="$ALPINE_BRANCH" -t "$IMAGE" "$ctx"
+	rm -rf "$ctx"
+	podman run --rm "$IMAGE" cat /etc/klos-builder.lock > "$TOP/builder/builder.lock"
+	echo "klos: builder image $IMAGE is ready"
+}
+
+# run_builder <network: yes|no> <kvm: yes|no> <command...>
+run_builder() {
+	net=$1; kvm=$2; shift 2
+	podman image exists "$IMAGE" || die "no builder image; run './klos bootstrap'"
+	set -- --rm --init -v "$TOP:/klos:Z" -w /klos \
+		-e KLOS_JOBS="${KLOS_JOBS:-$(nproc)}" "$@"
+	[ "$net" = no ] && set -- --network=none "$@"
+	[ "$kvm" = yes ] && [ -e /dev/kvm ] && set -- --device /dev/kvm "$@"
+	[ -t 0 ] && set -- -it "$@"
+	exec podman run "$@"
+}
+
+# kbuild is compiled from tools/kbuild on each run (the Go cache makes this fast).
+KBUILD_SH='cd /klos/tools/kbuild && GOCACHE=/klos/work/gocache GOFLAGS=-mod=vendor \
+	GOTOOLCHAIN=local go build -trimpath -o /klos/work/bin/kbuild . && \
+	exec /klos/work/bin/kbuild "$@"'
+
+# kbuild <network: yes|no> <kvm: yes|no> <kbuild arguments...>
+kbuild() {
+	net=$1; kvm=$2; shift 2
+	run_builder "$net" "$kvm" "$IMAGE" sh -c "$KBUILD_SH" kbuild "$@"
+}
+
+[ $# -ge 1 ] || { usage; exit 1; }
+cmd=$1; shift
+case $cmd in
+	bootstrap) cmd_bootstrap ;;
+	shell) run_builder no no "$IMAGE" bash -l ;;
+	keygen) kbuild no no keygen "$@" ;;
+	fetch) kbuild yes no fetch "$@" ;;
+	build|image|installer|verify)
+		# Download first with the network, then build without it.
+		(kbuild yes no fetch "$@")
+		kbuild no no "$cmd" "$@" ;;
+	lock|list) kbuild no no "$cmd" "$@" ;;
+	test)
+		(kbuild yes no fetch "$@")
+		kbuild no yes test "$@" ;;
+	qemu) kbuild no yes qemu "$@" ;;
+	-h|--help|help) usage ;;
+	*) usage; exit 1 ;;
+esac

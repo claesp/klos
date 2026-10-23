@@ -1,0 +1,14 @@
+# The KLOS bootstrap builder. The "klos bootstrap" command verifies the
+# minirootfs tarball (SHA-256 and OpenPGP signature) before this build runs.
+FROM scratch
+ADD alpine-minirootfs.tar.gz /
+ARG ALPINE_BRANCH
+COPY packages.txt /tmp/packages.txt
+RUN printf 'https://dl-cdn.alpinelinux.org/alpine/%s/main\nhttps://dl-cdn.alpinelinux.org/alpine/%s/community\n' \
+        "$ALPINE_BRANCH" "$ALPINE_BRANCH" > /etc/apk/repositories \
+ && apk upgrade --no-cache \
+ && apk add --no-cache $(grep -v '^#' /tmp/packages.txt) \
+ && apk info -v | sort > /etc/klos-builder.lock \
+ && rm /tmp/packages.txt
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC
+WORKDIR /klos

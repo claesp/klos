@@ -1,0 +1,20 @@
+# The Mozilla CA certificate bundle, as curl.se extracts it.
+[package]
+name = "ca-certificates"
+version = "2026.10.20"
+summary = "Mozilla CA certificate bundle"
+license = "MPL-2.0"
+homepage = "https://curl.se/docs/caextract.html"
+implicit-deps = false
+
+[[source]]
+url = "https://curl.se/ca/cacert-2026-10-20.pem"
+sha256 = "796f1389bfea13c0ed78f663b765baaff54a508e5483786bd6ece73c5e3e3cbe"
+
+[build]
+script = '''
+install -D -m 0644 cacert-2026-10-20.pem "$DESTDIR/usr/share/ca-certificates/cacert.pem"
+mkdir -p "$DESTDIR/etc/ssl/certs"
+ln -s ../../../usr/share/ca-certificates/cacert.pem "$DESTDIR/etc/ssl/certs/ca-certificates.crt"
+ln -s certs/ca-certificates.crt "$DESTDIR/etc/ssl/cert.pem"
+'''

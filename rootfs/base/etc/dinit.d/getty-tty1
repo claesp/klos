@@ -1,0 +1,5 @@
+type = process
+command = /usr/bin/getty -L 38400 tty1 linux
+depends-on = early-setup
+restart = true
+termsignal = HUP

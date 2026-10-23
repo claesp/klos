@@ -1,0 +1,24 @@
+# The "ip" and "ss" network tools.
+[package]
+name = "iproute2"
+version = "7.3.0"
+summary = "Network configuration tools (ip, ss, bridge)"
+license = "GPL-2.0-or-later"
+homepage = "https://wiki.linuxfoundation.org/networking/iproute2"
+build-depends = ["libmnl"]
+
+[[source]]
+url = "https://cdn.kernel.org/pub/linux/utils/net/iproute2/iproute2-7.3.0.tar.xz"
+sha256 = "5c1789d290bba048a6135ed1ab81b0402dd0fb528d1f1421765c42b1fc3d6289"
+signature = "https://cdn.kernel.org/pub/linux/utils/net/iproute2/iproute2-7.3.0.tar.sign"
+signed-content = "uncompressed"
+key = ["iproute2"]
+
+[build]
+script = '''
+./configure --prefix=/usr --libbpf_force=off --color=auto
+# Build only the tools that KLOS uses.
+kmake CC=cc HOSTCC=gcc SUBDIRS="lib ip misc bridge"
+make DESTDIR="$DESTDIR" PREFIX=/usr SBINDIR=/usr/bin SUBDIRS="lib ip misc bridge" install
+rm -rf "$DESTDIR/usr/share/bash-completion"
+'''

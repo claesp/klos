@@ -1,0 +1,20 @@
+# The POSIX shell. KLOS has a shell only for interactive administration.
+[package]
+name = "dash"
+version = "0.5.13.5"
+summary = "The Debian Almquist shell (POSIX sh)"
+license = "BSD-3-Clause"
+homepage = "http://gondor.apana.org.au/~herbert/dash/"
+# Upstream does not sign releases. The SHA-256 is pinned.
+
+[[source]]
+url = "http://gondor.apana.org.au/~herbert/dash/files/dash-0.5.13.5.tar.gz"
+sha256 = "40090101a2a491f13e901d3d48e90414f26634628b9bfff35ff540363c227a7d"
+
+[build]
+script = '''
+kconfigure --bindir=/usr/bin
+kmake
+make DESTDIR="$DESTDIR" install
+ln -s dash "$DESTDIR/usr/bin/sh"
+'''

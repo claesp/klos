@@ -1,0 +1,22 @@
+[package]
+name = "linux-headers"
+version = "6.18.58"
+summary = "Linux kernel headers for user space"
+license = "GPL-2.0-only WITH Linux-syscall-note"
+homepage = "https://www.kernel.org/"
+implicit-deps = false
+
+[[source]]
+url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.58.tar.xz"
+sha256 = "069b19f9032c4dac8149ae4b6520c35debca0f42a9f6d52ee55ba6ca9b818013"
+signature = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.58.tar.sign"
+signed-content = "uncompressed"
+key = ["kernel-gregkh", "kernel-torvalds"]
+
+[build]
+script = '''
+make ARCH=x86_64 HOSTCC=gcc headers
+find usr/include -type f ! -name '*.h' -delete
+mkdir -p "$DESTDIR/usr"
+cp -a usr/include "$DESTDIR/usr/"
+'''

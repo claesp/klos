@@ -1,0 +1,19 @@
+[package]
+name = "json-c"
+version = "0.19"
+summary = "JSON library for C"
+license = "MIT"
+homepage = "https://github.com/json-c/json-c"
+# Upstream does not sign releases. The SHA-256 is pinned.
+
+[[source]]
+url = "https://s3.amazonaws.com/json-c_releases/releases/json-c-0.19.tar.gz"
+sha256 = "37ad0249902e301bd9052bf712e511fcc6acff4ecaad4b5900aad9ce564e26de"
+
+[build]
+script = '''
+kcmake -DBUILD_STATIC_LIBS=OFF -DBUILD_TESTING=OFF -DDISABLE_WERROR=ON \
+	-DBUILD_APPS=OFF
+kninja
+kninja_install
+'''

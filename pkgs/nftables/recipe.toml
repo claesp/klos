@@ -1,0 +1,22 @@
+# The packet filter tool. The default firewall uses it.
+[package]
+name = "nftables"
+version = "1.1.7"
+summary = "Packet filtering and classification (nft)"
+license = "GPL-2.0-only"
+homepage = "https://www.netfilter.org/projects/nftables/"
+build-depends = ["libmnl", "libnftnl"]
+
+[[source]]
+url = "https://www.netfilter.org/projects/nftables/files/nftables-1.1.7.tar.xz"
+sha256 = "a6fbf060d8d4fff001517a2b94f356bb4366bfbf0ba366366f9d27cc38caa58f"
+signature = "https://www.netfilter.org/projects/nftables/files/nftables-1.1.7.tar.xz.sig"
+key = ["netfilter-pablo"]
+
+[build]
+script = '''
+kconfigure --disable-static --with-mini-gmp --without-cli --without-json \
+	--disable-man-doc --disable-python --without-xtables
+kmake
+make DESTDIR="$DESTDIR" install
+'''

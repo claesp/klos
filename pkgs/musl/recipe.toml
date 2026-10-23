@@ -1,0 +1,26 @@
+[package]
+name = "musl"
+version = "1.2.6"
+summary = "The C standard library"
+license = "MIT"
+homepage = "https://musl.libc.org/"
+implicit-deps = false
+host-depends = ["llvm"]
+
+[[source]]
+url = "https://musl.libc.org/releases/musl-1.2.6.tar.gz"
+sha256 = "d585fd3b613c66151fc3249e8ed44f77020cb5e6c1e635a616d3f9f82460512a"
+signature = "https://musl.libc.org/releases/musl-1.2.6.tar.gz.asc"
+key = ["musl"]
+
+[build]
+script = '''
+LIBCC=$(cc -print-libgcc-file-name) ./configure \
+	--prefix=/usr --syslibdir=/usr/lib --target="$TARGET"
+kmake
+make DESTDIR="$DESTDIR" install
+# Use relative symlinks, so that a sysroot cannot point into the builder.
+ln -sf libc.so "$DESTDIR/usr/lib/ld-musl-x86_64.so.1"
+mkdir -p "$DESTDIR/usr/bin"
+ln -sf ../lib/libc.so "$DESTDIR/usr/bin/ldd"
+'''

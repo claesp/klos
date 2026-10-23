@@ -1,0 +1,5 @@
+type = process
+command = /usr/bin/getty -L 115200 ttyS0 vt100
+depends-on = early-setup
+restart = true
+termsignal = HUP

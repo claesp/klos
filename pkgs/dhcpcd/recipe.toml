@@ -1,0 +1,23 @@
+# DHCPv4, DHCPv6 and IPv6 router advertisement client.
+[package]
+name = "dhcpcd"
+version = "10.5.2"
+summary = "DHCP and IPv6 autoconfiguration client"
+license = "BSD-2-Clause"
+homepage = "https://roy.marples.name/projects/dhcpcd"
+
+[[source]]
+url = "https://github.com/NetworkConfiguration/dhcpcd/releases/download/v10.5.2/dhcpcd-10.5.2.tar.xz"
+sha256 = "3e476657fdb6eeb38b277da3a48d0ac0113ecce5858ebdcddff2b629faed52b4"
+signature = "https://github.com/NetworkConfiguration/dhcpcd/releases/download/v10.5.2/dhcpcd-10.5.2.tar.xz.asc"
+key = ["dhcpcd-roy"]
+
+[build]
+script = '''
+./configure --host="$TARGET" --prefix=/usr --sbindir=/usr/bin \
+	--sysconfdir=/etc --libexecdir=/usr/lib/dhcpcd \
+	--dbdir=/var/lib/dhcpcd --rundir=/run/dhcpcd \
+	--privsepuser=dhcpcd --without-udev --disable-ntp
+kmake
+make DESTDIR="$DESTDIR" install
+'''

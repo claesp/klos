@@ -1,0 +1,26 @@
+# ext4 tools for the /var volume.
+[package]
+name = "e2fsprogs"
+version = "1.47.4"
+summary = "ext2, ext3 and ext4 file system tools"
+license = "GPL-2.0-only AND LGPL-2.0-only AND BSD-3-Clause AND MIT"
+homepage = "https://e2fsprogs.sourceforge.net/"
+build-depends = ["util-linux"]
+
+[[source]]
+url = "https://cdn.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.4/e2fsprogs-1.47.4.tar.xz"
+sha256 = "fd5bf388cbdbe006a3d3b318d983b2948382440acc85a87f1e7d108653e8db0b"
+signature = "https://cdn.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.4/e2fsprogs-1.47.4.tar.sign"
+signed-content = "uncompressed"
+key = ["e2fsprogs-tytso"]
+
+[build]
+script = '''
+kconfigure --enable-elf-shlibs --disable-libuuid --disable-libblkid \
+	--disable-uuidd --disable-fsck --disable-fuse2fs --disable-e2initrd-helper \
+	--disable-debugfs --disable-imager --disable-defrag \
+	--without-libarchive --with-root-prefix="" --with-crond-dir=no \
+	--with-systemd-unit-dir=no --with-udev-rules-dir=no
+kmake
+make DESTDIR="$DESTDIR" install install-libs
+'''

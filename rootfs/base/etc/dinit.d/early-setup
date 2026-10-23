@@ -1,0 +1,5 @@
+# Mounts, sysctl, host name, loopback, machine-id and SSH host key.
+type = scripted
+command = /usr/bin/klos boot-setup
+log-type = file
+logfile = /var/log/early-setup.log

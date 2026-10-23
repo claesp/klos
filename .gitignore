@@ -1,0 +1,6 @@
+# Build output and caches. All of these are made again from the repository.
+/cache/
+/out/
+/work/
+# Private signing keys. Never commit these.
+/secrets/

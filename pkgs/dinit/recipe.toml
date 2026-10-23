@@ -1,0 +1,23 @@
+# The init system and service manager (PID 1).
+[package]
+name = "dinit"
+version = "0.22.1"
+summary = "Service manager and init system"
+license = "Apache-2.0"
+homepage = "https://davmac.org/projects/dinit/"
+# Upstream does not sign releases. The SHA-256 is pinned.
+
+[[source]]
+url = "https://github.com/davmac314/dinit/releases/download/v0.22.1/dinit-0.22.1.tar.xz"
+sha256 = "959b35c171452ecfbc09379b516517dadd675350eebc57ca54aebedda05d9adf"
+
+[build]
+script = '''
+./configure --prefix=/usr --sbindir=/usr/bin --mandir=/usr/share/man \
+	--syscontrolsocket=/run/dinitctl \
+	--platform=Linux --enable-shutdown \
+	CXX=c++ CXX_FOR_BUILD=g++ CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
+	CXXFLAGS_FOR_BUILD="-O2" LDFLAGS_FOR_BUILD=""
+kmake
+make DESTDIR="$DESTDIR" install
+'''

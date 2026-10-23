@@ -1,0 +1,15 @@
+# KLOS server: the primary flavor. A very small system for KVM virtual
+# machines. The kernel has no module support: all drivers are built in.
+include = ["base"]
+
+[flavor]
+name = "server"
+description = "Minimal server for KVM virtual machines"
+# The size of one OS volume. It must be larger than the OS image.
+slot-size = "512M"
+
+[kernel]
+config = ["kvm-guest", "server"]
+# The last console is /dev/console. The serial console comes last, because
+# most KVM servers have no screen.
+cmdline = ["console=tty0", "console=ttyS0,115200"]

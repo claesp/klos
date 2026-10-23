@@ -1,0 +1,5 @@
+# The installer. It runs only when the system starts from installer media.
+type = scripted
+command = /usr/bin/klos install-service
+depends-on = early-setup
+options = runs-on-console

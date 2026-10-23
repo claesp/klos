@@ -1,0 +1,40 @@
+# The C++ runtime: libc++, libc++abi and libunwind. They replace the GCC
+# runtime (libstdc++, libgcc_s). libc++ uses the "fast" hardening mode.
+[package]
+name = "llvm-runtimes"
+version = "23.1.4"
+summary = "libc++, libc++abi and libunwind"
+license = "Apache-2.0 WITH LLVM-exception"
+homepage = "https://libcxx.llvm.org/"
+implicit-deps = false
+host-depends = ["llvm"]
+build-depends = ["filesystem", "linux-headers", "musl"]
+
+[[source]]
+url = "https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.4/llvm-project-23.1.4.src.tar.xz"
+sha256 = "819ecf7351f1a66f76b2d701d8942faaf5faeb324cb90c9d5b090de142434bb2"
+signature = "https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.4/llvm-project-23.1.4.src.tar.xz.sig"
+key = ["llvm"]
+
+[build]
+script = '''
+# libunwind and libc++ do not exist yet, so do not link them by default.
+export LDFLAGS="$LDFLAGS -unwindlib=none"
+CMAKE_SOURCE=runtimes kcmake \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
+	-DLLVM_ENABLE_RUNTIMES="libunwind;libcxxabi;libcxx" \
+	-DLIBCXX_HAS_MUSL_LIBC=ON \
+	-DLIBCXX_HARDENING_MODE=fast \
+	-DLIBCXX_USE_COMPILER_RT=ON \
+	-DLIBCXXABI_USE_COMPILER_RT=ON \
+	-DLIBCXXABI_USE_LLVM_UNWINDER=ON \
+	-DLIBUNWIND_USE_COMPILER_RT=ON \
+	-DLIBCXX_INCLUDE_BENCHMARKS=OFF \
+	-DLIBCXX_INCLUDE_TESTS=OFF \
+	-DLIBCXXABI_INCLUDE_TESTS=OFF \
+	-DLIBUNWIND_INCLUDE_TESTS=OFF \
+	-DLIBCXX_INSTALL_MODULES=OFF
+kninja
+kninja_install
+'''

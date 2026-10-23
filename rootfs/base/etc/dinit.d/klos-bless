@@ -1,0 +1,9 @@
+# Mark the running OS version as good when the main services run. On a trial
+# boot this also stops the watchdog. Read docs/updates.md.
+type = scripted
+command = /usr/bin/klos bless
+depends-on = early-setup
+depends-on = sshd
+waits-for = dhcpcd
+log-type = file
+logfile = /var/log/klos-bless.log

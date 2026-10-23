@@ -1,0 +1,33 @@
+# OpenSSH without OpenSSL. It uses its internal cryptography: Ed25519 keys,
+# the ChaCha20-Poly1305 and AES-CTR ciphers, and the mlkem768x25519 and
+# curve25519 key exchanges. RSA and ECDSA keys are not available.
+[package]
+name = "openssh"
+version = "10.6p1"
+summary = "SSH client and server"
+license = "BSD-2-Clause AND ISC AND BSD-3-Clause"
+homepage = "https://www.openssh.com/"
+build-depends = ["zlib"]
+
+[[source]]
+url = "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz"
+sha256 = "a9dc9565dffe8640f64d863cd29a32bc4a3dbdec0566a7fc44c5d6ee767d5f39"
+signature = "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz.asc"
+key = ["openssh"]
+
+[build]
+script = '''
+kconfigure --sysconfdir=/etc/ssh --libexecdir=/usr/lib/ssh \
+	--without-openssl --with-zlib \
+	--with-privsep-path=/usr/share/empty.sshd --with-privsep-user=sshd \
+	--with-pid-dir=/run --without-pam --without-selinux \
+	--with-default-path=/usr/bin --with-superuser-path=/usr/bin \
+	--disable-lastlog --disable-utmp --disable-utmpx --disable-wtmp \
+	--disable-wtmpx --disable-strip --without-kerberos5 --without-security-key-builtin
+kmake
+make DESTDIR="$DESTDIR" install-nokeys
+mkdir -p "$DESTDIR/usr/share/empty.sshd"
+'''
+
+[package.options]
+keep-empty-dirs = true

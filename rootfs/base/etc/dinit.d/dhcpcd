@@ -1,0 +1,8 @@
+type = process
+command = /usr/bin/dhcpcd --nobackground --quiet
+depends-on = early-setup
+depends-on = nftables
+restart = true
+smooth-recovery = true
+log-type = file
+logfile = /var/log/dhcpcd.log

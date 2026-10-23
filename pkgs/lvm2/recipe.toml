@@ -1,0 +1,33 @@
+# LVM and device-mapper. No daemons (no dmeventd, lvmpolld or lvmlockd).
+[package]
+name = "lvm2"
+version = "2.03.43"
+summary = "Logical volume manager and device-mapper library"
+license = "GPL-2.0-only AND LGPL-2.1-only"
+homepage = "https://sourceware.org/lvm2/"
+
+[[source]]
+url = "https://sourceware.org/pub/lvm2/LVM2.2.03.43.tgz"
+sha256 = "d87ec0dac9061f1fa58ebced5c6b1360c87d4c5cd7b455dc0ebe1d3f036920d7"
+signature = "https://sourceware.org/pub/lvm2/LVM2.2.03.43.tgz.asc"
+key = ["lvm2"]
+
+[package.options]
+cflags = "-Wno-error"
+
+[build]
+script = '''
+kconfigure --disable-static_link --enable-pkgconfig \
+	--with-confdir=/etc --with-default-system-dir=/etc/lvm \
+	--with-default-run-dir=/run/lvm --with-default-locking-dir=/run/lock/lvm \
+	--with-usrlibdir=/usr/lib --libdir=/usr/lib \
+	--disable-udev_sync --disable-udev_rules --disable-udev-rule-exec-detection \
+	--disable-dmeventd --disable-cmirrord --disable-lvmpolld --disable-lvmlockd-sanlock \
+	--disable-lvmlockd-dlm --disable-lvmlockd-idm --disable-readline --disable-selinux \
+	--disable-blkid_wiping --disable-nls --disable-dbus-service --disable-notify-dbus \
+	--disable-systemd-journal --disable-app-machineid --without-systemd-run \
+	--with-thin=none --with-cache=none --with-vdo=none --with-writecache=internal \
+	--with-integrity=internal
+kmake
+make DESTDIR="$DESTDIR" install
+'''

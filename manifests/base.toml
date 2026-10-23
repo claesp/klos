@@ -1,0 +1,104 @@
+# The part that all KLOS flavors share. This is not a flavor: the flavor
+# manifests include it. Read docs/manifests.md.
+
+[kernel]
+config = ["common", "hardening"]
+cmdline = ["ro", "panic=10", "oops=panic", "slab_nomerge", "init_on_alloc=1",
+  "page_alloc.shuffle=1", "randomize_kstack_offset=on", "vsyscall=none",
+  "lockdown=integrity", "loglevel=4"]
+
+[packages]
+install = [
+  "filesystem",
+  "musl",
+  "klos-tools",
+  "toybox",
+  "dash",
+  "dinit",
+  "util-linux",
+  "lvm2",
+  "cryptsetup",
+  "e2fsprogs",
+  "dosfstools",
+  "openssh",
+  "dhcpcd",
+  "chrony",
+  "nftables",
+  "iproute2",
+  "ca-certificates",
+]
+
+[services]
+enable = ["early-setup", "nftables", "dhcpcd", "chronyd", "sshd",
+  "getty-ttyS0", "getty-tty1", "klos-bless", "klos-installer"]
+
+[rootfs]
+overlays = ["base"]
+
+# These programs (and the libraries that they need) go into the initramfs.
+[initramfs]
+files = [
+  "usr/bin/cryptsetup",
+  "usr/bin/veritysetup",
+  "usr/bin/lvm",
+  "usr/bin/e2fsck",
+  "usr/bin/losetup",
+]
+
+[[groups]]
+name = "root"
+gid = 0
+[[groups]]
+name = "tty"
+gid = 5
+[[groups]]
+name = "wheel"
+gid = 10
+[[groups]]
+name = "sshd"
+gid = 101
+[[groups]]
+name = "dhcpcd"
+gid = 102
+[[groups]]
+name = "chrony"
+gid = 103
+[[groups]]
+name = "nogroup"
+gid = 65534
+
+[[users]]
+name = "root"
+uid = 0
+gid = 0
+home = "/root"
+shell = "/bin/sh"
+gecos = "root"
+[[users]]
+name = "sshd"
+uid = 101
+gid = 101
+home = "/usr/share/empty.sshd"
+shell = "/bin/false"
+gecos = "sshd privilege separation"
+[[users]]
+name = "dhcpcd"
+uid = 102
+gid = 102
+home = "/var/lib/dhcpcd"
+shell = "/bin/false"
+gecos = "dhcpcd privilege separation"
+[[users]]
+name = "chrony"
+uid = 103
+gid = 103
+home = "/var/lib/chrony"
+shell = "/bin/false"
+gecos = "chrony"
+[[users]]
+name = "nobody"
+uid = 65534
+gid = 65534
+home = "/var/empty"
+shell = "/bin/false"
+gecos = "nobody"

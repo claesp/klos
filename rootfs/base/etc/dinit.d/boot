@@ -1,0 +1,4 @@
+# The first service that dinit starts. The image builder puts a symlink in
+# boot.d for each service in the [services] list of the flavor manifest.
+type = internal
+waits-for.d = /etc/dinit.d/boot.d

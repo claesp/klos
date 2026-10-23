@@ -1,0 +1,36 @@
+# Distribution-wide settings for KLOS.
+
+[distribution]
+name = "KLOS"
+id = "klos"
+# The version of the OS image. Each release has a new value.
+version = "2026.10.0"
+# All timestamps in packages and images use this value (seconds since 1970).
+source-date-epoch = 1792800000
+target = "x86_64-unknown-linux-musl"
+arch = "x86_64"
+
+[flags]
+# Default compiler and linker flags for target packages. The CPU baseline
+# is x86-64-v2 (all x86 processors since about 2009).
+cflags = "-O2 -march=x86-64-v2 -pipe -fstack-protector-strong -fstack-clash-protection -ftrivial-auto-var-init=zero -fcf-protection=full -fno-semantic-interposition -D_FORTIFY_SOURCE=2"
+# libc++ itself uses the "fast" hardening mode by default (pkgs/llvm-runtimes).
+cxxflags = ""
+ldflags = "-Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -Wl,--as-needed -Wl,-z,pack-relative-relocs -Wl,--build-id=sha1"
+
+[image]
+# Paths that the image builder does not copy into OS images.
+# The files stay in the packages, so that builds can use them.
+exclude = [
+  "usr/include/*",
+  "usr/lib/*.a",
+  "usr/lib/*.o",
+  "usr/lib/pkgconfig/*",
+  "usr/share/pkgconfig/*",
+  "usr/lib/cmake/*",
+  "usr/share/aclocal/*",
+  "usr/share/man/*",
+  "usr/share/doc/*",
+  "usr/share/info/*",
+  "usr/share/gtk-doc/*",
+]
