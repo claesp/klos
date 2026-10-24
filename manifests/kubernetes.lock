@@ -4,14 +4,14 @@
 [image]
 flavor = "kubernetes"
 version = "2026.10.0"
-roothash = "dedc32c6549a6661b76af29e7c3659fc194de39cb748ec7b535fafcfd10680f8"
-root_img_sha256 = "73297b3ae2b4c480781bcecda90b8c37c6e64ed517a2b8d7e4a3a4e9d7918212"
-efi_sha256 = "7fe34761c78ff94c4290b780f79c25d0b5810a2425e5a2358858a7ffbe8bccad"
-efi_live_sha256 = "5fadae5f44412577ddf54eff47fd3fdc61be2ed1142ec5974e331d955d4ef2e2"
+roothash = "6612bc260d998430fb7b6b87d410ce5d628d47bc7d6be5073d69fd563bc1edf5"
+root_img_sha256 = "3ba8681d5f17c5ee349a344a2dc85981b7b945bf6a817941253165647e42f9f1"
+efi_sha256 = "9cd6428320a9fe1d56981c7b10606a8c6086fc28c91685eb12e368b4bbee8b78"
+efi_live_sha256 = "81b6cb6716fb6b447eb8121b83de9647cf07258d90509633342bce5f2baefd3e"
 
 [kernel]
 release = "6.18.58-klos"
-config_sha256 = "ba1d4b5415ec812d8c6815a9ab50205d73c428b7f83e27ecd7feff7ed5a2de7e"
+config_sha256 = "e17d11adc28780d72d10535bf0acce6bb4286268e1c11236d2427824005f55ec"
 
 [[tool]]
 name = "compiler-rt"
@@ -121,8 +121,8 @@ input = "df175ce23ebd361b77084bb657a3e7f9081e8a1361fdcd19853ce47a09e7629e"
 [[package]]
 name = "klos-tools"
 version = "0.1.0-r1"
-sha256 = "7acd5746a6ff1db6fda501edec726d3957a508aef9288475661fa71dcb72f0a6"
-input = "fc2265becb499ea21b30e5e12cce7cdfaa54f5903bb9d32a5b180850f36a03bf"
+sha256 = "d940936583b137c77f2b09919a6af31ad9a3eb1efd04fa05d7ead077b9e53b09"
+input = "7bea54c45c4b471fa1497ece1d4d871042b714aeacc7953477508f8ac12c70a3"
 
 [[package]]
 name = "kubernetes"
