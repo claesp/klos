@@ -1,0 +1,60 @@
+# Firmware files for the hardware drivers of the desktop kernel. The full
+# linux-firmware release is about 2 GB, so the package keeps only the
+# firmware of the drivers in kernel/config/desktop.config. The files are
+# zstd-compressed (the desktop kernel has CONFIG_FW_LOADER_COMPRESS_ZSTD).
+# LoadPin lets the kernel load firmware only from the verified OS image.
+[package]
+name = "linux-firmware"
+version = "20261019"
+summary = "Firmware for graphics, Wi-Fi, Ethernet and Bluetooth devices"
+license = "LicenseRef-linux-firmware (redistributable; see WHENCE)"
+homepage = "https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git"
+implicit-deps = false
+
+[package.options]
+no-strip = true
+allow-unresolved = true
+
+[[source]]
+url = "https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-20261019.tar.xz"
+sha256 = "a10d1ab5baf2c74ba92e8c7cf313e691696c26bddfa6df00db795e48d70cd4ca"
+signature = "https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-20261019.tar.sign"
+signed-content = "uncompressed"
+key = ["linux-firmware"]
+
+[build]
+script = '''
+F="$DESTDIR/usr/lib/firmware"
+mkdir -p "$F"
+# copy-firmware.sh installs the files and the symlinks of WHENCE.
+./copy-firmware.sh "$F"
+# The firmware of these drivers stays (see kernel/config/desktop.config):
+#   amdgpu, i915, xe, nouveau (nvidia), iwlwifi, Intel Bluetooth (ibt),
+#   ath11k and its Bluetooth (qca), MT7921/MT7922, r8169 and Realtek BT.
+keep="amdgpu i915 xe nvidia intel/iwlwifi intel/ibt-* ath11k qca rtl_nic rtl_bt
+	mediatek/*MT7961* mediatek/*MT7922*"
+cd "$F"
+find . \( -type f -o -type l \) | sort | while read -r p; do
+	p=${p#./}
+	ok=no
+	for k in $keep; do
+		case $p in $k|$k/*) ok=yes ;; esac
+	done
+	[ "$ok" = yes ] || rm -f "$p"
+done
+find . -xtype l -delete
+find . -type d -empty -delete
+# Compress with fixed settings (one thread), so that the result is the same
+# in each build. Each symlink gets the .zst name and target.
+find . -type f | sort | while read -r p; do
+	zstd -q -19 -T1 --rm "$p"
+done
+find . -type l | sort | while read -r l; do
+	t=$(readlink "$l")
+	ln -s "$t.zst" "$l.zst"
+	rm "$l"
+done
+cd "$S"
+mkdir -p "$DESTDIR/usr/share/licenses/linux-firmware"
+cp -r WHENCE LICEN[CS]E* "$DESTDIR/usr/share/licenses/linux-firmware/"
+'''

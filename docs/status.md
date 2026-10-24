@@ -20,6 +20,7 @@ This document shows what works now and what is planned. "Tested" means that
 | No setuid programs, no scripts except the shell and the dhcpcd hook | Tested (build check and test) |
 | Kubernetes flavor: containerd, crun, CNI plugins, kubelet, kubeadm | Tested (preflight, not a full cluster) |
 | Desktop flavor: sway, foot, seatd, devd | Tested (headless sway) |
+| Desktop firmware (linux-firmware subset, wireless-regdb) | Built; regulatory.db load tested (firmware loading through LoadPin) |
 | Mesa with LLVM: iris, crocus, radeonsi, nouveau, virgl, llvmpipe, softpipe | Built; llvmpipe tested (sway with GLES2 on llvmpipe). The hardware drivers are not tested (no hardware in QEMU). |
 
 ## Planned
@@ -28,7 +29,6 @@ This document shows what works now and what is planned. "Tested" means that
 |----------|-------|
 | Secure Boot with Microsoft keys | An option to keep the Microsoft certificates in db, for option ROMs. |
 | Vulkan | Mesa Vulkan drivers (radv, anv) and the Vulkan loader. |
-| Firmware for the desktop | The linux-firmware files (kernel.org, signed) for Wi-Fi and graphics. |
 | A self-hosted stage | Build the build tools (cmake, python, perl) with KLOS too, so that Alpine is only the first compiler. |
 | A second, independent builder | Compare the results of two builders to detect a bad bootstrap builder. |
 | Merge of `/etc/passwd` and `/etc/group` after updates | Now, a changed file in the `/etc` upper layer hides new system users of a new version. |

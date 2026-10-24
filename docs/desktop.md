@@ -45,6 +45,30 @@ Mesa has these OpenGL drivers:
 `llvm-target` package). The Intel drivers need `mesa_clc` at build time;
 it is not in the image. Read [toolchain.md](toolchain.md).
 
+## Firmware
+
+The packages `linux-firmware` and `wireless-regdb` supply the firmware in
+`/usr/lib/firmware`. The full linux-firmware release is about 2 GB. The
+package keeps only the firmware of the drivers in the desktop kernel:
+
+| Firmware | Driver | Hardware |
+|----------|--------|----------|
+| `amdgpu/` | amdgpu | AMD graphics |
+| `i915/`, `xe/` | i915, xe | Intel graphics (GuC, HuC, DMC) |
+| `nvidia/` | nouveau | NVIDIA graphics (GSP firmware) |
+| `intel/iwlwifi/` | iwlwifi | Intel Wi-Fi |
+| `intel/ibt-*` | btusb | Intel Bluetooth |
+| `ath11k/`, `qca/` | ath11k, btusb | Qualcomm Wi-Fi and Bluetooth |
+| `mediatek/*MT7961*`, `mediatek/*MT7922*` | mt7921e, btusb | MediaTek Wi-Fi and Bluetooth |
+| `rtl_nic/`, `rtl_bt/` | r8169, btusb | Realtek Ethernet and Bluetooth |
+| `regulatory.db` | cfg80211 | The allowed Wi-Fi channels for each country |
+
+The files are zstd-compressed. The kernel loads firmware only from the
+verified OS image (LoadPin). The kernel checks the signature of
+`regulatory.db` with its built-in keys. To support more devices, add the
+driver to `kernel/config/desktop.config` and its firmware to the `keep`
+list in `pkgs/linux-firmware/recipe.toml`.
+
 ## Kernel modules
 
 The desktop kernel has modules for graphics (Intel, AMD, NVIDIA nouveau,
@@ -55,7 +79,6 @@ firmware only from the verified OS image.
 ## Limits of this version
 
 - There are no Vulkan drivers yet (Mesa is built with OpenGL drivers only).
-- The image has no firmware files yet. AMD graphics cards (amdgpu) and new
-  Intel graphics (xe, and i915 for GuC/HuC) need firmware, so these do not
-  work yet on real hardware. Many Wi-Fi chips also need firmware.
+- The image has firmware only for the drivers in the desktop kernel (see
+  Firmware). Other devices that need firmware do not work.
 - There is no sound server and no web browser yet.

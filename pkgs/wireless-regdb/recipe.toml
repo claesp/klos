@@ -1,0 +1,26 @@
+# The wireless regulatory database (the allowed Wi-Fi channels and power for
+# each country). The kernel loads regulatory.db as firmware and checks its
+# signature (regulatory.db.p7s) with the keys in the kernel.
+[package]
+name = "wireless-regdb"
+version = "2026.09.03"
+summary = "Wireless regulatory database"
+license = "ISC"
+homepage = "https://wireless.wiki.kernel.org/en/developers/regulatory/wireless-regdb"
+implicit-deps = false
+
+[package.options]
+no-strip = true
+
+[[source]]
+url = "https://cdn.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-2026.09.03.tar.xz"
+sha256 = "b22e0901227b820cd1c280abe681a15b773a5103a5e10dc442e94ebb34cbf58d"
+signature = "https://cdn.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-2026.09.03.tar.sign"
+signed-content = "uncompressed"
+key = ["wireless-regdb"]
+
+[build]
+script = '''
+install -D -m 0644 regulatory.db "$DESTDIR/usr/lib/firmware/regulatory.db"
+install -D -m 0644 regulatory.db.p7s "$DESTDIR/usr/lib/firmware/regulatory.db.p7s"
+'''

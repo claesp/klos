@@ -4,14 +4,14 @@
 [image]
 flavor = "desktop"
 version = "2026.10.0"
-roothash = "3cd89e9392f381f150f378a2bbcf57ee70748b6af1b9bac10b2d46cc0ab7c6bf"
-root_img_sha256 = "b77f77dc2467bab2bb4110f1c0d5e3e293c4ed14a8b92f827d1213d9a50417b9"
-efi_sha256 = "d35ba7e0102266ed2b7cda262f149507a37346d4c9574d6acb566629f601ef96"
-efi_live_sha256 = "3d834aa74f7706933d35bf735f9bab4ab90be2cb8a0b0120ae6d980d04d62ad4"
+roothash = "a27e8f32d4835196171e28ecb83eebe1632220402189e6be834216adf1ecfbfe"
+root_img_sha256 = "f26851e61ececbfa0182809957b1e2ad69ed126bd853d303214377f390e55c0f"
+efi_sha256 = "1f6a5acbf114317ade0d8328c4917a575fa67efc7b4b18a187e9dc337e63fab5"
+efi_live_sha256 = "f1590e5a5bdd738f242e29ac6453ac717317e4e065bdef74da0bdb11d4e3db87"
 
 [kernel]
 release = "6.18.58-klos"
-config_sha256 = "32ed14056069c6fbd2d5628901a84d37ebca6a1441d65c3873ccd94a1f9f2397"
+config_sha256 = "3d9e156c26915e8513a10d418b6f3624b98f38d4378acbe61a2f654e1edc7392"
 
 [[tool]]
 name = "compiler-rt"
@@ -256,6 +256,12 @@ sha256 = "d054f861ba201b0dde831fa1ce7b8a0a3c9be78455fd7b1ea16796dd10b53d9f"
 input = "53b4dff1ad2c185f8e0023af315988c401d299103b09c3c2216d72998cf322b0"
 
 [[package]]
+name = "linux-firmware"
+version = "20261019-r1"
+sha256 = "a5ba06ed8b48a4d02e936ceaa723273cee190e7c255ff459cfef2ddd5433af0e"
+input = "3e88e30a8a6c2d769a2e05ecc2eef65311edebbacc84419efb4a81b005460c2b"
+
+[[package]]
 name = "llvm-runtimes"
 version = "23.1.4-r1"
 sha256 = "ec451d4eb21c328857d9ad280fe677a84dc44d20a304b0e580f885e596603fdf"
@@ -368,6 +374,12 @@ name = "wayland"
 version = "1.26.0-r1"
 sha256 = "cd943b736d45fbe30699db6c13c71103db2034754d9c03eb45f5335e3ddd3778"
 input = "5429a4945f5d1c32ffe90bf3adda795e29a476505e03daf204d6444a56fc2073"
+
+[[package]]
+name = "wireless-regdb"
+version = "2026.09.03-r1"
+sha256 = "bac9d52faecde756f2b3b09066684369f53fde5c2f0bc9a4fe1f0db8a717e1d5"
+input = "76ab6161cf60d74e189827871e0d3d61a843ea4e11ab86112d3872d3905ea8b8"
 
 [[package]]
 name = "wlroots"
