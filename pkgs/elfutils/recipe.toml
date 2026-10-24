@@ -1,0 +1,29 @@
+# libelf from elfutils. The AMD radeonsi driver of Mesa needs it. Only the
+# library is installed, not the elfutils tools.
+[package]
+name = "elfutils"
+version = "0.197"
+summary = "ELF object file access library (libelf)"
+license = "GPL-2.0-or-later OR LGPL-3.0-or-later"
+homepage = "https://sourceware.org/elfutils/"
+build-depends = ["zlib", "zstd", "argp-standalone", "musl-fts", "musl-obstack"]
+
+[package.options]
+cflags = "-Wno-error"
+
+[[source]]
+url = "https://sourceware.org/elfutils/ftp/0.197/elfutils-0.197.tar.bz2"
+sha256 = "1fdf525f22dcf796d99a99ba3ea00a1f7b1ae5421bc62e8443a708920b99b904"
+signature = "https://sourceware.org/elfutils/ftp/0.197/elfutils-0.197.tar.bz2.sig"
+key = ["elfutils"]
+
+[build]
+script = '''
+kconfigure --disable-debuginfod --enable-libdebuginfod=no --disable-demangler \
+	--without-bzlib --without-lzma --with-zstd --disable-textrelcheck \
+	--disable-symbol-versioning
+make -C lib -j"$JOBS"
+make -C libelf -j"$JOBS"
+make -C libelf DESTDIR="$DESTDIR" install
+install -D -m 0644 config/libelf.pc "$DESTDIR/usr/lib/pkgconfig/libelf.pc"
+'''

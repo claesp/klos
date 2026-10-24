@@ -51,6 +51,9 @@ type Manifest struct {
 		// Exclude are paths that the image does not get, in addition to
 		// [image] exclude in config/klos.toml.
 		Exclude []string `toml:"exclude"`
+		// PackageExclude has "package:pattern" entries: paths of one
+		// package that the image does not get.
+		PackageExclude []string `toml:"package-exclude"`
 	} `toml:"rootfs"`
 	Initramfs struct {
 		Files []string `toml:"files"`
@@ -59,6 +62,8 @@ type Manifest struct {
 	// system after the first boot. Each command must exit with 0.
 	Test struct {
 		Commands []string `toml:"commands"`
+		// QemuArgs are more QEMU arguments for the test (for example a GPU).
+		QemuArgs []string `toml:"qemu-args"`
 	} `toml:"test"`
 	Users  []User  `toml:"users"`
 	Groups []Group `toml:"groups"`
@@ -94,8 +99,10 @@ func (m *Manifest) merge(o *Manifest) {
 	m.Rootfs.Dirs = appendUniq(m.Rootfs.Dirs, o.Rootfs.Dirs)
 	m.Rootfs.Scripts = appendUniq(m.Rootfs.Scripts, o.Rootfs.Scripts)
 	m.Rootfs.Exclude = appendUniq(m.Rootfs.Exclude, o.Rootfs.Exclude)
+	m.Rootfs.PackageExclude = appendUniq(m.Rootfs.PackageExclude, o.Rootfs.PackageExclude)
 	m.Initramfs.Files = appendUniq(m.Initramfs.Files, o.Initramfs.Files)
 	m.Test.Commands = append(m.Test.Commands, o.Test.Commands...)
+	m.Test.QemuArgs = append(m.Test.QemuArgs, o.Test.QemuArgs...)
 	for _, u := range o.Users {
 		m.Users = append(m.Users, u)
 	}

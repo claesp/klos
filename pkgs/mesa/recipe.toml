@@ -1,17 +1,26 @@
-# The first KLOS Mesa has the software renderer (softpipe) and the virtio
-# GPU driver (virgl). The hardware drivers (iris, radeonsi) and llvmpipe
-# need LLVM for the target; read docs/status.md.
+# Mesa: OpenGL, OpenGL ES and EGL. The drivers:
+#   radeonsi  AMD graphics (needs LLVM with AMDGPU, and libelf)
+#   iris      Intel graphics, gen 8 and later (needs mesa_clc)
+#   crocus    older Intel graphics, gen 4 to 7 (needs mesa_clc)
+#   nouveau   NVIDIA graphics (the open driver)
+#   virgl     the virtio GPU of virtual machines
+#   llvmpipe  the fast software renderer (needs LLVM)
+#   softpipe  the reference software renderer
+# mesa_clc (the OpenCL C compiler for the Intel drivers) is a target
+# program; Meson runs it in the builder through the exe_wrapper of the
+# kbuild cross file. It is not installed.
 [package]
 name = "mesa"
 version = "26.2.5"
 summary = "OpenGL and EGL graphics drivers"
 license = "MIT"
 homepage = "https://mesa3d.org/"
-build-depends = ["libdrm", "wayland", "wayland-protocols", "expat", "zlib", "zstd"]
+build-depends = ["libdrm", "wayland", "wayland-protocols", "expat", "zlib", "zstd",
+  "llvm-target", "elfutils", "spirv-tools", "spirv-headers", "spirv-llvm-translator"]
 host-depends = ["python-build-modules"]
 
 [package.options]
-run-tools = ["wayland-scanner"]
+run-tools = ["wayland-scanner", "llvm-config"]
 
 [[source]]
 url = "https://archive.mesa3d.org/mesa-26.2.5.tar.xz"
@@ -22,12 +31,13 @@ key = ["mesa-release"]
 [build]
 script = '''
 export PYTHONPATH="$HOST_PYTHON_BUILD_MODULES/opt/klos/toolchain/python"
-kmeson -Dplatforms=wayland -Dgallium-drivers=softpipe,virgl -Dvulkan-drivers= \
-	-Dllvm=disabled -Dglx=disabled -Degl=enabled -Dgbm=enabled -Dgles1=disabled \
+kmeson -Dplatforms=wayland -Dvulkan-drivers= \
+	-Dgallium-drivers=radeonsi,iris,crocus,nouveau,virgl,llvmpipe,softpipe \
+	-Dllvm=enabled -Dshared-llvm=enabled -Damd-use-llvm=true -Dglx=disabled -Degl=enabled -Dgbm=enabled -Dgles1=disabled \
 	-Dgles2=enabled -Dopengl=true -Dvalgrind=disabled -Dlibunwind=disabled \
 	-Dzstd=enabled -Dexpat=enabled -Dbuild-tests=false -Dvideo-codecs= \
 	-Dgallium-va=disabled -Dgallium-rusticl=false \
-	-Dmicrosoft-clc=disabled -Dmesa-clc=auto -Dspirv-tools=disabled -Dlmsensors=disabled \
+	-Dmicrosoft-clc=disabled -Dmesa-clc=auto -Dspirv-tools=enabled -Dlmsensors=disabled \
 	-Dselinux=false -Dxmlconfig=disabled -Dgallium-extra-hud=false
 kninja
 kninja_install

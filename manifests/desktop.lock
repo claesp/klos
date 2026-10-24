@@ -4,14 +4,14 @@
 [image]
 flavor = "desktop"
 version = "2026.10.0"
-roothash = "8d762ce6ee2cbfb03dcf157c2ed4bb6e9849f4f57795e02c1c9ba2956a35c5dc"
-root_img_sha256 = "f9b8b013f748457d2d8d711e99a777c7a832f8b2f4e80dbb97ab76f918ed8498"
-efi_sha256 = "c3a037e4812be49beef9d9dbfe50fdd0e474b7c9cb2323e5b9fc0701bb12e03a"
-efi_live_sha256 = "8cb2a985820c3bf8dc04ad1e0ca1d4dcde8b3caabaf1927864f3060589d230a5"
+roothash = "3cd89e9392f381f150f378a2bbcf57ee70748b6af1b9bac10b2d46cc0ab7c6bf"
+root_img_sha256 = "b77f77dc2467bab2bb4110f1c0d5e3e293c4ed14a8b92f827d1213d9a50417b9"
+efi_sha256 = "d35ba7e0102266ed2b7cda262f149507a37346d4c9574d6acb566629f601ef96"
+efi_live_sha256 = "3d834aa74f7706933d35bf735f9bab4ab90be2cb8a0b0120ae6d980d04d62ad4"
 
 [kernel]
 release = "6.18.58-klos"
-config_sha256 = "b7814bef3f3483e9ba1907c3f3b6fbb2f364c3eb1e2ee1836e4aa2e08edfb751"
+config_sha256 = "32ed14056069c6fbd2d5628901a84d37ebca6a1441d65c3873ccd94a1f9f2397"
 
 [[tool]]
 name = "compiler-rt"
@@ -88,6 +88,12 @@ sha256 = "e73a35e9dfa331fee0b7378a84e916074c864eb11c4249fffbdb96638816eb8c"
 input = "554c174bcf186323ab71eb53d2e574059811f230da1e89505419ea28ac8a6a1d"
 
 [[package]]
+name = "elfutils"
+version = "0.197-r1"
+sha256 = "b2b636779c9087aeb8dd45b4a88c27600cc8c81973f4091248a5b3c4cecc517d"
+input = "bf79008c1c723c8ff4b1d1c388e5cc7a70b64913fc6914639723e7d0a3f8c6f8"
+
+[[package]]
 name = "expat"
 version = "2.9.0-r1"
 sha256 = "887c1fbacf783898f21080b18951f94e58e26a35850cd9878489e15ef35d5db4"
@@ -162,8 +168,8 @@ input = "df175ce23ebd361b77084bb657a3e7f9081e8a1361fdcd19853ce47a09e7629e"
 [[package]]
 name = "klos-tools"
 version = "0.1.0-r1"
-sha256 = "7acd5746a6ff1db6fda501edec726d3957a508aef9288475661fa71dcb72f0a6"
-input = "fc2265becb499ea21b30e5e12cce7cdfaa54f5903bb9d32a5b180850f36a03bf"
+sha256 = "d940936583b137c77f2b09919a6af31ad9a3eb1efd04fa05d7ead077b9e53b09"
+input = "7bea54c45c4b471fa1497ece1d4d871042b714aeacc7953477508f8ac12c70a3"
 
 [[package]]
 name = "kmod"
@@ -198,8 +204,8 @@ input = "a27814a3036449ab68687c08832e2ec54ed88afcb5344077bf7ee2d3ba29e5dc"
 [[package]]
 name = "libdrm"
 version = "2.4.134-r1"
-sha256 = "30b54e6d0b9a3c6ad5d3d1ca2e5b8ed2fafa943cc0c4ec67821c5dae2171efa8"
-input = "fa4333ecf22e503313c2c18a27633cb7f70b50c7c325e1b1d213198816e1e238"
+sha256 = "ed1af21b16e73c72c759407e44e22c27df2b66856fc40fac5d6d84162d563e20"
+input = "ee4968b89ede5df2c6d86e59b73a5663e250b4b2f99d78d94e2958c6242b863c"
 
 [[package]]
 name = "libevdev"
@@ -256,6 +262,12 @@ sha256 = "ec451d4eb21c328857d9ad280fe677a84dc44d20a304b0e580f885e596603fdf"
 input = "f2d75fe080aa9f78b80fcee3c3f3bbcb2efc18440d2f0bb97fb0891f27adc6cd"
 
 [[package]]
+name = "llvm-target"
+version = "23.1.4-r1"
+sha256 = "77c65e614bb7d4eb7926dd082a664cac5f80b8e73222b3c860ba6d9e95fdd360"
+input = "17e05cacad927bacbb83203da57f2615d996f4ae38a7026afb865262bc4e383c"
+
+[[package]]
 name = "lvm2"
 version = "2.03.43-r1"
 sha256 = "6ee69ff6fcdcbcd7f546e0face7746f93a581f134bc006d5879bdbb1844d21ec"
@@ -264,8 +276,8 @@ input = "9bd330c625971b7b20611e769744a959a55fcbe025d97a34312855d5f42c3d3d"
 [[package]]
 name = "mesa"
 version = "26.2.5-r1"
-sha256 = "2fce1dfbf710969a1b47fc63ca85648682b7e5d505617d790b8ca35c3c316c5d"
-input = "0b88b84afd162dec5a0ace64f7053e21e01d62bb75b810aede1e74cd5fe88b61"
+sha256 = "f0051241d5318d8525e765350b5858d305869a45fa82d11c1196fa3f0d35afae"
+input = "9481013860a446f244435e7bb12a403e8783383608f3f25e2060c6dffd430794"
 
 [[package]]
 name = "mtdev"
@@ -325,7 +337,7 @@ input = "4d16f2da280d1f5281bca19231759ebbd8b83da46c867c02e6b680a327582c0d"
 name = "sway"
 version = "1.12-r1"
 sha256 = "dce8503a6a17cafc197b0fc5259d79efdeec866206589f91db1fe638dcf72193"
-input = "5ed993981c37b56cd216a367df472e411b7e0f2e8e77119f387580c42f2eca92"
+input = "a10ff7c4dbc2f8b5d72695b37a7344f99ada09ae719f7ed51a50dc3a1b3f765a"
 
 [[package]]
 name = "swaybg"
@@ -361,7 +373,7 @@ input = "5429a4945f5d1c32ffe90bf3adda795e29a476505e03daf204d6444a56fc2073"
 name = "wlroots"
 version = "0.20.2-r1"
 sha256 = "10af284a7b57d8257f672893228a80f63f7c836c950e63b55c279ab0b26750a7"
-input = "2e44281dc86fcb55c3e46da6d2b8def493d7351b30bb69a50f1d91bf5bb2553c"
+input = "496daddeeaaaf2d645880e23da7ba9e4d767e07b675c9000102fc885fb3c0840"
 
 [[package]]
 name = "xkeyboard-config"

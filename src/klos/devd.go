@@ -12,8 +12,9 @@ package main
 //  3. It sends each uevent again to the netlink group 4. libudev-zero
 //     (libinput, wlroots) listens on that group.
 //  4. It sets the group and the mode of device nodes from a fixed table
-//     (for example /dev/snd/* is root:audio 0660). seatd opens the graphics
-//     and input devices for the user, so they stay root:root 0600.
+//     (for example /dev/snd/* is root:audio 0660 and /dev/dri/* is
+//     root:video 0660). seatd opens the DRM master device and the input
+//     devices for the user; the render nodes need the group "video".
 
 import (
 	"bytes"
@@ -41,6 +42,7 @@ type devRule struct {
 
 var devRules = []devRule{
 	{"sound", "audio", 0o660},
+	{"drm", "video", 0o660},
 	{"video4linux", "video", 0o660},
 	{"rfkill", "rfkill", 0o664},
 }

@@ -120,6 +120,19 @@ func excluded(p string, extra []string) bool {
 func assembleRootfs(m *Manifest, rootfs string) []string {
 	build(m.Packages.Install, false)
 	pkgs := runtimeClosure(m.Packages.Install)
+	pkgExcludes := func(p string) []string {
+		ex := append([]string{}, m.Rootfs.Exclude...)
+		for _, e := range m.Rootfs.PackageExclude {
+			name, pat, ok := strings.Cut(e, ":")
+			if !ok {
+				die("bad package-exclude entry %q (use package:pattern)", e)
+			}
+			if name == p {
+				ex = append(ex, pat)
+			}
+		}
+		return ex
+	}
 	owners := map[string]string{}
 	for _, p := range pkgs {
 		meta := pkgMeta(p)
@@ -127,7 +140,7 @@ func assembleRootfs(m *Manifest, rootfs string) []string {
 			die("package %s is a host package; it cannot be in an image", p)
 		}
 		for _, f := range listTarball(pkgTarball(p)) {
-			if excluded(f, m.Rootfs.Exclude) {
+			if excluded(f, pkgExcludes(p)) {
 				continue
 			}
 			if o, ok := owners[f]; ok {
@@ -137,7 +150,7 @@ func assembleRootfs(m *Manifest, rootfs string) []string {
 		}
 	}
 	for _, p := range pkgs {
-		extractTarball(pkgTarball(p), rootfs, append(append([]string{}, CONFIG.Image.Exclude...), m.Rootfs.Exclude...))
+		extractTarball(pkgTarball(p), rootfs, append(append([]string{}, CONFIG.Image.Exclude...), pkgExcludes(p)...))
 	}
 	for _, o := range m.Rootfs.Overlays {
 		src := filepath.Join(TOP, "rootfs", o)

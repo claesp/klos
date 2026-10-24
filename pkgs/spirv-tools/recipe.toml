@@ -1,0 +1,22 @@
+# SPIR-V tools library (mesa_clc needs it at build time).
+[package]
+name = "spirv-tools"
+version = "1.4.363.0"
+summary = "SPIR-V optimizer and validator library"
+license = "Apache-2.0"
+homepage = "https://github.com/KhronosGroup/SPIRV-Tools"
+build-depends = ["spirv-headers"]
+# GitHub makes the archive from the tag vulkan-sdk-1.4.363.0. No signature.
+
+[[source]]
+url = "https://github.com/KhronosGroup/SPIRV-Tools/archive/refs/tags/vulkan-sdk-1.4.363.0.tar.gz"
+filename = "spirv-tools-1.4.363.0.tar.gz"
+sha256 = "e6c83a215538fbfd265ccf398d3877985055df1273dbed73912bd05307664688"
+
+[build]
+script = '''
+kcmake -DSPIRV-Headers_SOURCE_DIR="$SYSROOT/usr" -DSPIRV_SKIP_TESTS=ON \
+	-DSPIRV_SKIP_EXECUTABLES=ON -DSPIRV_WERROR=OFF -DSPIRV_TOOLS_BUILD_STATIC=ON
+kninja
+kninja_install
+'''

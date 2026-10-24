@@ -1,0 +1,26 @@
+# Translator between LLVM IR and SPIR-V (LLVMSPIRVLib). mesa_clc needs it
+# at build time. The major version must be the same as the LLVM version.
+[package]
+name = "spirv-llvm-translator"
+version = "23.1.2"
+summary = "LLVM IR to SPIR-V translator library"
+license = "Apache-2.0 WITH LLVM-exception"
+homepage = "https://github.com/KhronosGroup/SPIRV-LLVM-Translator"
+build-depends = ["llvm-target", "spirv-headers", "zlib", "zstd"]
+# GitHub makes the archive from the tag v23.1.2. No signature.
+
+[[source]]
+url = "https://github.com/KhronosGroup/SPIRV-LLVM-Translator/archive/refs/tags/v23.1.2.tar.gz"
+filename = "spirv-llvm-translator-23.1.2.tar.gz"
+sha256 = "b657254b5e0a2dda7914a8cb1eace467f22847d75d877b83829026c1452f827a"
+
+[build]
+script = '''
+kcmake -DLLVM_DIR="$SYSROOT/usr/lib/cmake/llvm" \
+	-DLLVM_EXTERNAL_SPIRV_HEADERS_SOURCE_DIR="$SYSROOT/usr" \
+	-DLLVM_SPIRV_INCLUDE_TESTS=OFF -DBUILD_SHARED_LIBS=ON \
+	-DLLVM_SPIRV_BUILD_EXTERNAL=YES
+kninja
+kninja_install
+rm -f "$DESTDIR/usr/bin/llvm-spirv"
+'''

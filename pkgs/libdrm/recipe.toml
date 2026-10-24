@@ -13,7 +13,7 @@ key = ["freedesktop-emersion"]
 
 [build]
 script = '''
-kmeson -Dintel=disabled -Dradeon=disabled -Damdgpu=enabled -Dnouveau=disabled -Dvmwgfx=disabled -Domap=disabled -Dexynos=disabled -Dfreedreno=disabled -Dtegra=disabled -Dvc4=disabled -Detnaviv=disabled -Dtests=false -Dman-pages=disabled -Dvalgrind=disabled -Dcairo-tests=disabled -Dudev=false
+kmeson -Dintel=disabled -Dradeon=disabled -Damdgpu=enabled -Dnouveau=enabled -Dvmwgfx=disabled -Domap=disabled -Dexynos=disabled -Dfreedreno=disabled -Dtegra=disabled -Dvc4=disabled -Detnaviv=disabled -Dtests=false -Dman-pages=disabled -Dvalgrind=disabled -Dcairo-tests=disabled -Dudev=false
 kninja
 kninja_install
 '''

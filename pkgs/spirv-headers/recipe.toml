@@ -1,0 +1,20 @@
+# SPIR-V headers (build only; mesa_clc needs them).
+[package]
+name = "spirv-headers"
+version = "1.4.363.0"
+summary = "SPIR-V headers and grammar files"
+license = "MIT"
+homepage = "https://github.com/KhronosGroup/SPIRV-Headers"
+# GitHub makes the archive from the tag vulkan-sdk-1.4.363.0. No signature.
+
+[[source]]
+url = "https://github.com/KhronosGroup/SPIRV-Headers/archive/refs/tags/vulkan-sdk-1.4.363.0.tar.gz"
+filename = "spirv-headers-1.4.363.0.tar.gz"
+sha256 = "5b3a0d099f5c7649e29c0938476c462e71d66ad89a0bde42fa1ba3eb476956c9"
+
+[build]
+script = '''
+kcmake -DSPIRV_HEADERS_ENABLE_TESTS=OFF
+kninja
+kninja_install
+'''

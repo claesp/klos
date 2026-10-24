@@ -12,7 +12,7 @@ KLOS has these flavors:
 |--------------|-----|----------|
 | `server`     | A very small server for KVM virtual machines (primary flavor) | approximately 20 MiB |
 | `kubernetes` | A Kubernetes node (containerd, crun, kubelet, kubeadm) | approximately 200 MiB |
-| `desktop`    | A Wayland desktop (sway, foot) | approximately 65 MiB |
+| `desktop`    | A Wayland desktop (sway, foot, Mesa with hardware drivers) | approximately 120 MiB |
 
 ## Main properties
 

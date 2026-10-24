@@ -238,6 +238,7 @@ pkg-config = '%[1]s/pkg-config'
 # the KLOS dynamic linker and the sysroot libraries.
 exe_wrapper = ['%[3]s/usr/lib/libc.so', '--library-path', '%[3]s/usr/lib']
 
+%[7]s
 [host_machine]
 system = 'linux'
 cpu_family = 'x86_64'
@@ -253,7 +254,7 @@ cpp_args = %[5]s
 c_link_args = %[6]s
 cpp_link_args = %[6]s
 `, bindir, tcbin, sysroot, shellQuoteList(cflags), shellQuoteList(cxxflags),
-		shellQuoteList(ldflags)), 0o644)
+		shellQuoteList(ldflags), runToolBinaries(bindir, r.Options.RunTools)), 0o644)
 
 	for k, v := range map[string]string{
 		"CC": "cc", "CXX": "c++", "CPP": "cpp",
@@ -298,6 +299,17 @@ func writeRunTool(bindir, sysroot, tool string) {
 		w = fmt.Sprintf("#!/bin/sh\nexec \"%[1]s/usr/lib/libc.so\" --library-path \"%[1]s/usr/lib\" \"%[2]s\" \"$@\"\n", sysroot, prog)
 	}
 	writeExec(filepath.Join(bindir, tool), w)
+}
+
+// runToolBinaries lists the run-tools wrappers for the [binaries] table of
+// the Meson cross file. Meson finds config tools (for example llvm-config)
+// of the host machine only there.
+func runToolBinaries(bindir string, tools []string) string {
+	var b strings.Builder
+	for _, t := range tools {
+		fmt.Fprintf(&b, "%s = '%s/%s'\n", t, bindir, t)
+	}
+	return b.String()
 }
 
 func envList(m map[string]string) []string {

@@ -19,15 +19,15 @@ This document shows what works now and what is planned. "Tested" means that
 | TPM PIN (PolicyAuthValue, TPM lockout protection, wrong PIN refused) | Tested (swtpm) |
 | No setuid programs, no scripts except the shell and the dhcpcd hook | Tested (build check and test) |
 | Kubernetes flavor: containerd, crun, CNI plugins, kubelet, kubeadm | Tested (preflight, not a full cluster) |
-| Desktop flavor: sway, foot, mesa (softpipe, virgl), seatd, devd | Tested (headless sway) |
+| Desktop flavor: sway, foot, seatd, devd | Tested (headless sway) |
+| Mesa with LLVM: iris, crocus, radeonsi, nouveau, virgl, llvmpipe, softpipe | Built; llvmpipe tested (sway with GLES2 on llvmpipe). The hardware drivers are not tested (no hardware in QEMU). |
 
 ## Planned
 
 | Function | Notes |
 |----------|-------|
 | Secure Boot with Microsoft keys | An option to keep the Microsoft certificates in db, for option ROMs. |
-| LLVM for the target | Necessary for Mesa llvmpipe and the AMD radeonsi driver. |
-| Mesa hardware drivers | Intel iris and AMD radeonsi need LLVM or mesa-clc for the target. |
+| Vulkan | Mesa Vulkan drivers (radv, anv) and the Vulkan loader. |
 | Firmware for the desktop | The linux-firmware files (kernel.org, signed) for Wi-Fi and graphics. |
 | A self-hosted stage | Build the build tools (cmake, python, perl) with KLOS too, so that Alpine is only the first compiler. |
 | A second, independent builder | Compare the results of two builders to detect a bad bootstrap builder. |

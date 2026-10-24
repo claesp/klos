@@ -338,7 +338,8 @@ func cmdTest(args []string) {
 		run(Cmd{Args: []string{"tar", "-C", sbdir, "-cf", sbtar, "dbx-update.auth"}})
 		drives = append(drives, "file="+sbtar+",format=raw,if=virtio,readonly=on")
 	}
-	vm2 := startVM(qemuArgs(vars, drives, startTPM(tw)...), filepath.Join(tw, "2-boot.log"))
+	vm2 := startVM(qemuArgs(vars, drives, append(startTPM(tw), flavorManifest(flavor).Test.QemuArgs...)...),
+		filepath.Join(tw, "2-boot.log"))
 	vm2.unlockAndLogin(v1)
 	vm2.waitBlessed(v1)
 	out := vm2.sh("touch /usr/klos-test 2>/dev/null && echo WRITABLE || echo READONLY", 30*time.Second)

@@ -43,6 +43,26 @@ The flags are in `config/klos.toml`:
 | `-Wl,-z,pack-relative-relocs` | Compact relocations (RELR). |
 | `-fPIE -pie` | Position-independent executables (the Clang default). |
 
+## LLVM for the target
+
+The package `llvm-target` is a second LLVM build, for KLOS itself (not for
+the builder). It supplies `libLLVM.so` (with the X86 and AMDGPU back ends)
+and the clang libraries. Mesa uses it for llvmpipe and radeonsi, and for
+`mesa_clc`, which compiles the OpenCL C kernels of the Intel drivers.
+
+The build has two passes:
+
+1. Build the tools that a cross build of LLVM runs (`llvm-tblgen`,
+   `clang-tblgen`, `llvm-config`, `llvm-nm`, ...) as static programs. They
+   run in the builder.
+2. Build LLVM and clang for the target, with `LLVM_NATIVE_TOOL_DIR` set to
+   the tools of pass 1.
+
+`mesa_clc` is a target program. Meson runs it in the builder through the
+`exe_wrapper` of the kbuild cross file (the KLOS dynamic linker with the
+sysroot libraries). The desktop image gets only `libLLVM.so`; the clang
+libraries and `llvm-config` stay out of the image.
+
 ## Go programs
 
 The host package `go` is the official Go release. Go programs in KLOS are

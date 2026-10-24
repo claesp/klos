@@ -26,6 +26,12 @@ exclude = ["usr/bin/glib-mkenums", "usr/bin/glib-genmarshal",
   "usr/bin/gdbus-codegen", "usr/bin/gtester-report", "usr/share/glib-2.0/codegen/*",
   "usr/share/glib-2.0/gdb/*", "usr/share/gdb/*", "usr/bin/glib-gettextize",
   "usr/share/glib-2.0/gettext/*", "usr/bin/cairo-trace", "usr/lib/cairo/*"]
+# llvm-target: the image gets only libLLVM.so (llvmpipe and radeonsi use it).
+# The tools and the clang libraries are only for builds (mesa_clc).
+package-exclude = ["llvm-target:usr/bin/*", "llvm-target:usr/lib/libclang*",
+  "llvm-target:usr/lib/clang/*", "llvm-target:usr/lib/libLTO.so*",
+  "llvm-target:usr/lib/libRemarks.so*", "llvm-target:usr/lib/LLVMgold.so",
+  "llvm-target:usr/share/*"]
 
 [[groups]]
 name = "audio"
@@ -37,13 +43,17 @@ gid = 44
 name = "input"
 gid = 97
 
-# The test runs sway with the headless back end and the pixman renderer,
-# as the test user "klos" (UID 1000).
+# The test runs sway with the headless back end, as the test user "klos"
+# (UID 1000): first with the pixman renderer, then with the GLES2 renderer
+# on the virtio GPU (without virgl on the host, Mesa uses llvmpipe).
 [test]
+qemu-args = ["-device", "virtio-gpu-pci"]
 commands = [
   "pidof seatd && lsmod | grep -q virtio_net",
   "id klos | grep -q video && test -d /run/user/1000",
   "setpriv --reuid=1000 --regid=1000 --init-groups env HOME=/home/klos XDG_RUNTIME_DIR=/run/user/1000 WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 sway > /tmp/sway.log 2>&1 & for i in $(seq 30); do [ -S /run/user/1000/wayland-1 ] && break; sleep 1; done; ls /run/user/1000/wayland-1 || { cat /tmp/sway.log; false; }",
   "setpriv --reuid=1000 --regid=1000 --init-groups env XDG_RUNTIME_DIR=/run/user/1000 SWAYSOCK=$(ls /run/user/1000/sway-ipc.*.sock) swaymsg -t get_version",
   "foot --version && fc-list | grep -qi dejavu",
+  "for d in iris crocus radeonsi nouveau virtio_gpu llvmpipe; do strings /usr/lib/libgallium-*.so | grep -qx $d || { echo no driver $d; false; }; done",
+  "pkill sway; sleep 1; setpriv --reuid=1000 --regid=1000 --init-groups env HOME=/home/klos XDG_RUNTIME_DIR=/run/user/1000 WLR_BACKENDS=headless WLR_RENDERER=gles2 WLR_LIBINPUT_NO_DEVICES=1 sway -d > /tmp/sway-gl.log 2>&1 & for i in $(seq 30); do grep -q 'GL renderer' /tmp/sway-gl.log && break; sleep 1; done; grep 'GL renderer' /tmp/sway-gl.log | grep -q llvmpipe || { grep -iE 'egl|gl|error' /tmp/sway-gl.log | tail -20; false; }",
 ]

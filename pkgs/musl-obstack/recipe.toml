@@ -1,0 +1,22 @@
+# The obstack functions that glibc has and musl does not have. Only a static
+# library: elfutils needs it at build time.
+[package]
+name = "musl-obstack"
+version = "1.2.3"
+summary = "obstack functions for musl (static library)"
+license = "GPL-2.0-or-later"
+homepage = "https://github.com/void-linux/musl-obstack"
+# GitHub makes the archive from the tag v1.2.3. No signature.
+
+[[source]]
+url = "https://github.com/void-linux/musl-obstack/archive/refs/tags/v1.2.3.tar.gz"
+filename = "musl-obstack-1.2.3.tar.gz"
+sha256 = "9ffb3479b15df0170eba4480e51723c3961dbe0b461ec289744622db03a69395"
+
+[build]
+script = '''
+sh ./bootstrap.sh
+kconfigure --enable-static --disable-shared
+kmake
+make DESTDIR="$DESTDIR" install
+'''
