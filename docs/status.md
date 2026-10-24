@@ -14,6 +14,7 @@ This document shows what works now and what is planned. "Tested" means that
 | Server flavor: install, LUKS2, LVM, erofs + dm-verity, `/etc` overlay | Tested |
 | Signed update bundles, trial boot with watchdog, bless, rollback | Tested |
 | Firewall (nftables), SSH (keys only, no OpenSSL), DHCP, NTP | Tested |
+| Secure Boot: signed EFI binaries, key enrollment, refusal of unsigned binaries | Tested (OVMF) |
 | No setuid programs, no scripts except the shell and the dhcpcd hook | Tested (build check and test) |
 | Kubernetes flavor: containerd, crun, CNI plugins, kubelet, kubeadm | Tested (preflight, not a full cluster) |
 | Desktop flavor: sway, foot, mesa (softpipe, virgl), seatd, devd | Tested (headless sway) |
@@ -22,7 +23,7 @@ This document shows what works now and what is planned. "Tested" means that
 
 | Function | Notes |
 |----------|-------|
-| UEFI Secure Boot | Sign `klos.efi` with a KLOS key. Then the firmware checks the kernel, the initramfs, the command line and thus the root hash. |
+| Secure Boot with Microsoft keys | An option to keep the Microsoft certificates in db, for option ROMs. |
 | TPM2 unlock | Unlock LUKS2 with a TPM2 policy (with Secure Boot measurements), and keep the passphrase as a second key. |
 | LLVM for the target | Necessary for Mesa llvmpipe and the AMD radeonsi driver. |
 | Mesa hardware drivers | Intel iris and AMD radeonsi need LLVM or mesa-clc for the target. |

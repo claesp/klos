@@ -378,6 +378,11 @@ func buildImage(flavor string) *BuildRecord {
 	writeOSRelease(m, rootfs)
 	sk, pub := signingKey()
 	copyFile(pub, filepath.Join(rootfs, "usr/share/klos/bundle.pub"))
+	var sbKeys map[string]*sbKey
+	if CONFIG.Image.SecureBoot {
+		sbKeys = ensureSecureBootKeys()
+		writeSecureBootFiles(sbKeys, filepath.Join(rootfs, "usr/share/klos/secureboot"))
+	}
 	var list strings.Builder
 	rec := &BuildRecord{Flavor: flavor, Version: VERSION, HostPackages: map[string]string{}}
 	for _, p := range pkgs {
@@ -438,6 +443,11 @@ func buildImage(flavor string) *BuildRecord {
 	efiLive := filepath.Join(iw, "klos-live.efi")
 	kb.link(cpio, cmdline+" klos.mode=installed", efi)
 	kb.link(cpio, cmdline+" klos.mode=live", efiLive)
+	if sbKeys != nil {
+		signPE(efi, sbKeys["db"])
+		signPE(efiLive, sbKeys["db"])
+		logf("image %s: signed the EFI binaries for Secure Boot", flavor)
+	}
 	rec.Kernel = kb.release()
 	rec.KernelConfig = sha256File(filepath.Join(kb.obj, ".config"))
 

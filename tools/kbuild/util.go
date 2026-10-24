@@ -45,7 +45,8 @@ type Config struct {
 		LDFlags  string `toml:"ldflags" json:"ldflags"`
 	} `toml:"flags"`
 	Image struct {
-		Exclude []string `toml:"exclude"`
+		Exclude    []string `toml:"exclude"`
+		SecureBoot bool     `toml:"secure-boot"`
 	} `toml:"image"`
 }
 

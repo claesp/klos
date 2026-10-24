@@ -40,6 +40,7 @@ type installConfig struct {
 	UserSSHKey    string // an authorized_keys line for the user
 	PowerOff      bool
 	ReservedSlots int
+	SecureBoot    string // "enroll": enroll the KLOS keys if the firmware is in Setup Mode
 }
 
 func readInstallConfig(path string) (*installConfig, error) {
@@ -80,6 +81,11 @@ func readInstallConfig(path string) (*installConfig, error) {
 			c.UserPassword = v
 		case "user_ssh_key":
 			c.UserSSHKey = v
+		case "secureboot":
+			if v != "enroll" && v != "no" {
+				return nil, fmt.Errorf("%s: secureboot must be enroll or no", path)
+			}
+			c.SecureBoot = v
 		case "poweroff":
 			c.PowerOff = v == "yes"
 		case "reserved_slots":
@@ -306,6 +312,16 @@ func cmdInstall(args []string) error {
 		}
 		if err := moveToFront(n); err != nil {
 			return err
+		}
+	}
+	if c.SecureBoot == "enroll" {
+		if efiFlag("SetupMode") == 1 {
+			if err := secureBootEnroll(nil); err != nil {
+				return err
+			}
+			progress("enrolled the KLOS Secure Boot keys")
+		} else {
+			progress("Secure Boot: the firmware is not in Setup Mode, so the keys are not enrolled")
 		}
 	}
 	syscall.Sync()

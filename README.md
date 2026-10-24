@@ -18,6 +18,8 @@ KLOS has these flavors:
 
 - The operating system (OS) is a read-only erofs image with dm-verity.
 - The disk has LUKS2 encryption and LVM.
+- The EFI binaries have UEFI Secure Boot signatures. The signature covers the
+  kernel, the initramfs and the dm-verity root hash of the OS image.
 - An update installs a new OS image next to the current one. The previous
   version stays available. If the new version does not start, the computer
   starts the previous version.

@@ -75,7 +75,7 @@ in a container without a network (`podman run --network=none`). The `build`,
 | `out/pkgs/` | Packages (`<name>.tar.zst`) and their metadata (`<name>.json`). |
 | `out/images/<flavor>/<version>/` | The OS image, the EFI binaries, the update bundle and the installer. |
 | `work/` | Temporary build directories and the build logs (`work/logs/`). |
-| `secrets/` | The signing key for update bundles. Do not put this in Git. |
+| `secrets/` | The private keys: update bundles (`bundle.key`), Secure Boot (`secureboot/`) and kernel modules (`module-signing.pem`). Do not put this in Git. |
 
 ## Environment variables
 

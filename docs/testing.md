@@ -22,6 +22,11 @@ firmware and the serial console. It does these steps:
 6. Install the update with `klos update -reboot`. Check the trial boot and
    the bless step. Check that the `/etc` changes are still there.
 7. Run `klos rollback` and restart. Check that the first version runs.
+8. Install an update whose EFI binary has no Secure Boot signature. Check
+   that the firmware refuses it and that the first version starts again.
+
+The installer of the test enrolls the KLOS Secure Boot keys, so steps 4 to
+8 run with Secure Boot enabled.
 
 The console logs are in `work/test/<flavor>/`. To see the console during the
 test, set `KLOS_TEST_VERBOSE=1`.

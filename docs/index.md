@@ -9,6 +9,7 @@ All documentation uses Simplified Technical English (see [style.md](style.md)).
 - [kubernetes.md](kubernetes.md): The Kubernetes node flavor.
 - [desktop.md](desktop.md): The Wayland desktop flavor.
 - [security.md](security.md): The security properties and the threat model.
+- [secure-boot.md](secure-boot.md): UEFI Secure Boot keys, signatures and enrollment.
 - [glossary.md](glossary.md): The terms that this documentation uses.
 
 ## Build

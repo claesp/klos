@@ -222,6 +222,17 @@ func cmdTest(args []string) {
 	VERSION = v2
 	buildImage(flavor)
 	update := filepath.Join(outDir(flavor), fmt.Sprintf("klos-%s-%s.tar", flavor, v2))
+	// v3 has a valid bundle signature, but its EFI binary has no Secure
+	// Boot signature. The firmware must refuse to start it.
+	v3 := v1 + ".2"
+	var unsigned string
+	if CONFIG.Image.SecureBoot {
+		VERSION = v3
+		CONFIG.Image.SecureBoot = false
+		buildImage(flavor)
+		CONFIG.Image.SecureBoot = true
+		unsigned = filepath.Join(outDir(flavor), fmt.Sprintf("klos-%s-%s.tar", flavor, v3))
+	}
 	VERSION = v1
 
 	hash := strings.TrimSpace(output("openssl", "passwd", "-6", "-salt", "klostest", testPassword))
@@ -235,6 +246,7 @@ func cmdTest(args []string) {
 		"user=klos",
 		"user_password_hash=" + hash,
 		"poweroff=yes",
+		"secureboot=enroll",
 	}, "\n")+"\n", 0o600)
 	installer := buildInstaller(flavor, conf)
 
@@ -256,10 +268,14 @@ func cmdTest(args []string) {
 	logf("test 1: the installation is complete")
 
 	logf("test 2: boot the installed system")
-	vm2 := startVM(qemuArgs(vars, []string{
+	drives := []string{
 		"file=" + disk + ",format=raw,if=virtio",
 		"file=" + update + ",format=raw,if=virtio,readonly=on",
-	}), filepath.Join(tw, "2-boot.log"))
+	}
+	if unsigned != "" {
+		drives = append(drives, "file="+unsigned+",format=raw,if=virtio,readonly=on")
+	}
+	vm2 := startVM(qemuArgs(vars, drives), filepath.Join(tw, "2-boot.log"))
 	vm2.unlockAndLogin(v1)
 	vm2.waitBlessed(v1)
 	out := vm2.sh("touch /usr/klos-test 2>/dev/null && echo WRITABLE || echo READONLY", 30*time.Second)
@@ -270,6 +286,10 @@ func cmdTest(args []string) {
 	vm2.sh("dmsetup table klos-root | grep -q verity", 30*time.Second)
 	vm2.sh("echo test > /etc/klos-test-file && test -f /var/lib/klos/etc/upper/klos-test-file", 30*time.Second)
 	logf("test 2: read-only root, dm-verity, firewall and /etc overlay are good")
+	if CONFIG.Image.SecureBoot {
+		vm2.sh("klos secureboot status | grep -q 'Secure Boot: enabled'", 30*time.Second)
+		logf("test 2: Secure Boot is enabled (the installer enrolled the KLOS keys)")
+	}
 	m := flavorManifest(flavor)
 	for _, c := range m.Test.Commands {
 		logf("test 2: %s", c)
@@ -295,6 +315,17 @@ func cmdTest(args []string) {
 	vm2.waitBlessed(v1)
 	vm2.sh("klos status", time.Minute)
 	logf("test 4: the rollback is good")
+
+	if unsigned != "" {
+		logf("test 5: install %s, which has no Secure Boot signature", v3)
+		vm2.send("klos update -reboot /dev/vdc\n")
+		vm2.expect(`the next boot is a trial boot of `+regexp.QuoteMeta(v3), 5*time.Minute)
+		vm2.expect(`Access Denied`, 3*time.Minute)
+		logf("test 5: the firmware refused the unsigned EFI binary")
+		vm2.unlockAndLogin(v1)
+		vm2.waitBlessed(v1)
+		logf("test 5: the computer started %s again", v1)
+	}
 	vm2.send("poweroff\n")
 	vm2.waitExit(2 * time.Minute)
 	logf("test: all tests passed for %s", flavor)

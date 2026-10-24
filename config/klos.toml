@@ -19,6 +19,8 @@ cxxflags = ""
 ldflags = "-Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -Wl,--as-needed -Wl,-z,pack-relative-relocs -Wl,--build-id=sha1"
 
 [image]
+# Sign the EFI binaries for UEFI Secure Boot (read docs/secure-boot.md).
+secure-boot = true
 # Paths that the image builder does not copy into OS images.
 # The files stay in the packages, so that builds can use them.
 exclude = [

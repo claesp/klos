@@ -74,14 +74,19 @@ func clearImmutable(path string) error {
 }
 
 func efiWrite(name string, data []byte) error {
-	p := efiPath(name)
+	return efiWriteVar(name, efiGlobalGUID, attrDefault, data)
+}
+
+// efiWriteVar writes a variable with a vendor GUID and attributes.
+func efiWriteVar(name, guid string, attrs uint32, data []byte) error {
+	p := filepath.Join(efivarsDir, name+"-"+guid)
 	if _, err := os.Stat(p); err == nil {
 		if err := clearImmutable(p); err != nil {
 			return fmt.Errorf("%s: %w", name, err)
 		}
 	}
 	buf := make([]byte, 4+len(data))
-	binary.LittleEndian.PutUint32(buf, attrDefault)
+	binary.LittleEndian.PutUint32(buf, attrs)
 	copy(buf[4:], data)
 	f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {

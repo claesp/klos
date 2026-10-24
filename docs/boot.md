@@ -1,6 +1,8 @@
 # The boot sequence
 
-1. The UEFI firmware starts the boot entry `KLOS <version>`. This is the
+1. The UEFI firmware starts the boot entry `KLOS <version>`. With Secure
+   Boot, the firmware first checks the signature of the EFI binary (read
+   [secure-boot.md](secure-boot.md)). This is the
    file `\EFI\Linux\klos-<version>.efi` on the EFI system partition (ESP).
    If there is no boot entry, the firmware starts the fallback file
    `\EFI\BOOT\BOOTX64.EFI`, which is a copy of the last good version.

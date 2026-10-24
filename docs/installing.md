@@ -52,6 +52,8 @@ poweroff=yes
 | `root_ssh_key` | An `authorized_keys` line for root. |
 | `poweroff` | `yes` (default): stop the computer after the installation. |
 | `reserved_slots` | Free space for this number of OS versions (default 2). |
+| `secureboot` | `enroll`: enroll the KLOS Secure Boot keys if the firmware is in Setup Mode. `no` (default): do not change the keys. Read [secure-boot.md](secure-boot.md). |
+| `user`, `user_password_hash`, `user_ssh_key` | A normal user (UID 1000), for example for the desktop. |
 
 Then make an installer with this file:
 

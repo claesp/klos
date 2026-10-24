@@ -20,7 +20,7 @@ An update bundle is a tar file `klos-<flavor>-<version>.tar` with:
 | `bundle.json` | The flavor, the version, the slot size, the dm-verity root hash, and the size and SHA-256 value of each file. |
 | `bundle.sig` | The Ed25519 signature of `bundle.json` (base64). |
 | `root.img` | The erofs OS image with the dm-verity hash tree. |
-| `klos.efi` | The kernel with the initramfs and the command line. |
+| `klos.efi` | The kernel with the initramfs and the command line, with a Secure Boot signature. |
 
 The OS image contains the public key `/usr/share/klos/bundle.pub`.
 `klos update` accepts only bundles with a valid signature from this key.

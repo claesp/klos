@@ -9,6 +9,7 @@
 | Encrypted data | LUKS2 encrypts all data except the ESP. |
 | Small attack surface | No interpreters (except a shell), no setuid programs, no unnecessary daemons, no kernel modules on servers. |
 | Signed updates | Update bundles have an Ed25519 signature. |
+| Secure Boot | The EFI binaries have a Secure Boot signature. The signature covers the kernel, the initramfs and the command line with the root hash. |
 | Safe updates | Trial boots with watchdog and automatic rollback. |
 | Hardened code | Clang hardening flags, libc++ hardening, kernel CFI and KSPP options. |
 | Firewall | nftables drops all incoming traffic except SSH and ICMP. |
@@ -40,13 +41,18 @@ KLOS protects against:
 - A lost or stolen disk (LUKS2).
 - A false or changed source file in the build (SHA-256 and signatures).
 - A false update bundle (Ed25519 signature).
+- A changed kernel, initramfs or command line on the ESP (Secure Boot, when
+  the KLOS keys are enrolled).
 - An update that does not start (trial boot and rollback).
 
 KLOS does not yet protect against:
 
-- A person with physical access who replaces the EFI binary on the ESP. The
-  fix is UEFI Secure Boot with signed EFI binaries (planned, see
-  [status.md](status.md)).
+- A person with physical access who replaces the EFI binary on the ESP,
+  if the KLOS Secure Boot keys are not enrolled (read
+  [secure-boot.md](secure-boot.md)).
+- A person with physical access who clears the Secure Boot keys in the
+  firmware setup. Use a firmware setup password. TPM2 sealing of the disk
+  key is planned (see [status.md](status.md)).
 - A person with physical access who reads the passphrase (for example
   with a keyboard logger).
 - A compromised upstream project that signs a bad release.

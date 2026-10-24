@@ -390,6 +390,7 @@ func cmdStatus(args []string) error {
 			fmt.Printf("installed versions: %s\n", strings.Join(vs, " "))
 		}
 	}
+	fmt.Printf("Secure Boot: %s\n", secureBootState())
 	if !efiAvailable() {
 		fmt.Println("no UEFI variables")
 		return nil

@@ -31,6 +31,8 @@ Commands:
                          a directory or an https:// URL). The next boot
                          is a trial boot of the new version.
   bless                  Mark the running version as good (dinit does this).
+  secureboot status      Show the Secure Boot state.
+  secureboot enroll      Enroll the KLOS Secure Boot keys (Setup Mode only).
   rollback               Make the previous version the default again.
   install [-config FILE] Install KLOS on a disk (only on the installer).
   boot-setup             Early boot set-up (dinit runs this).
@@ -67,6 +69,8 @@ func main() {
 		err = cmdRunEnv(args)
 	case "devd":
 		err = cmdDevd(args)
+	case "secureboot":
+		err = cmdSecureBoot(args)
 	case "-h", "--help", "help":
 		usage()
 	default:

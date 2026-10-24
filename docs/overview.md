@@ -28,6 +28,7 @@ KLOS is a general-purpose Linux distribution. It has three goals:
 | OS storage | erofs with dm-verity on an LVM volume | Read-only, compressed and verified for each block. |
 | Disk | LUKS2 (argon2id, AES-XTS) with LVM | Full disk encryption. LVM supplies a volume for each OS version. |
 | Updates | A new OS volume for each version. UEFI `BootNext` starts a trial boot. | The previous version stays available, and a failed update rolls back automatically. |
+| Secure Boot | KLOS keys (PK, KEK, db) sign each EFI binary. | The firmware checks the kernel, the initramfs and the root hash before it starts them. |
 | Builds | Podman containers, QEMU for tests | The host needs only a few programs. |
 
 ## Components
