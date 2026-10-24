@@ -59,6 +59,7 @@ The build uses approximately 40 GB of disk space and 16 GB of memory.
 | `./klos lock <flavor>` | Write `manifests/<flavor>.lock` from the last image build. |
 | `./klos verify <flavor>` | Build the flavor again and compare it with the lock file. |
 | `./klos test <flavor>` | Install, boot, update and roll back the flavor in QEMU. |
+| `./klos revoke <klos.efi>...` | Make a signed dbx update that revokes EFI binaries (read [secure-boot.md](secure-boot.md)). |
 | `./klos qemu <flavor>` | Start the test disk of a flavor with the console on the terminal. |
 
 ## The network

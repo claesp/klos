@@ -41,10 +41,12 @@ import (
 
 const (
 	guidCertX509     = "a5c059a1-94e4-4aa7-87b5-ab155c2bf072"
+	guidCertSHA256   = "c1c41626-504c-4092-aca9-41f936934328"
 	guidCertPKCS7    = "4aafd29d-68df-49ee-8aa9-347d375665a7"
 	guidEFIGlobal    = "8be4df61-93ca-11d2-aa0d-00e098032b8c"
 	guidImageSecDB   = "d719b2cb-3d3a-4596-a3bc-dad00e67656f"
 	sbVarAttributes  = 0x27 // NV, BS, RT, time-based authenticated write
+	sbVarAppend      = 0x40 // EFI_VARIABLE_APPEND_WRITE
 	winCertRevision  = 0x0200
 	winCertPKCS      = 0x0002
 	winCertEFIGUID   = 0x0ef1
@@ -506,16 +508,16 @@ func efiTime(t time.Time) []byte {
 
 // authVariable makes an EFI_VARIABLE_AUTHENTICATION_2 update: the time
 // stamp, a PKCS #7 signature by signer, and the data.
-func authVariable(name, guid string, data []byte, signer *sbKey, ts time.Time) []byte {
+func authVariable(name, guid string, attrs uint32, data []byte, signer *sbKey, ts time.Time) []byte {
 	tsb := efiTime(ts)
 	var signed []byte
 	for _, r := range utf16.Encode([]rune(name)) {
 		signed = append(signed, byte(r), byte(r>>8))
 	}
 	signed = append(signed, guidBytes(guid)...)
-	var attrs [4]byte
-	binary.LittleEndian.PutUint32(attrs[:], sbVarAttributes)
-	signed = append(signed, attrs[:]...)
+	var ab [4]byte
+	binary.LittleEndian.PutUint32(ab[:], attrs)
+	signed = append(signed, ab[:]...)
 	signed = append(signed, tsb...)
 	signed = append(signed, data...)
 	// The firmware takes the SignedData without the ContentInfo wrapper.
@@ -549,8 +551,60 @@ func writeSecureBootFiles(keys map[string]*sbKey, dir string) {
 	}
 	for _, v := range vars {
 		esl := efiSignatureList(owner, v.key.cert.Raw)
-		writeFile(filepath.Join(dir, v.name+".auth"), string(authVariable(v.name, v.guid, esl, v.signer, ts)), 0o644)
+		writeFile(filepath.Join(dir, v.name+".auth"), string(authVariable(v.name, v.guid, sbVarAttributes, esl, v.signer, ts)), 0o644)
 		writeFile(filepath.Join(dir, v.name+".crt"),
 			string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: v.key.cert.Raw})), 0o644)
 	}
+}
+
+// dbxUpdate makes a signed dbx update (an append, signed by KEK) that
+// revokes the EFI binaries: the firmware does not start a file whose
+// Authenticode image hash is in dbx.
+func dbxUpdate(keys map[string]*sbKey, files []string) []byte {
+	b, err := os.ReadFile(filepath.Join(sbDir(), "owner.guid"))
+	check(err)
+	owner := guidBytes(strings.TrimSpace(string(b)))
+	var entries []byte
+	for _, f := range files {
+		data, err := os.ReadFile(f)
+		check(err)
+		p, err := parsePE(data)
+		if err != nil {
+			die("%s: %v", f, err)
+		}
+		end := len(data)
+		if p.certSize != 0 {
+			end = p.certOff
+		}
+		q := *p
+		q.certSize = 0
+		entries = append(entries, owner...)
+		entries = append(entries, authenticodeDigest(data[:end], &q)...)
+	}
+	esl := append([]byte{}, guidBytes(guidCertSHA256)...)
+	var hdr [12]byte
+	binary.LittleEndian.PutUint32(hdr[0:], uint32(16+12+len(entries)))
+	binary.LittleEndian.PutUint32(hdr[8:], 16+32)
+	esl = append(esl, hdr[:]...)
+	esl = append(esl, entries...)
+	return authVariable("dbx", guidImageSecDB, sbVarAttributes|sbVarAppend, esl, keys["KEK"], time.Unix(SDE, 0))
+}
+
+// cmdRevoke writes out/secureboot/dbx-update.auth, which revokes the EFI
+// binaries. Apply it with "klos secureboot apply dbx FILE -append".
+func cmdRevoke(args []string) {
+	if len(args) == 0 {
+		die("usage: revoke <klos.efi>...")
+	}
+	keys := ensureSecureBootKeys()
+	var files []string
+	for _, a := range args {
+		if !filepath.IsAbs(a) {
+			a = filepath.Join(TOP, a)
+		}
+		files = append(files, a)
+	}
+	out := filepath.Join(OUT, "secureboot", "dbx-update.auth")
+	writeFile(out, string(dbxUpdate(keys, files)), 0o644)
+	logf("wrote %s (it revokes %d EFI binaries)", rel(out), len(files))
 }

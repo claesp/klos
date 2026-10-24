@@ -25,8 +25,17 @@ firmware and the serial console. It does these steps:
 8. Install an update whose EFI binary has no Secure Boot signature. Check
    that the firmware refuses it and that the first version starts again.
 
+9. Apply a dbx update that revokes the test update. The changed PCR 7 must
+   stop the TPM unlock, and the passphrase must unlock the disk. Then enroll
+   the TPM key again, and check the TPM unlock.
+
 The installer of the test enrolls the KLOS Secure Boot keys, so steps 4 to
-8 run with Secure Boot enabled.
+9 run with Secure Boot enabled. After step 5, the test enrolls a TPM key
+(`klos tpm enroll`), and it checks that the TPM unlocks each later boot,
+also the trial boot of the update.
+
+The test virtual machine has a software TPM (swtpm). The test image
+`localhost/klos-tester` has swtpm; `./klos bootstrap` makes it.
 
 The console logs are in `work/test/<flavor>/`. To see the console during the
 test, set `KLOS_TEST_VERBOSE=1`.

@@ -97,6 +97,30 @@ The command shows one of these states:
 
 `klos status` also shows the state.
 
+## Revoke an EFI binary
+
+If a KLOS version has a vulnerability, revoke its EFI binary in dbx. Then the
+firmware does not start it, also if an attacker puts it on the ESP.
+
+1. On the build computer, make a signed dbx update (KEK signs it):
+
+   ```sh
+   ./klos revoke out/images/server/2026.10.0/klos.efi
+   ```
+
+   The result is `out/secureboot/dbx-update.auth`. It contains the
+   Authenticode hash of each EFI binary.
+
+2. Copy the file to each computer and apply it:
+
+   ```sh
+   klos secureboot apply -append dbx dbx-update.auth
+   ```
+
+**Caution:** do not revoke the running version or the previous version on a
+computer. A change of dbx changes PCR 7: after the next boot, enroll the TPM
+key again (read [tpm.md](tpm.md)).
+
 ## Updates
 
 The EFI binary in each update bundle has a signature from the db key. The
@@ -110,4 +134,5 @@ starts the previous version (see [updates.md](updates.md)).
 that Secure Boot is enabled. At the end, it installs a test update whose EFI
 binary has no Secure Boot signature (the bundle signature is valid). The
 test checks that the firmware refuses the update ("Access Denied") and that
-the computer starts the previous version.
+the computer starts the previous version. Then it applies a dbx update that
+revokes a test version (read [tpm.md](tpm.md) for the TPM part of the test).

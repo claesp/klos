@@ -8,6 +8,7 @@ set -eu
 TOP=$(cd "$(dirname "$0")" && pwd)
 . "$TOP/builder/alpine.conf"
 IMAGE="localhost/klos-builder:$ALPINE_VERSION"
+TESTER="localhost/klos-tester:$ALPINE_VERSION"
 
 die() { echo "klos: $*" >&2; exit 1; }
 
@@ -30,6 +31,7 @@ Build commands (run in the builder):
   test <flavor>        Install the flavor in QEMU and run the boot tests.
   qemu <flavor>        Boot an installed test disk in QEMU (interactive).
   list                 Show all recipes.
+  revoke <klos.efi>... Make a signed dbx update that revokes EFI binaries.
 
 Read docs/building.md for more information.
 USAGE
@@ -62,6 +64,8 @@ cmd_bootstrap() {
 	rm -rf "$ctx"
 	podman run --rm "$IMAGE" cat /etc/klos-builder.lock > "$TOP/builder/builder.lock"
 	echo "klos: builder image $IMAGE is ready"
+	podman build --build-arg BUILDER="$IMAGE" -t "$TESTER" -f "$TOP/builder/Containerfile.test" "$TOP/builder"
+	echo "klos: test image $TESTER is ready"
 }
 
 # run_builder <network: yes|no> <kvm: yes|no> <command...>
@@ -86,9 +90,15 @@ KBUILD_SH='cd /klos/tools/kbuild && GOCACHE=/klos/work/gocache GOFLAGS=-mod=vend
 	exec /klos/work/bin/kbuild "$@"'
 
 # kbuild <network: yes|no> <kvm: yes|no> <kbuild arguments...>
+# The QEMU commands (kvm=yes) use the test image, which also has swtpm.
 kbuild() {
 	net=$1; kvm=$2; shift 2
-	run_builder "$net" "$kvm" "$IMAGE" sh -c "$KBUILD_SH" kbuild "$@"
+	img=$IMAGE
+	if [ "$kvm" = yes ]; then
+		podman image exists "$TESTER" || die "no test image; run './klos bootstrap'"
+		img=$TESTER
+	fi
+	run_builder "$net" "$kvm" "$img" sh -c "$KBUILD_SH" kbuild "$@"
 }
 
 [ $# -ge 1 ] || { usage; exit 1; }
@@ -102,7 +112,7 @@ case $cmd in
 		# Download first with the network, then build without it.
 		(kbuild yes no fetch "$@")
 		kbuild no no "$cmd" "$@" ;;
-	lock|list) kbuild no no "$cmd" "$@" ;;
+	lock|list|revoke) kbuild no no "$cmd" "$@" ;;
 	test)
 		(kbuild yes no fetch "$@")
 		kbuild no yes test "$@" ;;

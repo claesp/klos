@@ -64,6 +64,16 @@ Then make an installer with this file:
 **Caution:** the file contains the disk passphrase. Keep the installer image
 safe, and do not use the passphrase of a test installation on a real system.
 
+## TPM unlock
+
+After the first boot with Secure Boot, you can let the TPM unlock the disk:
+
+```sh
+klos tpm enroll
+```
+
+Read [tpm.md](tpm.md).
+
 ## After the installation
 
 - Log in with SSH as root (with the key) or on the console (with the password).

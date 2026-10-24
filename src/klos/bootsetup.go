@@ -57,6 +57,7 @@ func cmdBootSetup(args []string) error {
 		}
 		note(mount(m.src, m.target, m.fs, m.flags, m.data))
 	}
+	note(devLinks())
 	note(makeDirs())
 	note(applySysctl())
 	note(setHostname())
@@ -71,6 +72,21 @@ func cmdBootSetup(args []string) error {
 	}
 	if len(errs) > 0 {
 		return fmt.Errorf("%d steps failed", len(errs))
+	}
+	return nil
+}
+
+// devLinks makes the standard symlinks in /dev that udev makes on other
+// systems: /dev/fd, /dev/stdin, /dev/stdout and /dev/stderr.
+func devLinks() error {
+	for _, l := range [][2]string{{"/dev/fd", "/proc/self/fd"}, {"/dev/stdin", "/proc/self/fd/0"},
+		{"/dev/stdout", "/proc/self/fd/1"}, {"/dev/stderr", "/proc/self/fd/2"}} {
+		if _, err := os.Lstat(l[0]); err == nil {
+			continue
+		}
+		if err := os.Symlink(l[1], l[0]); err != nil {
+			return err
+		}
 	}
 	return nil
 }

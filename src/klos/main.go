@@ -33,6 +33,13 @@ Commands:
   bless                  Mark the running version as good (dinit does this).
   secureboot status      Show the Secure Boot state.
   secureboot enroll      Enroll the KLOS Secure Boot keys (Setup Mode only).
+  secureboot apply [-append] VAR FILE
+                         Write a signed update to db, dbx, KEK or PK.
+  tpm status             Show the TPM key of the disk.
+  tpm enroll [-key-file F]
+                         Seal a disk key in the TPM (PCR 7 and 15).
+  tpm remove [-key-file F]
+                         Remove the TPM key from the disk.
   rollback               Make the previous version the default again.
   install [-config FILE] Install KLOS on a disk (only on the installer).
   boot-setup             Early boot set-up (dinit runs this).
@@ -71,6 +78,8 @@ func main() {
 		err = cmdDevd(args)
 	case "secureboot":
 		err = cmdSecureBoot(args)
+	case "tpm":
+		err = cmdTPM(args)
 	case "-h", "--help", "help":
 		usage()
 	default:

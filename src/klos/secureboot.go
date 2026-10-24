@@ -50,7 +50,7 @@ func secureBootState() string {
 
 func cmdSecureBoot(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: klos secureboot status|enroll")
+		return errors.New("usage: klos secureboot status|enroll|apply")
 	}
 	switch args[0] {
 	case "status":
@@ -58,8 +58,10 @@ func cmdSecureBoot(args []string) error {
 		return nil
 	case "enroll":
 		return secureBootEnroll(args[1:])
+	case "apply":
+		return secureBootApply(args[1:])
 	}
-	return errors.New("usage: klos secureboot status|enroll")
+	return errors.New("usage: klos secureboot status|enroll|apply")
 }
 
 func secureBootEnroll(args []string) error {
@@ -89,5 +91,42 @@ func secureBootEnroll(args []string) error {
 		return errors.New("the firmware is still in Setup Mode after the enrollment")
 	}
 	fmt.Println("Secure Boot keys are enrolled. Secure Boot is active from the next boot.")
+	return nil
+}
+
+// secureBootApply writes a signed variable update (.auth file) to db, dbx,
+// KEK or PK. For example, a dbx update from "./klos revoke" revokes old
+// EFI binaries. The firmware checks the signature of the update.
+func secureBootApply(args []string) error {
+	fs := flag.NewFlagSet("secureboot apply", flag.ExitOnError)
+	appendWrite := fs.Bool("append", false, "add to the variable (for db and dbx updates)")
+	fs.Parse(args)
+	if fs.NArg() != 2 {
+		return errors.New("usage: klos secureboot apply [-append] db|dbx|KEK|PK FILE")
+	}
+	if err := requireRoot(); err != nil {
+		return err
+	}
+	name, file := fs.Arg(0), fs.Arg(1)
+	guid := efiGlobalGUID
+	switch name {
+	case "db", "dbx":
+		guid = imageSecDBGUID
+	case "KEK", "PK":
+	default:
+		return fmt.Errorf("unknown variable %q", name)
+	}
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return err
+	}
+	attrs := uint32(sbAuthAttributes)
+	if *appendWrite {
+		attrs |= 0x40 // EFI_VARIABLE_APPEND_WRITE
+	}
+	if err := efiWriteVar(name, guid, attrs, data); err != nil {
+		return fmt.Errorf("the firmware refused the update of %s: %w", name, err)
+	}
+	fmt.Printf("updated %s; the change is active from the next boot\n", name)
 	return nil
 }

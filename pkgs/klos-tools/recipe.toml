@@ -4,6 +4,7 @@
 name = "klos-tools"
 version = "0.1.0"
 summary = "KLOS init, update and installer tool"
+# Go modules: the standard library and github.com/google/go-tpm (vendored).
 license = "BSD-2-Clause"
 implicit-deps = false
 host-depends = ["go"]
@@ -13,7 +14,7 @@ options = { no-strip = true }
 [build]
 script = '''
 export PATH="$HOST_GO/opt/klos/go/bin:$PATH" CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v2
-export GOFLAGS="-trimpath -buildvcs=false"
+export GOFLAGS="-mod=vendor -trimpath -buildvcs=false"
 go vet .
 go build -ldflags="-s -w -buildid=" -o "$DESTDIR/usr/bin/klos" .
 '''

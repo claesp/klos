@@ -10,6 +10,7 @@
 | Small attack surface | No interpreters (except a shell), no setuid programs, no unnecessary daemons, no kernel modules on servers. |
 | Signed updates | Update bundles have an Ed25519 signature. |
 | Secure Boot | The EFI binaries have a Secure Boot signature. The signature covers the kernel, the initramfs and the command line with the root hash. |
+| TPM2 unlock | The TPM unseals the disk key only for the expected Secure Boot state (PCR 7), and only once in each boot (PCR 15). |
 | Safe updates | Trial boots with watchdog and automatic rollback. |
 | Hardened code | Clang hardening flags, libc++ hardening, kernel CFI and KSPP options. |
 | Firewall | nftables drops all incoming traffic except SSH and ICMP. |
@@ -51,8 +52,8 @@ KLOS does not yet protect against:
   if the KLOS Secure Boot keys are not enrolled (read
   [secure-boot.md](secure-boot.md)).
 - A person with physical access who clears the Secure Boot keys in the
-  firmware setup. Use a firmware setup password. TPM2 sealing of the disk
-  key is planned (see [status.md](status.md)).
+  firmware setup. Use a firmware setup password. With the TPM key, the
+  changed Secure Boot state stops the TPM unlock (read [tpm.md](tpm.md)).
 - A person with physical access who reads the passphrase (for example
   with a keyboard logger).
 - A compromised upstream project that signs a bad release.

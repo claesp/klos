@@ -20,6 +20,8 @@ KLOS has these flavors:
 - The disk has LUKS2 encryption and LVM.
 - The EFI binaries have UEFI Secure Boot signatures. The signature covers the
   kernel, the initramfs and the dm-verity root hash of the OS image.
+- A TPM 2.0 can unlock the disk (sealed to the Secure Boot state, once in
+  each boot). The passphrase stays as a second key.
 - An update installs a new OS image next to the current one. The previous
   version stays available. If the new version does not start, the computer
   starts the previous version.

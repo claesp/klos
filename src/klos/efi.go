@@ -88,7 +88,11 @@ func efiWriteVar(name, guid string, attrs uint32, data []byte) error {
 	buf := make([]byte, 4+len(data))
 	binary.LittleEndian.PutUint32(buf, attrs)
 	copy(buf[4:], data)
-	f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+	mode := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
+	if attrs&0x40 != 0 { // EFI_VARIABLE_APPEND_WRITE: do not truncate
+		mode = os.O_WRONLY | os.O_CREATE | os.O_APPEND
+	}
+	f, err := os.OpenFile(p, mode, 0o644)
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}

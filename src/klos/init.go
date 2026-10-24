@@ -120,6 +120,17 @@ func setupInstalled(c map[string]string) error {
 		return err
 	}
 	unlocked := false
+	switch err := tpmUnlock(part.Dev); {
+	case err == nil:
+		unlocked = true
+		ilog("unlocked %s with the TPM", part.Dev)
+	case errors.Is(err, errNoToken):
+	default:
+		ilog("the TPM did not unlock the disk: %v", err)
+	}
+	// Always lock PCR 15 before the next step, also after a failure: then
+	// the disk key cannot be unsealed again before the next boot.
+	lockPCR()
 	for try := 1; try <= 3 && !unlocked; try++ {
 		pass, err := readSecret("Passphrase for " + part.Dev + ": ")
 		if err != nil {

@@ -34,6 +34,7 @@ var commands = map[string]command{
 	"test":      {"test <flavor>", cmdTest},
 	"qemu":      {"qemu <flavor>", cmdQemu},
 	"hash":      {"hash <url>", cmdHash},
+	"revoke":    {"revoke <klos.efi>...", cmdRevoke},
 }
 
 func usage() {

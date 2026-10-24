@@ -40,6 +40,33 @@ type vm struct {
 	log   *os.File
 }
 
+// startTPM starts swtpm (a software TPM 2.0) for a virtual machine. The TPM
+// state is in dir, so it stays the same for all virtual machines of a test.
+// It returns the QEMU arguments, or nil if swtpm is not available.
+func startTPM(dir string) []string {
+	if _, err := exec.LookPath("swtpm"); err != nil {
+		logf("no swtpm: the virtual machine has no TPM")
+		return nil
+	}
+	state := filepath.Join(dir, "tpm")
+	mkdirAll(state)
+	sock := filepath.Join(dir, "swtpm.sock")
+	os.Remove(sock)
+	cmd := exec.Command("swtpm", "socket", "--tpm2", "--tpmstate", "dir="+state,
+		"--ctrl", "type=unixio,path="+sock, "--terminate",
+		"--log", "file="+filepath.Join(dir, "swtpm.log"))
+	check(cmd.Start())
+	go cmd.Wait()
+	for i := 0; i < 50 && !exists(sock); i++ {
+		time.Sleep(100 * time.Millisecond)
+	}
+	if !exists(sock) {
+		die("swtpm did not start")
+	}
+	return []string{"-chardev", "socket,id=chrtpm,path=" + sock,
+		"-tpmdev", "emulator,id=tpm0,chardev=chrtpm", "-device", "tpm-crb,tpmdev=tpm0"}
+}
+
 func qemuArgs(vars string, drives []string, extra ...string) []string {
 	args := []string{"qemu-system-x86_64", "-nodefaults", "-no-user-config",
 		"-machine", "q35", "-m", "2048", "-smp", "2",
@@ -175,14 +202,31 @@ func (v *vm) sh(command string, timeout time.Duration) string {
 	return m[1]
 }
 
-func (v *vm) unlock() {
-	v.expect(`Passphrase for /dev/\S+: `, 3*time.Minute)
-	v.send(testPassphrase + "\n")
+// unlock types the passphrase, or sees that the TPM unlocked the disk. It
+// returns true for a TPM unlock.
+func (v *vm) unlock() bool {
+	m := v.expect(`(Passphrase for /dev/\S+: |unlocked /dev/\S+ with the TPM)`, 3*time.Minute)
+	if strings.HasPrefix(m[1], "Passphrase") {
+		v.send(testPassphrase + "\n")
+		return false
+	}
+	return true
 }
 
-func (v *vm) unlockAndLogin(version string) {
-	v.unlock()
+func (v *vm) unlockAndLogin(version string) bool {
+	tpm := v.unlock()
 	v.login(version)
+	return tpm
+}
+
+// tpmUnlocks checks that the boot used the TPM, if the test enrolled it.
+func tpmUnlocks(enrolled, used bool, what string) {
+	if enrolled && !used {
+		die("test: %s: the TPM did not unlock the disk", what)
+	}
+	if enrolled {
+		logf("test: %s: the TPM unlocked the disk", what)
+	}
 }
 
 func (v *vm) login(version string) {
@@ -259,10 +303,11 @@ func cmdTest(args []string) {
 	f.Close()
 
 	logf("test 1: install %s %s", flavor, v1)
+	tpmArgs := startTPM(tw)
 	vm1 := startVM(qemuArgs(vars, []string{
 		"file=" + installer + ",format=raw,if=virtio,readonly=on",
 		"file=" + disk + ",format=raw,if=virtio",
-	}, "-no-reboot"), filepath.Join(tw, "1-install.log"))
+	}, append([]string{"-no-reboot"}, tpmArgs...)...), filepath.Join(tw, "1-install.log"))
 	vm1.expect(`KLOS is installed`, 20*time.Minute)
 	vm1.waitExit(2 * time.Minute)
 	logf("test 1: the installation is complete")
@@ -274,8 +319,19 @@ func cmdTest(args []string) {
 	}
 	if unsigned != "" {
 		drives = append(drives, "file="+unsigned+",format=raw,if=virtio,readonly=on")
+		// A dbx update (signed by KEK) that revokes the EFI binary of v2.
+		// It changes PCR 7, so the TPM key must stop working (test 6).
+		sbdir := filepath.Join(tw, "sbupdate")
+		mkdirAll(sbdir)
+		VERSION = v2
+		writeFile(filepath.Join(sbdir, "dbx-update.auth"),
+			string(dbxUpdate(ensureSecureBootKeys(), []string{filepath.Join(outDir(flavor), "klos.efi")})), 0o644)
+		VERSION = v1
+		sbtar := filepath.Join(tw, "sbupdate.tar")
+		run(Cmd{Args: []string{"tar", "-C", sbdir, "-cf", sbtar, "dbx-update.auth"}})
+		drives = append(drives, "file="+sbtar+",format=raw,if=virtio,readonly=on")
 	}
-	vm2 := startVM(qemuArgs(vars, drives), filepath.Join(tw, "2-boot.log"))
+	vm2 := startVM(qemuArgs(vars, drives, startTPM(tw)...), filepath.Join(tw, "2-boot.log"))
 	vm2.unlockAndLogin(v1)
 	vm2.waitBlessed(v1)
 	out := vm2.sh("touch /usr/klos-test 2>/dev/null && echo WRITABLE || echo READONLY", 30*time.Second)
@@ -290,6 +346,16 @@ func cmdTest(args []string) {
 		vm2.sh("klos secureboot status | grep -q 'Secure Boot: enabled'", 30*time.Second)
 		logf("test 2: Secure Boot is enabled (the installer enrolled the KLOS keys)")
 	}
+	tpm := false
+	if tpmArgs != nil && CONFIG.Image.SecureBoot {
+		vm2.sh("printf %s '"+testPassphrase+"' | klos tpm enroll -key-file -", 2*time.Minute)
+		vm2.sh("klos tpm status | grep -q 'unseal in this boot: refused'", time.Minute)
+		logf("test 2: the TPM key is enrolled; it cannot be unsealed again in this boot")
+		vm2.send("reboot\n")
+		tpmUnlocks(true, vm2.unlockAndLogin(v1), "test 2")
+		vm2.sh("klos tpm status | grep -q 'PCR 7: the same'", time.Minute)
+		tpm = true
+	}
 	m := flavorManifest(flavor)
 	for _, c := range m.Test.Commands {
 		logf("test 2: %s", c)
@@ -301,7 +367,7 @@ func cmdTest(args []string) {
 	vm2.expect(`the next boot is a trial boot of `+regexp.QuoteMeta(v2), 5*time.Minute)
 	// klos bless runs when sshd starts, so it can be complete before the
 	// login. The console message of /init shows the trial boot.
-	vm2.unlock()
+	tpmUnlocks(tpm, vm2.unlock(), "test 3")
 	vm2.expect(`klos-init: trial boot of `+regexp.QuoteMeta(v2), 5*time.Minute)
 	vm2.login(v2)
 	vm2.waitBlessed(v2)
@@ -311,7 +377,7 @@ func cmdTest(args []string) {
 	logf("test 4: roll back to %s", v1)
 	vm2.sh("klos rollback", time.Minute)
 	vm2.send("reboot\n")
-	vm2.unlockAndLogin(v1)
+	tpmUnlocks(tpm, vm2.unlockAndLogin(v1), "test 4")
 	vm2.waitBlessed(v1)
 	vm2.sh("klos status", time.Minute)
 	logf("test 4: the rollback is good")
@@ -322,9 +388,23 @@ func cmdTest(args []string) {
 		vm2.expect(`the next boot is a trial boot of `+regexp.QuoteMeta(v3), 5*time.Minute)
 		vm2.expect(`Access Denied`, 3*time.Minute)
 		logf("test 5: the firmware refused the unsigned EFI binary")
-		vm2.unlockAndLogin(v1)
+		tpmUnlocks(tpm, vm2.unlockAndLogin(v1), "test 5")
 		vm2.waitBlessed(v1)
 		logf("test 5: the computer started %s again", v1)
+	}
+
+	if tpm {
+		logf("test 6: revoke %s in dbx; the TPM key must stop working", v2)
+		vm2.sh("tar -xf /dev/vdd -C /tmp && klos secureboot apply -append dbx /tmp/dbx-update.auth", time.Minute)
+		vm2.send("reboot\n")
+		if vm2.unlockAndLogin(v1) {
+			die("test 6: the TPM unlocked the disk after the Secure Boot state changed")
+		}
+		logf("test 6: the TPM did not unlock (PCR 7 changed); the passphrase unlocked the disk")
+		vm2.sh("klos tpm status | grep -q 'PCR 7: different'", time.Minute)
+		vm2.sh("printf %s '"+testPassphrase+"' | klos tpm enroll -key-file -", 2*time.Minute)
+		vm2.send("reboot\n")
+		tpmUnlocks(true, vm2.unlockAndLogin(v1), "test 6 (after the new enrollment)")
 	}
 	vm2.send("poweroff\n")
 	vm2.waitExit(2 * time.Minute)
@@ -341,7 +421,7 @@ func cmdQemu(args []string) {
 	if !exists(disk) {
 		die("no test disk; run './klos test %s' first", args[0])
 	}
-	a := qemuArgs(filepath.Join(tw, "OVMF_VARS.fd"), []string{"file=" + disk + ",format=raw,if=virtio"})
+	a := qemuArgs(filepath.Join(tw, "OVMF_VARS.fd"), []string{"file=" + disk + ",format=raw,if=virtio"}, startTPM(tw)...)
 	for i, x := range a {
 		if x == "stdio" {
 			a[i] = "mon:stdio"

@@ -1,0 +1,6 @@
+# The KLOS test image: the builder and swtpm (a software TPM for QEMU).
+# /etc/klos-builder.lock is not changed, so the package input hashes are
+# the same as in the builder.
+ARG BUILDER
+FROM ${BUILDER}
+RUN apk add --no-cache swtpm
