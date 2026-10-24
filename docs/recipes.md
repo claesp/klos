@@ -58,6 +58,27 @@ dependency `llvm`.
 | `no-strip` | Do not strip the ELF files. |
 | `keep-empty-dirs` | Do not remove empty directories. |
 | `allow-unresolved` | Do not stop for a library that no package supplies. |
+| `run-tools` | Programs of the sysroot (in `/usr/bin`) that the build runs, for example `wayland-scanner`. kbuild makes a wrapper for each one (see below). |
+
+## Programs that a build runs
+
+The target is x86_64 musl, and the builder is also x86_64 musl. Thus a
+target program can run in the builder with the KLOS dynamic linker:
+
+- `run-tools` makes a wrapper in `PATH` for a program of the sysroot. An ELF
+  program runs with the KLOS dynamic linker and the sysroot libraries. A
+  script runs with the interpreter of the builder.
+- The Meson cross file has an `exe_wrapper`, so Meson can run the target
+  programs that it compiles.
+- Build-time C++ helpers use the KLOS toolchain with `-static`
+  (`CXX_FOR_BUILD`, `HOST_CXX`).
+
+## The compiler wrapper
+
+The `cc` and `c++` wrappers change the builder paths `-L/usr/lib`, `-L/lib`
+and `-I/usr/include` to the sysroot paths. Some build tools (for example the
+libtool relink step) add these paths. Without the change, a target library
+could link to a library of the builder.
 
 ## The [[source]] tables
 

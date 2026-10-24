@@ -100,3 +100,21 @@ func readSecret(prompt string) (string, error) {
 	}
 	return res.text, res.err
 }
+
+// consoleWrite writes a message to all consoles of the kernel command line,
+// for example the screen and the serial port.
+func consoleWrite(msg string) {
+	wrote := false
+	for _, dev := range consoles() {
+		f, err := os.OpenFile(dev, os.O_WRONLY|syscall.O_NOCTTY, 0)
+		if err != nil {
+			continue
+		}
+		f.WriteString(msg)
+		f.Close()
+		wrote = true
+	}
+	if !wrote {
+		os.Stdout.WriteString(msg)
+	}
+}

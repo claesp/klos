@@ -255,8 +255,12 @@ func userRuntimeDirs() error {
 		if err1 != nil || err2 != nil || uid < 1000 || uid >= 60000 {
 			continue
 		}
+		// /run/user must be 0755, so that each user can get to its directory.
+		if err := os.MkdirAll("/run/user", 0o755); err != nil {
+			return err
+		}
 		d := fmt.Sprintf("/run/user/%d", uid)
-		if err := os.MkdirAll(d, 0o700); err != nil {
+		if err := os.Mkdir(d, 0o700); err != nil && !os.IsExist(err) {
 			return err
 		}
 		os.Chmod(d, 0o700)

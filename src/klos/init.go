@@ -40,7 +40,7 @@ func ilog(format string, a ...any) {
 	if kmsg != nil {
 		fmt.Fprintf(kmsg, "<6>klos-init: %s\n", msg)
 	}
-	fmt.Fprintf(os.Stdout, "klos-init: %s\n", msg)
+	consoleWrite("klos-init: " + msg + "\n")
 }
 
 func ifail(err error) {

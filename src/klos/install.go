@@ -94,6 +94,12 @@ func readInstallConfig(path string) (*installConfig, error) {
 	return c, s.Err()
 }
 
+// progress shows an installer message on all consoles (for example the
+// screen and the serial port), so that each one shows the installation.
+func progress(format string, a ...any) {
+	consoleWrite(fmt.Sprintf(format, a...) + "\n")
+}
+
 func prompt(q string) string {
 	fmt.Print(q)
 	s := bufio.NewScanner(os.Stdin)
@@ -174,7 +180,11 @@ func cmdInstallService(args []string) error {
 	}
 	conf := runDir + "/media/install.conf"
 	if _, err := os.Stat(conf); err == nil {
-		return cmdInstall([]string{"-config", conf})
+		if err := cmdInstall([]string{"-config", conf}); err != nil {
+			progress("The installation did not complete: %v", err)
+			return err
+		}
+		return nil
 	}
 	for {
 		fmt.Println("\nKLOS installer")
@@ -182,7 +192,7 @@ func cmdInstallService(args []string) error {
 		if err == nil {
 			return nil
 		}
-		fmt.Printf("The installation did not complete: %v\n", err)
+		progress("The installation did not complete: %v", err)
 		if prompt("Type R to try again, or P to power off: ") == "P" {
 			return run("poweroff")
 		}
@@ -224,7 +234,7 @@ func cmdInstall(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("install KLOS %s (%s) on /dev/%s\n", info.Version, info.Flavor, disk)
+	progress("install KLOS %s (%s) on /dev/%s", info.Version, info.Flavor, disk)
 	if err := partitionDisk(disk); err != nil {
 		return err
 	}
@@ -235,7 +245,7 @@ func cmdInstall(args []string) error {
 	if err := run("mkfs.fat", "-F", "32", "-n", "KLOS-ESP", esp.Dev); err != nil {
 		return err
 	}
-	fmt.Println("encrypt the disk (LUKS2, argon2id)")
+	progress("encrypt the disk (LUKS2, argon2id)")
 	key := []byte(c.Passphrase)
 	if err := runInput(key, "cryptsetup", "luksFormat", "--batch-mode", "--type", "luks2",
 		"--pbkdf", "argon2id", "--cipher", "aes-xts-plain64", "--key-size", "512",
@@ -299,7 +309,7 @@ func cmdInstall(args []string) error {
 		}
 	}
 	syscall.Sync()
-	fmt.Println("KLOS is installed. Remove the installer media and start the computer.")
+	progress("KLOS is installed. Remove the installer media and start the computer.")
 	if c.PowerOff {
 		syscall.Unmount(espMount, 0)
 		lvm("vgchange", "-an", vgName)
@@ -311,7 +321,7 @@ func cmdInstall(args []string) error {
 }
 
 func partitionDisk(disk string) error {
-	fmt.Printf("make the partition table on /dev/%s\n", disk)
+	progress("make the partition table on /dev/%s", disk)
 	run("wipefs", "--all", "--force", "/dev/"+disk)
 	script := "label: gpt\n" +
 		"size=512MiB, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, name=\"" + espLabel + "\"\n" +

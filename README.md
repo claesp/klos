@@ -8,11 +8,11 @@ supplies one, its signature.
 
 KLOS has these flavors:
 
-| Flavor       | Use                                              |
-|--------------|--------------------------------------------------|
-| `server`     | A very small server for KVM virtual machines (primary flavor) |
-| `kubernetes` | A Kubernetes node                                |
-| `desktop`    | A Wayland desktop                                |
+| Flavor       | Use | OS image (compressed) |
+|--------------|-----|----------|
+| `server`     | A very small server for KVM virtual machines (primary flavor) | approximately 20 MiB |
+| `kubernetes` | A Kubernetes node (containerd, crun, kubelet, kubeadm) | approximately 200 MiB |
+| `desktop`    | A Wayland desktop (sway, foot) | approximately 65 MiB |
 
 ## Main properties
 
@@ -37,7 +37,8 @@ The host needs Podman, QEMU support (`/dev/kvm`), curl, gpg and sha256sum.
 ./klos test server      # install in QEMU, boot, update and roll back
 ```
 
-Read [docs/index.md](docs/index.md) for all documentation.
+Read [docs/index.md](docs/index.md) for all documentation, and
+[docs/status.md](docs/status.md) for what works now and what is planned.
 
 ## License
 

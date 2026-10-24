@@ -232,6 +232,8 @@ func cmdTest(args []string) {
 		"passphrase=" + testPassphrase,
 		"hostname=klos-test",
 		"root_password_hash=" + hash,
+		"user=klos",
+		"user_password_hash=" + hash,
 		"poweroff=yes",
 	}, "\n")+"\n", 0o600)
 	installer := buildInstaller(flavor, conf)

@@ -39,7 +39,23 @@ The `server` and `kubernetes` flavors have no module support
 code to the running kernel.
 
 The `desktop` flavor needs modules for many hardware types. The modules
-are in the read-only, verified OS image.
+are in the read-only, verified OS image. Two controls protect them:
+
+- `lockdown=integrity` accepts only modules with a valid signature. kbuild
+  signs all modules (`CONFIG_MODULE_SIG_ALL`). It makes the signing key
+  `secrets/module-signing.pem` one time. The same key gives the same
+  signatures, so the build stays reproducible. Keep this key secret.
+- LoadPin accepts modules and firmware only from the root file system,
+  which is the verified OS image.
+
+`depmod` comes from the `kmod` package of the image. It runs in the builder
+with the KLOS dynamic linker.
+
+## Fragment order
+
+The fragments of a flavor are read in the order of the manifest (the
+fragments of `base.toml` first). If two fragments set the same option, the
+last value is used.
 
 ## The EFI binary
 

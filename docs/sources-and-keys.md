@@ -35,6 +35,20 @@ in the recipes (`key = ["musl"]` is `keys/musl.asc`).
 | dosfstools.asc | Andreas Bombe | FDF2 7714 0B6D F9E8 CDC8 A982 3164 705B 1DA3 1D4C | keyserver.ubuntu.com |
 | lvm2.asc | Marian Csontos | D501 A478 440A E2FD 130A 1BE8 B911 2431 E509 039F | keyserver.ubuntu.com |
 | zlib-madler.asc | Mark Adler | 5ED4 6A67 21D3 6558 7791 E2AA 783F CD8E 58BC AFBA | keyserver.ubuntu.com |
+| libcap-morgan.asc | Andrew G. Morgan | 38A6 4469 8C69 7873 44E9 54CE 29EE 848A E2CC F3F4 | kernel.org pgpkeys |
+| libseccomp.asc | Tom Hromatka (Oracle) | 47A6 8FCE 37C7 D702 4FD6 5E11 356C E62C 2B52 4099 | keyserver.ubuntu.com |
+| crun-gscrivano.asc | Giuseppe Scrivano | AC40 4C1C 0BF7 35C6 3FF4 D562 263D 6DF2 E163 E1EA | keyserver.ubuntu.com |
+| kmod-ldm.asc | Lucas De Marchi | EAB3 3C96 9001 3C73 3916 AC83 9BA2 A5A6 30CB EA53 | kernel.org pgpkeys |
+| zstd.asc | Zstandard Release Signing Key | 4EF4 AC63 455F C9F4 545D 9B7D EF8F E995 28B5 2FFD | keyserver.ubuntu.com |
+| freedesktop-emersion.asc | Simon Ser | 34FF 9526 CFEF 0E97 A340 E2E4 0FDE 7BE0 E88F 5E48 | keyserver.ubuntu.com |
+| pixman-cairo.asc | Matt Turner | 3BB6 39E5 6F86 1FA2 E865 0569 0FDD 682D 974C A72A | keyserver.ubuntu.com |
+| mesa-release.asc | Eric Engestrom | 5755 1DE1 5B96 8F63 41C2 48F6 8D8E 31AF C324 28A6 | keyserver.ubuntu.com |
+| libevdev-whot.asc | Peter Hutterer (Who-T) | 3C2C 43D9 447D 5938 EF45 51EB E23B 7E70 B467 F0BF | keyserver.ubuntu.com |
+| xkeyboard-config.asc | Sergey Udaltsov | FFB4 CCD2 75AA A422 F5F9 808E 0661 D98F C933 A145 | keyserver.ubuntu.com |
+| pcre2.asc | Nicholas Wilson | A955 3620 4A3B B489 7152 3128 2A98 E77E B6F2 4CA8 | keyserver.ubuntu.com |
+| expat-sping.asc | Sebastian Pipping | 3176 EF7D B236 7F1F CA4F 306B 1F9B 0E90 9AF3 7285 | keyserver.ubuntu.com |
+| freetype-wl.asc | Werner Lemberg | E306 7470 7856 409F F194 8010 BE6C 3AAC 63AD 8E3F | keyserver.ubuntu.com |
+| dnkl.asc | Daniel Eklöf (Git signing) | B199 64FB BA09 664C C810 27ED 5BBD 4992 C116 573F | keyserver.ubuntu.com |
 
 Before you add a key, compare its fingerprint with a second source. For
 example, use the web site of the project, the release announcement, or the
@@ -45,7 +59,17 @@ kernel.org key ring.
 These upstream projects do not sign their releases. Their recipes have
 only a pinned SHA-256 value:
 
-- toybox, dash, dinit, popt, json-c (upstream publishes no signatures)
+- toybox, dash, dinit, popt, json-c, libaio, argp-standalone, mtdev,
+  libudev-zero, seatd, libinput, libxkbcommon, libffi, fribidi, harfbuzz,
+  utf8proc, tllist, hwdata, cairo, libpng, the DejaVu fonts, containerd, the CNI plugins,
+  cri-tools (upstream publishes no signatures, or only signed Git tags)
+- glib, pango, fontconfig, libaio (upstream publishes SHA-256 or SHA-512
+  values; the pinned values agree with them)
+- Kubernetes (dl.k8s.io publishes the SHA-256 value and Sigstore signatures;
+  kbuild does not check Sigstore signatures yet)
+- pixman (upstream signs a `.sha512` file; kbuild does not check this
+  format yet)
+- the Python build modules (PyPI publishes the SHA-256 values)
 - the Mozilla CA bundle from curl.se (served with HTTPS only)
 - Go (go.dev publishes the SHA-256 values with HTTPS)
 

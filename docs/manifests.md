@@ -42,6 +42,9 @@ enable = ["sshd"]
 | `[services] enable` | The dinit services that start at boot. |
 | `[rootfs] overlays` | Directories in `rootfs/` that kbuild copies into the image. |
 | `[rootfs] dirs` | Empty directories to make in the image. |
+| `[rootfs] scripts` | Executable scripts that the image can have. kbuild stops for all other scripts (KLOS has no interpreted programs). |
+| `[rootfs] exclude` | Paths that the image does not get (for example build-only tools). |
+| `[test] commands` | Shell commands that `./klos test` runs on the installed system. Each command must exit with 0. |
 | `[initramfs] files` | Programs to copy into the initramfs, with their libraries. |
 | `[[users]]` | User accounts: `name`, `uid`, `gid`, `home`, `shell`, `gecos`, `groups`. |
 | `[[groups]]` | Groups: `name`, `gid`. |

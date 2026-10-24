@@ -70,14 +70,26 @@ func readConfigFragments(names []string) ([][2]string, string) {
 			if m == nil {
 				die("%s: bad line %q", rel(p), l)
 			}
-			opts = append(opts, [2]string{m[1], m[2]})
-			if m[2] == "n" {
-				fmt.Fprintf(&text, "# %s is not set\n", m[1])
-			} else {
-				fmt.Fprintf(&text, "%s=%s\n", m[1], m[2])
+			// A later fragment replaces the value of an earlier fragment.
+			replaced := false
+			for i := range opts {
+				if opts[i][0] == m[1] {
+					opts[i][1] = m[2]
+					replaced = true
+				}
+			}
+			if !replaced {
+				opts = append(opts, [2]string{m[1], m[2]})
 			}
 		}
 		f.Close()
+	}
+	for _, o := range opts {
+		if o[1] == "n" {
+			fmt.Fprintf(&text, "# %s is not set\n", o[0])
+		} else {
+			fmt.Fprintf(&text, "%s=%s\n", o[0], o[1])
+		}
 	}
 	return opts, text.String()
 }
@@ -125,6 +137,11 @@ func (kb *kernelBuild) make(args ...string) {
 // configure writes the .config and checks it against the fragments.
 func (kb *kernelBuild) configure(m *Manifest) {
 	opts, text := readConfigFragments(m.Kernel.Config)
+	for _, o := range opts {
+		if o[0] == "CONFIG_MODULE_SIG_KEY" {
+			moduleSigningKey(strings.Trim(o[1], `"`))
+		}
+	}
 	frag := filepath.Join(kb.obj, "klos-fragments.config")
 	mkdirAll(kb.obj)
 	old, _ := os.ReadFile(frag)
@@ -208,4 +225,40 @@ func (kb *kernelBuild) release() string {
 	b, err := os.ReadFile(filepath.Join(kb.obj, "include", "config", "kernel.release"))
 	check(err)
 	return strings.TrimSpace(string(b))
+}
+
+// moduleSigningKey makes the kernel module signing key one time. The same
+// key gives the same signatures, so the builds stay reproducible. Keep the
+// key secret: with it, a person can sign kernel modules for KLOS kernels.
+func moduleSigningKey(path string) {
+	if exists(path) {
+		return
+	}
+	if !strings.HasPrefix(path, SECRETS+"/") {
+		die("CONFIG_MODULE_SIG_KEY must be in %s", SECRETS)
+	}
+	mkdirAll(SECRETS)
+	conf := path + ".genkey"
+	writeFile(conf, `[ req ]
+default_bits = 4096
+distinguished_name = req_distinguished_name
+prompt = no
+string_mask = utf8only
+x509_extensions = myexts
+
+[ req_distinguished_name ]
+O = KLOS
+CN = KLOS kernel module signing key
+
+[ myexts ]
+basicConstraints=critical,CA:FALSE
+keyUsage=digitalSignature
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid
+`, 0o600)
+	run(Cmd{Args: []string{"openssl", "req", "-new", "-nodes", "-utf8", "-sha512", "-days", "36500",
+		"-batch", "-x509", "-config", conf, "-outform", "PEM", "-out", path, "-keyout", path}, Quiet: true})
+	os.Remove(conf)
+	check(os.Chmod(path, 0o600))
+	logf("made the kernel module signing key %s", rel(path))
 }

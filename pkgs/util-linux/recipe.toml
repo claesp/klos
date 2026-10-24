@@ -5,6 +5,7 @@ version = "2.42.4"
 summary = "Block device, mount and namespace tools and libraries"
 license = "GPL-2.0-or-later AND LGPL-2.1-or-later AND BSD-3-Clause"
 homepage = "https://github.com/util-linux/util-linux"
+build-depends = ["libcap-ng"]
 
 [[source]]
 url = "https://cdn.kernel.org/pub/linux/utils/util-linux/v2.42/util-linux-2.42.4.tar.xz"
@@ -25,7 +26,7 @@ kconfigure --bindir=/usr/bin --disable-static \
 	--disable-pylibmount --disable-asciidoc \
 	--without-python --without-systemd --without-udev --without-ncurses \
 	--without-ncursesw --without-tinfo --without-readline --without-libz \
-	--without-cap-ng --without-btrfs --without-econf \
+	--with-cap-ng --without-btrfs --without-econf \
 	--without-selinux --without-audit --without-user --without-cryptsetup
 kmake
 make DESTDIR="$DESTDIR" install

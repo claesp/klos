@@ -1,0 +1,23 @@
+# POSIX capabilities library. util-linux uses it for setpriv (start a
+# program as another user, without setuid).
+[package]
+name = "libcap-ng"
+version = "0.9.6"
+summary = "Library for POSIX capabilities"
+license = "LGPL-2.1-or-later"
+homepage = "https://github.com/stevegrubb/libcap-ng"
+# GitHub makes the archive from the tag v0.9.6. Upstream does not sign it.
+
+[[source]]
+url = "https://github.com/stevegrubb/libcap-ng/archive/refs/tags/v0.9.6.tar.gz"
+filename = "libcap-ng-0.9.6.tar.gz"
+sha256 = "399040138e0ca62fa2bcabd63da9af4431a246ef7a654561a0ca3cb00010a539"
+
+[build]
+script = '''
+sh ./autogen.sh
+kconfigure --disable-static --without-python3 --without-python
+kmake
+make DESTDIR="$DESTDIR" install
+rm -f "$DESTDIR"/usr/bin/captest "$DESTDIR"/usr/bin/filecap "$DESTDIR"/usr/bin/netcap "$DESTDIR"/usr/bin/pscap
+'''
