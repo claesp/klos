@@ -1,0 +1,383 @@
+# The lock file of the KLOS flavor "desktop". "./klos lock desktop" writes it.
+# "./klos verify desktop" builds the flavor again and compares the results.
+
+[image]
+flavor = "desktop"
+version = "2026.10.0"
+roothash = "bd5c7c69d06215121d0d5d02437845406dcf0ef091d1bf953d683617ce3a7855"
+root_img_sha256 = "aa6a3515eae543a2e77d4949ed1f69d7988000be1b3d9ba1cd23ffa825661c9a"
+efi_sha256 = "28d62d2f2fc600907a654dcc60e7b40c7af12ea915fe9693a376ed122fbe0bf3"
+efi_live_sha256 = "94cadf68a387c510d95c3c8f72f0c715909535715a7877e7abaceccd8d98f257"
+
+[kernel]
+release = "6.18.58-klos"
+config_sha256 = "85e6c9c7d572e008dd8834967cb97ea2aa2c68309a998e38d9501c824ff1af95"
+
+[[tool]]
+name = "compiler-rt"
+version = "23.1.4-r1"
+sha256 = "4538801954e4550b5349e2b12860c538d9456b59213b517471be975eabccc348"
+
+[[tool]]
+name = "go"
+version = "1.27.3-r1"
+sha256 = "d47a3dd9ee649404ac208b0a78551c8e04f7ad62b25ad834dbcf8e565c031dbd"
+
+[[tool]]
+name = "llvm"
+version = "23.1.4-r1"
+sha256 = "c507544dc0289b05c0999d64304c24e85ed57c4f53b72429018f1e6886e20fac"
+
+[[tool]]
+name = "python-build-modules"
+version = "1-r1"
+sha256 = "00c9241da380ba3e4f8ade9a573ab0082610b2f576fec1b5f8e60cc1baf2676e"
+
+[[package]]
+name = "ca-certificates"
+version = "2026.10.20-r1"
+sha256 = "7da31cb0179009beb6723f0c4bd281924bf637e0e8b6d4fcbd0906dc0df04ee8"
+input = "7188976a127aab8c6f204d8da9bc80fefefd99991ea34b15c4298d733ef80406"
+
+[[package]]
+name = "cairo"
+version = "1.18.4-r1"
+sha256 = "5e098081f2d026fd490ce64229321a52abddfb88c3e6fa713f9ec5c96b757e04"
+input = "4ba08caea3538ebac1a4c79f0e7d8de58c30e562c7df3d4a0388bce70501161f"
+
+[[package]]
+name = "chrony"
+version = "4.9-r1"
+sha256 = "38621897b1ad99bec313dd4f1a9a21252a296c753a7c96e957ba39f8c9245412"
+input = "72fee98eb8ed8b4a8a7ffc4f08aa9047e0417c1fc783d2d927bf242f7787e849"
+
+[[package]]
+name = "cryptsetup"
+version = "2.8.8-r1"
+sha256 = "89ea0067b153deb1e09aaee027947a7a81415a1630084a9c7ab5c0ae20877bd9"
+input = "317016b7a0aa3ca6eb7848265b1e4490cd101282bda1cb6d08dfdc66aca127fb"
+
+[[package]]
+name = "dash"
+version = "0.5.13.5-r1"
+sha256 = "33c22cf46aac175d0599a30bcf98341e92ef37ad3ed9028ed0a511b3a9adb02c"
+input = "e66bfd5264b7202d3d7052ff62b795a82dd06068cef7ee4da5cbaafb491b224b"
+
+[[package]]
+name = "dhcpcd"
+version = "10.5.2-r1"
+sha256 = "fdc61628480129e33b2341dc1142f05f666488c16c10710c954f4c3f8fd7b705"
+input = "57319b939b823b23ffb4ba4202e99d66a5d074574b394f1159c9c80cd1ae1440"
+
+[[package]]
+name = "dinit"
+version = "0.22.1-r1"
+sha256 = "f66f38241c40e2fb5ed3e207070aec7b0d250c323d2f4a69076b5d9d864bfdce"
+input = "dd3f5fe2930da9c6f4222507a3747953f5a5dc75dd407082f097cc7579bd92b9"
+
+[[package]]
+name = "dosfstools"
+version = "4.2-r1"
+sha256 = "8ea3d432b62df8f16b055fc9e4b353344ba9717509ca4f6d141dd7be404ae06f"
+input = "6a20f88e003e2e62ea0b698dc7988b763abf65cb82f9e61ed213103e10a0c30a"
+
+[[package]]
+name = "e2fsprogs"
+version = "1.47.4-r1"
+sha256 = "e73a35e9dfa331fee0b7378a84e916074c864eb11c4249fffbdb96638816eb8c"
+input = "554c174bcf186323ab71eb53d2e574059811f230da1e89505419ea28ac8a6a1d"
+
+[[package]]
+name = "expat"
+version = "2.9.0-r1"
+sha256 = "887c1fbacf783898f21080b18951f94e58e26a35850cd9878489e15ef35d5db4"
+input = "709e1f13fb18f5346de9f67e70a404debbc58616edf35432b1c53a9a7f51ceb7"
+
+[[package]]
+name = "fcft"
+version = "3.3.3-r1"
+sha256 = "d739c2073fa8e37ef777d0a7e91a3ef008de0386aca4690b5e45ac28a384f52d"
+input = "2bdd2314b27edf78b59bf0f9c8bfe40051c9a34557d82f03f112b3001b6fa739"
+
+[[package]]
+name = "filesystem"
+version = "1-r1"
+sha256 = "f1c5bd3f1c6c91d67a2bf7180dea7f3ad4ad3b78d461dbebbf9da63443109192"
+input = "6e7e9fd9cd06a4394f02176ebe63b406fc1034500674b68ec597780c07da8bce"
+
+[[package]]
+name = "font-dejavu"
+version = "2.37-r1"
+sha256 = "51b79588144b9602032f8ddaf2bef5b123754f7a57cf78a0f4d8fcee99200108"
+input = "af5f1f6e4fc7ba7bc64b5b40a1c696ec5e8cc19095ab343e56ba82f771b3d0b9"
+
+[[package]]
+name = "fontconfig"
+version = "2.18.3-r1"
+sha256 = "cdbfe68a8485d47394051b0be83f174fbb3c3e3ece7e02958eace6ece79077d2"
+input = "947c5b5ced95c6ee69a91050eb64b28c92dab7570f30f86ee1726b9dfb4141ac"
+
+[[package]]
+name = "foot"
+version = "1.28.0-r1"
+sha256 = "ab2e79595993b9ee9ce9f8d1324442d44d9169841cc1476962350459c8083ce7"
+input = "702d7e480332b33e5e658dd5706f0755d6aadbe557013fbf7e5b01ff20386532"
+
+[[package]]
+name = "freetype"
+version = "2.15.0-r1"
+sha256 = "c3ca187f22984b161f18f54193ab323f8b1cd567e72b4e275915becfc2c08acf"
+input = "7425155fe94e1c0d7c76edca5682f06c57212b1256f113bf9b5e105636e7bd7e"
+
+[[package]]
+name = "fribidi"
+version = "1.0.17-r1"
+sha256 = "b9e05eb69fa532ebe7a69d7b8aa69e19a3ed8dc65e42a6fcd6e8714caed122ab"
+input = "143bcaacd41e8a042ae5b4e5c0b97fced50adfc340cd22e22c0850dd4b4551f0"
+
+[[package]]
+name = "glib"
+version = "2.90.1-r1"
+sha256 = "eabda3af79701231e46fbae6efd35ee4c2669319ae637b99f5336a5d70943de5"
+input = "c563d2ba969e9dc3bf7f73cf765e070838ee13fa84512d6d5a1767f7da8c7f11"
+
+[[package]]
+name = "harfbuzz"
+version = "15.0.0-r1"
+sha256 = "d8e6a42fa4ff85f2de3b8be60e4757bf8a3eab7797d15997b66ec33955220bab"
+input = "568a5c00dafcf7b9c73ce06bbe2d158f10bf6e4503d28e0f146505b571048f72"
+
+[[package]]
+name = "iproute2"
+version = "7.3.0-r1"
+sha256 = "039e607d5f78fb4a32ffa58ecbcfd18258fce39295c9171a27bc94428e47769a"
+input = "035a1f1642d79dffa5c25e2fe55b621278f5927f81f93f7b741a43f7a16914e0"
+
+[[package]]
+name = "json-c"
+version = "0.19-r1"
+sha256 = "4db9cc1e789b378ffa6b515f4bbd867875b670ce52bb2085db78f8f00bf3a61e"
+input = "df175ce23ebd361b77084bb657a3e7f9081e8a1361fdcd19853ce47a09e7629e"
+
+[[package]]
+name = "klos-tools"
+version = "0.1.0-r1"
+sha256 = "2d90d0e1c4a413d3524cead48b78e311af8a7ba6542e92399e4ff32bda604140"
+input = "1e5fadf1b4e525ba735fe6ba700f14a10021b244c4d5cebe28f35df453887377"
+
+[[package]]
+name = "kmod"
+version = "34.2-r1"
+sha256 = "957f2a86f08e1168bf56c44af3ef51a562509834a302f54f60a3c1c7ba957599"
+input = "55080e33e07725b5fb11c32b347942c3b7c2a39e0af58010762c78dba3a526b0"
+
+[[package]]
+name = "libaio"
+version = "0.3.113-r1"
+sha256 = "200cea4a46a54d203d1c82779e09780ca802314150a4e48a118bd8cc9cd6d277"
+input = "7132f22eca481252dfabc18988b12b4df6fd9c51d8e35913bc22753d97d67264"
+
+[[package]]
+name = "libcap"
+version = "2.78-r1"
+sha256 = "b9373d524e89c1f59a0d81403c85566dfc49335bd26cce7a5ced8a699a0ff0a4"
+input = "f7ac48e2956751b76ef2b56c74063b6d06c0790770e7a7820f111c3d59ba82a2"
+
+[[package]]
+name = "libcap-ng"
+version = "0.9.6-r1"
+sha256 = "848ab5c1a30de82be1da37b14935e424004acb05f7e333da965e1032b26a7567"
+input = "d8dc5f2e5073eb80a943647e85612376e88028d7fe5b868f94b4a22677be7102"
+
+[[package]]
+name = "libdisplay-info"
+version = "0.4.0-r1"
+sha256 = "84a722505ace0765cd1b6048ad04e053c26f668b2c531fb5f12ab2dd082cedb9"
+input = "a27814a3036449ab68687c08832e2ec54ed88afcb5344077bf7ee2d3ba29e5dc"
+
+[[package]]
+name = "libdrm"
+version = "2.4.134-r1"
+sha256 = "30b54e6d0b9a3c6ad5d3d1ca2e5b8ed2fafa943cc0c4ec67821c5dae2171efa8"
+input = "fa4333ecf22e503313c2c18a27633cb7f70b50c7c325e1b1d213198816e1e238"
+
+[[package]]
+name = "libevdev"
+version = "1.14.0-r1"
+sha256 = "087c270f0fe43a8012cd2ed7aa00a8ddab2836cc82812a2bd2b0e5243daae09a"
+input = "6303ebe043bc5c8c62714e26452b08665cf06a38b797631918134ab937a985f3"
+
+[[package]]
+name = "libffi"
+version = "3.8.0-r1"
+sha256 = "074175db71affab2f0ea5868c7938b6fdbe7f2335317b2b2fa9707fcc0a9e36d"
+input = "d22b6d5366a98291c24296fe1dcde5b8c581519de079422738da0bca1cf57c52"
+
+[[package]]
+name = "libinput"
+version = "1.32.0-r1"
+sha256 = "657685a241e49777f95da566646058d2ee6fa88ddc98089816a7ad36e6be0892"
+input = "5e5e93991bf5b37cd9f22a6a7a3cbc522334087c1f678c1bcc83ad37f4ac5903"
+
+[[package]]
+name = "libmnl"
+version = "1.0.5-r1"
+sha256 = "6a26748b45a4041ca072be804b9e146b518e6cdccacb11186d9c579cd1a3f59e"
+input = "703d6a238b298745789ee98c3f6288c84ba5aad96693b1dc62846d237b22bbf0"
+
+[[package]]
+name = "libnftnl"
+version = "1.3.2-r1"
+sha256 = "c48817cd6ec61ac2c9364568124210a9dd9dc94d45caabeaa2aec7fb41a059de"
+input = "1cee8e8e0ff8da44bd0c52b73287896c24dd2d481572d7beb2e43f3d1cb8df31"
+
+[[package]]
+name = "libpng"
+version = "1.6.59-r1"
+sha256 = "d1ffe62494210833f1c6700924c8b941aa9441136509004bd701095b35f9bf6b"
+input = "2a85160fc1718a78b5b92a6b880020fe2817a5409a52f3b37d728bd7fae51fdd"
+
+[[package]]
+name = "libudev-zero"
+version = "1.0.5-r1"
+sha256 = "9ffa83c56bf4ffe9bb4d8ed03da66d20011e13fd200260282390aba7234051ff"
+input = "c1a08d86c8f54a0d47076cd3ca8881deaf11c466cdc23aefd56b768f61d4661f"
+
+[[package]]
+name = "libxkbcommon"
+version = "1.13.2-r1"
+sha256 = "d054f861ba201b0dde831fa1ce7b8a0a3c9be78455fd7b1ea16796dd10b53d9f"
+input = "53b4dff1ad2c185f8e0023af315988c401d299103b09c3c2216d72998cf322b0"
+
+[[package]]
+name = "llvm-runtimes"
+version = "23.1.4-r1"
+sha256 = "ec451d4eb21c328857d9ad280fe677a84dc44d20a304b0e580f885e596603fdf"
+input = "f2d75fe080aa9f78b80fcee3c3f3bbcb2efc18440d2f0bb97fb0891f27adc6cd"
+
+[[package]]
+name = "lvm2"
+version = "2.03.43-r1"
+sha256 = "6ee69ff6fcdcbcd7f546e0face7746f93a581f134bc006d5879bdbb1844d21ec"
+input = "9bd330c625971b7b20611e769744a959a55fcbe025d97a34312855d5f42c3d3d"
+
+[[package]]
+name = "mesa"
+version = "26.2.5-r1"
+sha256 = "2fce1dfbf710969a1b47fc63ca85648682b7e5d505617d790b8ca35c3c316c5d"
+input = "0b88b84afd162dec5a0ace64f7053e21e01d62bb75b810aede1e74cd5fe88b61"
+
+[[package]]
+name = "mtdev"
+version = "1.1.7-r1"
+sha256 = "7e4f46548a882f4838051f476c5577086ad6a5e70d96a038277dc41fbde9a8a1"
+input = "987ebb849d7203a46eba2839ec8ec083278833a0fac71999c7a2132cffe98930"
+
+[[package]]
+name = "musl"
+version = "1.2.6-r1"
+sha256 = "87512ec4c39213d288115b3a602722b107bf14386929178a8b5002c2a3dba116"
+input = "8dcaecb91f5a3a8f7e2a7cc2d6627d73d8f8c51f21810be31b4eae09a11a6f66"
+
+[[package]]
+name = "nftables"
+version = "1.1.7-r1"
+sha256 = "2e2b30a1d3e5c5d8160592937a9f259369a0d086b56ca8390e381746c195cc4f"
+input = "26855572f4333aac62c7c3847f58548fa81ace204924c9d4ed56c704dfb0795a"
+
+[[package]]
+name = "openssh"
+version = "10.6p1-r1"
+sha256 = "d91b2d821f3e2bd576a7967389182058a1ab1b9bf63f14ed8988e3981d18acc2"
+input = "d78ce930fdf8efae8d1e86af5b9a30b53ef76c08ccbac9421df1cafc2e2b1664"
+
+[[package]]
+name = "pango"
+version = "1.58.2-r1"
+sha256 = "fcdf7b50aff80179b8054c0f11fc4385af3a614e64c21678867e70cc3ac47200"
+input = "3530c56eaf0a5f3db3445c7dad3a108404d2e4c9d21f7d8272b0b3bb3f48de1d"
+
+[[package]]
+name = "pcre2"
+version = "10.49-r1"
+sha256 = "26ebfac085eaa39b88d8dba9d9edc8edbf9929a3fa29c06396e2fd7222c81998"
+input = "3a9e391ae23090239a01272be790497f975796a424416aee203c1db92ffe49d5"
+
+[[package]]
+name = "pixman"
+version = "0.46.4-r1"
+sha256 = "232569f687406a76b802b71f216853b06aa373ba85b0650be28d07d189db7a0c"
+input = "e8193334921a6004e44ce1d5c4a5207987cdda382967d93660bd8592a93d16a2"
+
+[[package]]
+name = "popt"
+version = "1.19-r1"
+sha256 = "f52ef1aa2b96a64b006c37f66c0d1ce890caeb0d7c9bcc70755c15cb94ab2209"
+input = "5efcbd49379deea6c23df3c4fad1933377aad8fcd139d59058babf73a4b61b36"
+
+[[package]]
+name = "seatd"
+version = "0.9.3-r1"
+sha256 = "9aaf304aa3a1f95103e13a63ccfd8c48ebe28e3cc72c06ab7260c97f61d39a92"
+input = "4d16f2da280d1f5281bca19231759ebbd8b83da46c867c02e6b680a327582c0d"
+
+[[package]]
+name = "sway"
+version = "1.12-r1"
+sha256 = "dce8503a6a17cafc197b0fc5259d79efdeec866206589f91db1fe638dcf72193"
+input = "5ed993981c37b56cd216a367df472e411b7e0f2e8e77119f387580c42f2eca92"
+
+[[package]]
+name = "swaybg"
+version = "1.2.2-r1"
+sha256 = "21bb791ed49b684b7b14ab4c321f3fac02e8cdf74adc9529b847f2bae1a9477d"
+input = "848652b6f5eedd31df5585c80ec24fd32264610880e1973e55434df320b605bd"
+
+[[package]]
+name = "toybox"
+version = "0.8.15-r1"
+sha256 = "5d5c9a65c2d8a33b97098a27921ad55f3c8d9dc888c325ab8b11c0273d7b27f7"
+input = "06b9eb0db0e024adeddbd70614bf7559046847cca15310e36920ef46e0c49652"
+
+[[package]]
+name = "utf8proc"
+version = "2.12.0-r1"
+sha256 = "df7c7d4b1038c1edde8bcbbb0e9ca1eb38b04d8feb542e5b7f46fac9c098d53b"
+input = "e6925da404ecc282e7e3c078fdea5199602ce999b86ac0321c699318e4a90b25"
+
+[[package]]
+name = "util-linux"
+version = "2.42.4-r1"
+sha256 = "81b562d92d0285dc70fcfbfca6392876d90eef301a1bc614d08013e74d6dd6d1"
+input = "7aaf340872df8ea6d9592b4b7f81c51e26585901d65de45a950261d46a7b28e2"
+
+[[package]]
+name = "wayland"
+version = "1.26.0-r1"
+sha256 = "cd943b736d45fbe30699db6c13c71103db2034754d9c03eb45f5335e3ddd3778"
+input = "5429a4945f5d1c32ffe90bf3adda795e29a476505e03daf204d6444a56fc2073"
+
+[[package]]
+name = "wlroots"
+version = "0.20.2-r1"
+sha256 = "10af284a7b57d8257f672893228a80f63f7c836c950e63b55c279ab0b26750a7"
+input = "2e44281dc86fcb55c3e46da6d2b8def493d7351b30bb69a50f1d91bf5bb2553c"
+
+[[package]]
+name = "xkeyboard-config"
+version = "2.48-r1"
+sha256 = "78d031002486b0511881c7193622285bb1b54ed54a99f127ee7c1c223cb16998"
+input = "e16e9666d54cf7e93f4dd99384691993f7ee56dffcde57e3f45b2bbb21d8aec3"
+
+[[package]]
+name = "zlib"
+version = "1.3.2-r1"
+sha256 = "49298ed437ac10f98328de1cf4b4089381ca4af2fabf098a6c6c3b4943740ed7"
+input = "0f2727844ef8c91d4b6d48068d4bdd88ecc9b1e1c9e26acacb4af0084d7118ed"
+
+[[package]]
+name = "zstd"
+version = "1.5.7-r1"
+sha256 = "3422ef706a70a5efdee7487b9ad46644963cf07a5e1d18416ba2e74d69f44f5d"
+input = "2e7698300e7607a803d98b6c1a33e70e0894ca5c6c8dc1821f4630625e31c0e7"
+

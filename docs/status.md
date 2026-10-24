@@ -10,7 +10,7 @@ This document shows what works now and what is planned. "Tested" means that
 | Verified bootstrap builder (Alpine minirootfs, SHA-256 and OpenPGP) | Works |
 | LLVM 23 cross toolchain, musl 1.2.6, libc++ (hardened) | Works |
 | Verified sources (SHA-256 for all, OpenPGP or published values for most) | Works |
-| Reproducible packages (input hashes, fixed time stamps, sorted archives) | Works; `verify` command available |
+| Reproducible packages and images (input hashes, fixed time stamps, sorted archives) | Checked: `./klos verify` gave the same images as the lock files for all three flavors |
 | Server flavor: install, LUKS2, LVM, erofs + dm-verity, `/etc` overlay | Tested |
 | Signed update bundles, trial boot with watchdog, bless, rollback | Tested |
 | Firewall (nftables), SSH (keys only, no OpenSSL), DHCP, NTP | Tested |

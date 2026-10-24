@@ -14,6 +14,11 @@ release = "6.18.58-klos"
 config_sha256 = "db7409fb7a1ee8a8431b1a051980715a48caf38918c7d42c31e7a6a25ac63d2a"
 
 [[tool]]
+name = "compiler-rt"
+version = "23.1.4-r1"
+sha256 = "4538801954e4550b5349e2b12860c538d9456b59213b517471be975eabccc348"
+
+[[tool]]
 name = "go"
 version = "1.27.3-r1"
 sha256 = "d47a3dd9ee649404ac208b0a78551c8e04f7ad62b25ad834dbcf8e565c031dbd"

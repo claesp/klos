@@ -380,9 +380,12 @@ func buildImage(flavor string) *BuildRecord {
 		rec.Packages = append(rec.Packages, *meta)
 		fmt.Fprintf(&list, "%s %s %s\n", meta.Name, meta.Version, meta.SHA256)
 	}
-	for _, h := range []string{"llvm", "go"} {
-		if meta := pkgMeta(h); meta != nil {
-			rec.HostPackages[h] = meta.Version + " " + meta.SHA256
+	// All host tools that the packages of the flavor need (the toolchain,
+	// Go, build modules).
+	for _, r := range topoClosure(m.Packages.Install) {
+		if r.Kind == "host" {
+			meta := pkgMeta(r.Name)
+			rec.HostPackages[r.Name] = meta.Version + " " + meta.SHA256
 		}
 	}
 	writeFile(filepath.Join(rootfs, "usr/lib/klos/packages.txt"), list.String(), 0o644)
