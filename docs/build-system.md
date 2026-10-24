@@ -63,8 +63,10 @@ kbuild removes the usual causes of differences between builds:
   order and fixed values.
 - The kernel build has a fixed time stamp, user name and host name.
 
-`./klos verify <flavor>` builds all target packages and the image again in a
-separate directory. Then it compares the result with the lock file.
+`./klos verify <flavor>` builds all target packages, the kernel and the
+image again, with the same build paths, into `out/verify/`. Then it compares
+the result with the lock file. The host tools (llvm, go) are not built
+again.
 
 ## Images
 

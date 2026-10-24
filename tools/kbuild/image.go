@@ -537,12 +537,16 @@ func cmdVerify(args []string) {
 	if err != nil {
 		die("no lock file %s (run './klos lock %s')", rel(lockPath), flavor)
 	}
+	// The build directories (work/build, work/kernel) stay the same: some
+	// programs keep their build paths (for example a configure line). The
+	// packages and images go to out/verify. The kernel compiles again from
+	// the start.
 	HOSTPKGOUT = PKGOUT
 	PKGOUT = filepath.Join(OUT, "verify", "pkgs")
 	OUT = filepath.Join(OUT, "verify")
-	WORK = filepath.Join(WORK, "verify")
 	removeAll(PKGOUT)
-	removeAll(WORK)
+	removeAll(filepath.Join(OUT, "images", flavor))
+	removeAll(filepath.Join(WORK, "kernel", flavor))
 	rec := buildImage(flavor)
 	got := lockText(rec)
 	if got != string(want) {

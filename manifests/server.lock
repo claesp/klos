@@ -1,0 +1,181 @@
+# The lock file of the KLOS flavor "server". "./klos lock server" writes it.
+# "./klos verify server" builds the flavor again and compares the results.
+
+[image]
+flavor = "server"
+version = "2026.10.0"
+roothash = "4dd975f4c27fc465b58a7b139c970ec45e28b86b6962be162e87e2f8247862f0"
+root_img_sha256 = "2a8b683987be0fa12ccf7147be2b2e11613e685ae43d60ab605c048a515f5047"
+efi_sha256 = "ea43fef461c64e6edf0275481236b4f2091129a30af79ca82bbb73b66d0bb0d0"
+efi_live_sha256 = "e1e1f922d3cc4ca66088a59ce04cedb2b522d2f840878973b14a70f1aff9d003"
+
+[kernel]
+release = "6.18.58-klos"
+config_sha256 = "db7409fb7a1ee8a8431b1a051980715a48caf38918c7d42c31e7a6a25ac63d2a"
+
+[[tool]]
+name = "go"
+version = "1.27.3-r1"
+sha256 = "d47a3dd9ee649404ac208b0a78551c8e04f7ad62b25ad834dbcf8e565c031dbd"
+
+[[tool]]
+name = "llvm"
+version = "23.1.4-r1"
+sha256 = "c507544dc0289b05c0999d64304c24e85ed57c4f53b72429018f1e6886e20fac"
+
+[[package]]
+name = "ca-certificates"
+version = "2026.10.20-r1"
+sha256 = "7da31cb0179009beb6723f0c4bd281924bf637e0e8b6d4fcbd0906dc0df04ee8"
+input = "7188976a127aab8c6f204d8da9bc80fefefd99991ea34b15c4298d733ef80406"
+
+[[package]]
+name = "chrony"
+version = "4.9-r1"
+sha256 = "38621897b1ad99bec313dd4f1a9a21252a296c753a7c96e957ba39f8c9245412"
+input = "72fee98eb8ed8b4a8a7ffc4f08aa9047e0417c1fc783d2d927bf242f7787e849"
+
+[[package]]
+name = "cryptsetup"
+version = "2.8.8-r1"
+sha256 = "89ea0067b153deb1e09aaee027947a7a81415a1630084a9c7ab5c0ae20877bd9"
+input = "317016b7a0aa3ca6eb7848265b1e4490cd101282bda1cb6d08dfdc66aca127fb"
+
+[[package]]
+name = "dash"
+version = "0.5.13.5-r1"
+sha256 = "33c22cf46aac175d0599a30bcf98341e92ef37ad3ed9028ed0a511b3a9adb02c"
+input = "e66bfd5264b7202d3d7052ff62b795a82dd06068cef7ee4da5cbaafb491b224b"
+
+[[package]]
+name = "dhcpcd"
+version = "10.5.2-r1"
+sha256 = "fdc61628480129e33b2341dc1142f05f666488c16c10710c954f4c3f8fd7b705"
+input = "57319b939b823b23ffb4ba4202e99d66a5d074574b394f1159c9c80cd1ae1440"
+
+[[package]]
+name = "dinit"
+version = "0.22.1-r1"
+sha256 = "f66f38241c40e2fb5ed3e207070aec7b0d250c323d2f4a69076b5d9d864bfdce"
+input = "dd3f5fe2930da9c6f4222507a3747953f5a5dc75dd407082f097cc7579bd92b9"
+
+[[package]]
+name = "dosfstools"
+version = "4.2-r1"
+sha256 = "8ea3d432b62df8f16b055fc9e4b353344ba9717509ca4f6d141dd7be404ae06f"
+input = "6a20f88e003e2e62ea0b698dc7988b763abf65cb82f9e61ed213103e10a0c30a"
+
+[[package]]
+name = "e2fsprogs"
+version = "1.47.4-r1"
+sha256 = "e73a35e9dfa331fee0b7378a84e916074c864eb11c4249fffbdb96638816eb8c"
+input = "554c174bcf186323ab71eb53d2e574059811f230da1e89505419ea28ac8a6a1d"
+
+[[package]]
+name = "filesystem"
+version = "1-r1"
+sha256 = "f1c5bd3f1c6c91d67a2bf7180dea7f3ad4ad3b78d461dbebbf9da63443109192"
+input = "6e7e9fd9cd06a4394f02176ebe63b406fc1034500674b68ec597780c07da8bce"
+
+[[package]]
+name = "iproute2"
+version = "7.3.0-r1"
+sha256 = "039e607d5f78fb4a32ffa58ecbcfd18258fce39295c9171a27bc94428e47769a"
+input = "035a1f1642d79dffa5c25e2fe55b621278f5927f81f93f7b741a43f7a16914e0"
+
+[[package]]
+name = "json-c"
+version = "0.19-r1"
+sha256 = "4db9cc1e789b378ffa6b515f4bbd867875b670ce52bb2085db78f8f00bf3a61e"
+input = "df175ce23ebd361b77084bb657a3e7f9081e8a1361fdcd19853ce47a09e7629e"
+
+[[package]]
+name = "klos-tools"
+version = "0.1.0-r1"
+sha256 = "2d90d0e1c4a413d3524cead48b78e311af8a7ba6542e92399e4ff32bda604140"
+input = "1e5fadf1b4e525ba735fe6ba700f14a10021b244c4d5cebe28f35df453887377"
+
+[[package]]
+name = "libaio"
+version = "0.3.113-r1"
+sha256 = "200cea4a46a54d203d1c82779e09780ca802314150a4e48a118bd8cc9cd6d277"
+input = "7132f22eca481252dfabc18988b12b4df6fd9c51d8e35913bc22753d97d67264"
+
+[[package]]
+name = "libcap"
+version = "2.78-r1"
+sha256 = "b9373d524e89c1f59a0d81403c85566dfc49335bd26cce7a5ced8a699a0ff0a4"
+input = "f7ac48e2956751b76ef2b56c74063b6d06c0790770e7a7820f111c3d59ba82a2"
+
+[[package]]
+name = "libcap-ng"
+version = "0.9.6-r1"
+sha256 = "848ab5c1a30de82be1da37b14935e424004acb05f7e333da965e1032b26a7567"
+input = "d8dc5f2e5073eb80a943647e85612376e88028d7fe5b868f94b4a22677be7102"
+
+[[package]]
+name = "libmnl"
+version = "1.0.5-r1"
+sha256 = "6a26748b45a4041ca072be804b9e146b518e6cdccacb11186d9c579cd1a3f59e"
+input = "703d6a238b298745789ee98c3f6288c84ba5aad96693b1dc62846d237b22bbf0"
+
+[[package]]
+name = "libnftnl"
+version = "1.3.2-r1"
+sha256 = "c48817cd6ec61ac2c9364568124210a9dd9dc94d45caabeaa2aec7fb41a059de"
+input = "1cee8e8e0ff8da44bd0c52b73287896c24dd2d481572d7beb2e43f3d1cb8df31"
+
+[[package]]
+name = "llvm-runtimes"
+version = "23.1.4-r1"
+sha256 = "ec451d4eb21c328857d9ad280fe677a84dc44d20a304b0e580f885e596603fdf"
+input = "f2d75fe080aa9f78b80fcee3c3f3bbcb2efc18440d2f0bb97fb0891f27adc6cd"
+
+[[package]]
+name = "lvm2"
+version = "2.03.43-r1"
+sha256 = "6ee69ff6fcdcbcd7f546e0face7746f93a581f134bc006d5879bdbb1844d21ec"
+input = "9bd330c625971b7b20611e769744a959a55fcbe025d97a34312855d5f42c3d3d"
+
+[[package]]
+name = "musl"
+version = "1.2.6-r1"
+sha256 = "87512ec4c39213d288115b3a602722b107bf14386929178a8b5002c2a3dba116"
+input = "8dcaecb91f5a3a8f7e2a7cc2d6627d73d8f8c51f21810be31b4eae09a11a6f66"
+
+[[package]]
+name = "nftables"
+version = "1.1.7-r1"
+sha256 = "2e2b30a1d3e5c5d8160592937a9f259369a0d086b56ca8390e381746c195cc4f"
+input = "26855572f4333aac62c7c3847f58548fa81ace204924c9d4ed56c704dfb0795a"
+
+[[package]]
+name = "openssh"
+version = "10.6p1-r1"
+sha256 = "d91b2d821f3e2bd576a7967389182058a1ab1b9bf63f14ed8988e3981d18acc2"
+input = "d78ce930fdf8efae8d1e86af5b9a30b53ef76c08ccbac9421df1cafc2e2b1664"
+
+[[package]]
+name = "popt"
+version = "1.19-r1"
+sha256 = "f52ef1aa2b96a64b006c37f66c0d1ce890caeb0d7c9bcc70755c15cb94ab2209"
+input = "5efcbd49379deea6c23df3c4fad1933377aad8fcd139d59058babf73a4b61b36"
+
+[[package]]
+name = "toybox"
+version = "0.8.15-r1"
+sha256 = "5d5c9a65c2d8a33b97098a27921ad55f3c8d9dc888c325ab8b11c0273d7b27f7"
+input = "06b9eb0db0e024adeddbd70614bf7559046847cca15310e36920ef46e0c49652"
+
+[[package]]
+name = "util-linux"
+version = "2.42.4-r1"
+sha256 = "81b562d92d0285dc70fcfbfca6392876d90eef301a1bc614d08013e74d6dd6d1"
+input = "7aaf340872df8ea6d9592b4b7f81c51e26585901d65de45a950261d46a7b28e2"
+
+[[package]]
+name = "zlib"
+version = "1.3.2-r1"
+sha256 = "49298ed437ac10f98328de1cf4b4089381ca4af2fabf098a6c6c3b4943740ed7"
+input = "0f2727844ef8c91d4b6d48068d4bdd88ecc9b1e1c9e26acacb4af0084d7118ed"
+
