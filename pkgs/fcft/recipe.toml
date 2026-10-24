@@ -14,7 +14,7 @@ key = ["dnkl"]
 
 [build]
 script = '''
-kmeson -Dgrapheme-shaping=disabled -Drun-shaping=disabled -Dsvg-backend=none -Dtest-text-shaping=false -Ddocs=disabled -Dexamples=false
+kmeson -Dwerror=false -Dgrapheme-shaping=disabled -Drun-shaping=disabled -Dsvg-backend=none -Dtest-text-shaping=false -Ddocs=disabled -Dexamples=false
 kninja
 kninja_install
 '''

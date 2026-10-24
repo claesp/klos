@@ -13,7 +13,7 @@ sha256 = "302564d54d8e28191fadfd734f2675ecb0c9e0615a58011b89ef15dfa4dbaa96"
 
 [build]
 script = '''
-kmeson -Dlibseat-logind=disabled -Dlibseat-seatd=enabled -Dlibseat-builtin=disabled -Dserver=enabled -Dexamples=disabled -Dman-pages=disabled
+kmeson -Dwerror=false -Dlibseat-logind=disabled -Dlibseat-seatd=enabled -Dlibseat-builtin=disabled -Dserver=enabled -Dexamples=disabled -Dman-pages=disabled
 kninja
 kninja_install
 '''

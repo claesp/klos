@@ -98,6 +98,23 @@ func shellQuoteList(s string) string {
 	return "[" + strings.Join(q, ", ") + "]"
 }
 
+// wrapperScript is the target compiler wrapper. It changes the builder
+// paths -L/usr/lib, -L/lib and -I/usr/include (for example from libtool) to
+// the sysroot paths, so that target code never uses builder libraries.
+const wrapperScript = `#!/bin/sh
+S="%[1]s"
+n=$#
+while [ "$n" -gt 0 ]; do
+	a=$1; shift; n=$((n - 1))
+	case $a in
+	-L/usr/lib*|-L/lib*) a="-L$S${a#-L}" ;;
+	-I/usr/include*) a="-I$S${a#-I}" ;;
+	esac
+	set -- "$@" "$a"
+done
+exec "%[2]s/%[3]s" %[4]s "$@"
+`
+
 // buildEnv makes the compiler wrappers and the environment for a build.
 func buildEnv(r *Recipe, bdir, sysroot string) []string {
 	bindir := filepath.Join(bdir, "bin")
@@ -164,8 +181,7 @@ func buildEnv(r *Recipe, bdir, sysroot string) []string {
 	drv := fmt.Sprintf(`--target=%s --sysroot="%s"`, target, sysroot)
 	for _, w := range [][2]string{{"cc", "clang"}, {"clang", "clang"}, {"gcc", "clang"},
 		{"c++", "clang++"}, {"clang++", "clang++"}, {"g++", "clang++"}, {"cpp", "clang-cpp"}} {
-		writeExec(filepath.Join(bindir, w[0]),
-			fmt.Sprintf("#!/bin/sh\nexec \"%s/%s\" %s \"$@\"\n", tcbin, w[1], drv))
+		writeExec(filepath.Join(bindir, w[0]), fmt.Sprintf(wrapperScript, sysroot, tcbin, w[1], drv))
 		switch w[0] {
 		case "cc", "c++", "gcc", "g++", "cpp":
 			symlink(w[0], filepath.Join(bindir, target+"-"+w[0]))
@@ -218,6 +234,9 @@ nm = '%[2]s/llvm-nm'
 strip = '%[2]s/llvm-strip'
 objcopy = '%[2]s/llvm-objcopy'
 pkg-config = '%[1]s/pkg-config'
+# The target is x86_64 musl, so target programs can run in the builder with
+# the KLOS dynamic linker and the sysroot libraries.
+exe_wrapper = ['%[3]s/usr/lib/libc.so', '--library-path', '%[3]s/usr/lib']
 
 [host_machine]
 system = 'linux'

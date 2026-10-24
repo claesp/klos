@@ -268,6 +268,11 @@ func cmdTest(args []string) {
 	vm2.sh("dmsetup table klos-root | grep -q verity", 30*time.Second)
 	vm2.sh("echo test > /etc/klos-test-file && test -f /var/lib/klos/etc/upper/klos-test-file", 30*time.Second)
 	logf("test 2: read-only root, dm-verity, firewall and /etc overlay are good")
+	m := flavorManifest(flavor)
+	for _, c := range m.Test.Commands {
+		logf("test 2: %s", c)
+		vm2.sh(c, 5*time.Minute)
+	}
 
 	logf("test 3: update to %s", v2)
 	vm2.send("klos update -reboot /dev/vdb\n")

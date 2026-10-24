@@ -14,8 +14,22 @@ key = ["freedesktop-emersion"]
 
 [build]
 script = '''
-# Build the scanner for the builder first (static), then the libraries.
-kmeson -Ddocumentation=false -Dtests=false -Ddtd_validation=false
+# A cross build of wayland needs a wayland-scanner for the build machine.
+# 1. Build the scanner as a static program (it runs in the builder).
+N="$S/native"
+CC_DIR=$(dirname "$(command -v cc)")
+printf "[binaries]\nc = ['%s/cc']\npkg-config = '%s/pkg-config'\n[built-in options]\nc_link_args = ['-static']\n" \
+	"$CC_DIR" "$CC_DIR" > "$S/scanner-native.ini"
+meson setup build-scanner --native-file "$S/scanner-native.ini" --prefix=/ -Dprefer_static=true \
+	-Dlibraries=false -Dscanner=true -Ddocumentation=false -Dtests=false -Ddtd_validation=false
+ninja -C build-scanner -j"$JOBS"
+mkdir -p "$N/bin" "$N/pc"
+cp build-scanner/src/wayland-scanner "$N/bin/"
+printf 'wayland_scanner=%s\nName: wayland-scanner\nDescription: scanner\nVersion: %s\n' \
+	"$N/bin/wayland-scanner" "$PKGVER" > "$N/pc/wayland-scanner.pc"
+printf "[binaries]\npkg-config = ['env', 'PKG_CONFIG_LIBDIR=%s', '/usr/bin/pkgconf']\n" "$N/pc" > "$N/native.ini"
+# 2. The cross build of the libraries and the scanner for the target.
+kmeson --native-file "$N/native.ini" -Ddocumentation=false -Dtests=false -Ddtd_validation=false
 kninja
 kninja_install
 sed -i 's|^wayland_scanner=.*|wayland_scanner=wayland-scanner|' "$DESTDIR/usr/lib/pkgconfig/wayland-scanner.pc"

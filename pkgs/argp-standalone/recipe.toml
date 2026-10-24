@@ -1,0 +1,21 @@
+# The argp option parser of glibc as a separate library. musl does not have
+# argp, and crun needs it. Only a static library: crun links it in.
+[package]
+name = "argp-standalone"
+version = "1.5.0"
+summary = "Standalone argp option parser (from glibc)"
+license = "LGPL-2.1-or-later"
+homepage = "https://github.com/argp-standalone/argp-standalone"
+# GitHub makes the archive from the tag 1.5.0. Upstream does not sign it.
+
+[[source]]
+url = "https://github.com/argp-standalone/argp-standalone/archive/refs/tags/1.5.0.tar.gz"
+filename = "argp-standalone-1.5.0.tar.gz"
+sha256 = "c29eae929dfebd575c38174f2c8c315766092cec99a8f987569d0cad3c6d64f6"
+
+[build]
+script = '''
+kmeson -Ddefault_library=static
+kninja
+kninja_install
+'''

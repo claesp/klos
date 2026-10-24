@@ -17,7 +17,7 @@ key = ["freedesktop-emersion"]
 
 [build]
 script = '''
-kmeson -Dman-pages=disabled -Dgdk-pixbuf=disabled -Dtray=disabled -Dfish-completions=false -Dzsh-completions=false -Dbash-completions=false -Dsd-bus-provider=auto -Dswaybar=true -Dswaynag=true
+kmeson -Dwerror=false -Dman-pages=disabled -Dgdk-pixbuf=disabled -Dtray=disabled -Dfish-completions=false -Dzsh-completions=false -Dbash-completions=false -Dsd-bus-provider=auto -Dswaybar=true -Dswaynag=true
 kninja
 kninja_install
 rm -f "$DESTDIR/usr/bin/grimshot"

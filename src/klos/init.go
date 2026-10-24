@@ -223,6 +223,14 @@ func prepareRoot(live bool) error {
 			os.Chmod(p, d.mode)
 		}
 	}
+	for _, l := range [][2]string{{"run", "../run"}, {"lock", "../run/lock"}} {
+		p := filepath.Join(v, l[0])
+		if _, err := os.Lstat(p); err != nil {
+			if err := os.Symlink(l[1], p); err != nil {
+				return err
+			}
+		}
+	}
 	// /etc is the read-only /etc of the image, with the local changes in
 	// an overlay upper layer on /var. Read docs/filesystem.md.
 	opts := "lowerdir=" + sysroot + "/etc,upperdir=" + v + "/lib/klos/etc/upper,workdir=" + v + "/lib/klos/etc/work"

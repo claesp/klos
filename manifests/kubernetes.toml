@@ -20,3 +20,15 @@ enable = ["containerd", "kubelet"]
 [rootfs]
 overlays = ["kubernetes"]
 dirs = ["etc/cni/net.d", "etc/kubernetes/manifests"]
+
+# kubeadm cannot pull images in the test (no network), so the test checks
+# the node parts and the kubeadm preflight checks without the image pull.
+[test]
+commands = [
+  "for i in $(seq 30); do [ -S /run/containerd/containerd.sock ] && break; sleep 1; done; crictl info >/dev/null",
+  "crun --version",
+  "kubelet --version && kubeadm version -o short && kubectl version --client",
+  "printf 'apiVersion: kubeadm.k8s.io/v1beta4\\nkind: InitConfiguration\\nnodeRegistration:\\n  imagePullPolicy: Never\\n---\\napiVersion: kubeadm.k8s.io/v1beta4\\nkind: ClusterConfiguration\\nkubernetesVersion: v1.37.1\\n' > /tmp/kubeadm.yaml && kubeadm init phase preflight --config /tmp/kubeadm.yaml --ignore-preflight-errors=ImagePull,NumCPU,Mem",
+  "sysctl -n net.ipv4.ip_forward | grep -qx 1",
+  "test -d /proc/sys/net/bridge && grep -q overlay /proc/filesystems",
+]

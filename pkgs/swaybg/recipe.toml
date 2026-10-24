@@ -17,7 +17,7 @@ key = ["freedesktop-emersion"]
 
 [build]
 script = '''
-kmeson -Dgdk-pixbuf=disabled -Dman-pages=disabled
+kmeson -Dwerror=false -Dgdk-pixbuf=disabled -Dman-pages=disabled
 kninja
 kninja_install
 '''

@@ -26,8 +26,8 @@ kmeson -Dplatforms=wayland -Dgallium-drivers=softpipe,virgl -Dvulkan-drivers= \
 	-Dllvm=disabled -Dglx=disabled -Degl=enabled -Dgbm=enabled -Dgles1=disabled \
 	-Dgles2=enabled -Dopengl=true -Dvalgrind=disabled -Dlibunwind=disabled \
 	-Dzstd=enabled -Dexpat=enabled -Dbuild-tests=false -Dvideo-codecs= \
-	-Dgallium-va=disabled -Dgallium-vdpau=disabled -Dgallium-rusticl=false \
-	-Dmicrosoft-clc=disabled -Dintel-clc=disabled -Dlmsensors=disabled \
+	-Dgallium-va=disabled -Dgallium-rusticl=false \
+	-Dmicrosoft-clc=disabled -Dmesa-clc=auto -Dspirv-tools=disabled -Dlmsensors=disabled \
 	-Dselinux=false -Dxmlconfig=disabled -Dgallium-extra-hud=false
 kninja
 kninja_install

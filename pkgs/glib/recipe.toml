@@ -20,5 +20,5 @@ kninja
 kninja_install
 # The tool paths in the .pc files must be names, so that other builds find
 # the run-tools wrappers in PATH.
-sed -i -E 's|^(glib_[a-z_]+|gdbus_codegen)=.*/([a-z-]+)$|\1=\2|' "$DESTDIR"/usr/lib/pkgconfig/*.pc
+sed -i -E 's#^(glib_[a-z_]+|gdbus_codegen)=.*/([a-z-]+)$#\1=\2#' "$DESTDIR"/usr/lib/pkgconfig/*.pc
 '''

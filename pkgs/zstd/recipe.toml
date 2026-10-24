@@ -4,15 +4,20 @@ version = "1.5.7"
 summary = "Zstandard compression library"
 license = "BSD-3-Clause"
 homepage = "https://facebook.github.io/zstd/"
-# Upstream does not sign this release. The SHA-256 is pinned.
 
 [[source]]
 url = "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz"
 sha256 = "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
+signature = "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz.sig"
+key = ["zstd"]
 
 [build]
 script = '''
-MESON_SOURCE=build/meson kmeson -Dbin_programs=false -Dbin_contrib=false -Dbin_tests=false -Dzlib=disabled -Dlzma=disabled -Dlz4=disabled
-kninja
-kninja_install
+# The Meson files are in build/meson, so the build directory is _build.
+meson setup _build build/meson --cross-file="$MESON_CROSS_FILE" \
+	--prefix=/usr --libdir=lib --buildtype=plain --wrap-mode=nodownload \
+	-Db_pie=true -Db_ndebug=true -Dbin_programs=false -Dbin_contrib=false \
+	-Dbin_tests=false -Dzlib=disabled -Dlzma=disabled -Dlz4=disabled
+ninja -C _build -j"$JOBS"
+DESTDIR="$DESTDIR" ninja -C _build install
 '''

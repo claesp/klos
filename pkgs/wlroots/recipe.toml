@@ -4,7 +4,7 @@ version = "0.20.2"
 summary = "Wayland compositor library"
 license = "MIT"
 homepage = "https://gitlab.freedesktop.org/wlroots/wlroots"
-build-depends = ["wayland", "wayland-protocols", "libdrm", "mesa", "libinput", "seatd", "libxkbcommon", "pixman", "libdisplay-info", "libudev-zero", "libevdev", "mtdev", "expat", "libffi", "zstd", "xkeyboard-config"]
+build-depends = ["wayland", "wayland-protocols", "libdrm", "mesa", "libinput", "seatd", "libxkbcommon", "pixman", "libdisplay-info", "libudev-zero", "libevdev", "mtdev", "expat", "libffi", "zstd", "xkeyboard-config", "hwdata"]
 
 [package.options]
 run-tools = ["wayland-scanner"]
@@ -17,7 +17,7 @@ key = ["freedesktop-emersion"]
 
 [build]
 script = '''
-kmeson -Dxwayland=disabled -Dbackends=drm,libinput -Drenderers=gles2 -Dallocators=gbm -Dexamples=false -Dsession=enabled -Dcolor-management=disabled -Dlibliftoff=disabled -Dxcb-errors=disabled
+kmeson -Dwerror=false -Dxwayland=disabled -Dbackends=drm,libinput -Drenderers=gles2 -Dallocators=gbm -Dexamples=false -Dsession=enabled -Dcolor-management=disabled -Dlibliftoff=disabled -Dxcb-errors=disabled
 kninja
 kninja_install
 '''

@@ -13,3 +13,11 @@ config = ["kvm-guest", "server"]
 # The last console is /dev/console. The serial console comes last, because
 # most KVM servers have no screen.
 cmdline = ["console=tty0", "console=ttyS0,115200"]
+
+[test]
+commands = [
+  "dinitctl list | grep -q 'sshd'",
+  "pidof chronyd && pidof dhcpcd",
+  "test ! -e /proc/modules",
+  "test -z \"$(find / -xdev -perm -4000 -o -xdev -perm -2000 2>/dev/null)\"",
+]

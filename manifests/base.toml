@@ -105,3 +105,9 @@ gid = 65534
 home = "/var/empty"
 shell = "/bin/false"
 gecos = "nobody"
+
+# "klos test" runs these commands on all flavors.
+[test]
+commands = [
+  "for i in $(seq 60); do ip route | grep -q default && break; sleep 1; done; ip route | grep -q default || { ip addr; ip route; cat /var/log/dhcpcd.log; false; }",
+]

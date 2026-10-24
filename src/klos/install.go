@@ -358,6 +358,8 @@ func setupVar(c *installConfig) error {
 		}
 		os.Chmod(filepath.Join(mnt, d.path), d.mode)
 	}
+	os.Symlink("../run", filepath.Join(mnt, "run"))
+	os.Symlink("../run/lock", filepath.Join(mnt, "lock"))
 	upper := filepath.Join(mnt, "lib/klos/etc/upper")
 	if err := os.WriteFile(filepath.Join(upper, "hostname"), []byte(c.Hostname+"\n"), 0o644); err != nil {
 		return err

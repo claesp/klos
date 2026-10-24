@@ -55,6 +55,11 @@ type Manifest struct {
 	Initramfs struct {
 		Files []string `toml:"files"`
 	} `toml:"initramfs"`
+	// Test has shell commands that "klos test" runs on the installed
+	// system after the first boot. Each command must exit with 0.
+	Test struct {
+		Commands []string `toml:"commands"`
+	} `toml:"test"`
 	Users  []User  `toml:"users"`
 	Groups []Group `toml:"groups"`
 }
@@ -90,6 +95,7 @@ func (m *Manifest) merge(o *Manifest) {
 	m.Rootfs.Scripts = appendUniq(m.Rootfs.Scripts, o.Rootfs.Scripts)
 	m.Rootfs.Exclude = appendUniq(m.Rootfs.Exclude, o.Rootfs.Exclude)
 	m.Initramfs.Files = appendUniq(m.Initramfs.Files, o.Initramfs.Files)
+	m.Test.Commands = append(m.Test.Commands, o.Test.Commands...)
 	for _, u := range o.Users {
 		m.Users = append(m.Users, u)
 	}

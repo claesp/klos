@@ -17,7 +17,7 @@ key = ["dnkl"]
 
 [build]
 script = '''
-kmeson -Ddocs=disabled -Dterminfo=disabled -Dthemes=true -Dtests=false -Dime=true -Dgrapheme-clustering=enabled
+kmeson -Dwerror=false -Ddocs=disabled -Dterminfo=disabled -Dthemes=true -Dtests=false -Dime=true -Dgrapheme-clustering=enabled
 kninja
 kninja_install
 rm -rf "$DESTDIR/usr/share/zsh" "$DESTDIR/usr/share/fish" "$DESTDIR/usr/share/bash-completion"

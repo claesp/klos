@@ -13,7 +13,7 @@ key = ["expat-sping"]
 
 [build]
 script = '''
-kconfigure --disable-static --without-docbook --without-examples --without-tests
+kconfigure --without-docbook --without-examples --without-tests
 kmake
 make DESTDIR="$DESTDIR" install
 '''
