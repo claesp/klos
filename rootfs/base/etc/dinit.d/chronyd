@@ -1,5 +1,5 @@
 type = process
-command = /usr/bin/chronyd -d -u chrony -F 1
+command = /usr/bin/chronyd -d -u chrony
 depends-on = early-setup
 waits-for = dhcpcd
 restart = true

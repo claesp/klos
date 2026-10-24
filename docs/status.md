@@ -31,6 +31,7 @@ This document shows what works now and what is planned. "Tested" means that
 | A second, independent builder | Compare the results of two builders to detect a bad bootstrap builder. |
 | Merge of `/etc/passwd` and `/etc/group` after updates | Now, a changed file in the `/etc` upper layer hides new system users of a new version. |
 | Signature formats | Check the signed `.sha512` files of pixman and cairo. |
+| chrony system call filter | The chrony seccomp filter (`chronyd -F 1`) stops chronyd on musl, because it does not allow all system calls of musl. |
 | Sound server, browser | The desktop has no sound server and no web browser yet. |
 | Other architectures | Only x86-64 now. |
 

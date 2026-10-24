@@ -27,6 +27,8 @@ kconfigure --sysconfdir=/etc/ssh --libexecdir=/usr/lib/ssh \
 kmake
 make DESTDIR="$DESTDIR" install-nokeys
 mkdir -p "$DESTDIR/usr/share/empty.sshd"
+# ssh-keysign is setuid root (host-based authentication). KLOS does not use it.
+rm -f "$DESTDIR/usr/lib/ssh/ssh-keysign"
 '''
 
 [package.options]

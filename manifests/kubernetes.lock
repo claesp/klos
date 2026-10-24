@@ -4,14 +4,14 @@
 [image]
 flavor = "kubernetes"
 version = "2026.10.0"
-roothash = "bb3808bc14a50bb127e650abb7d621bf69d669eda09e05f4f2cc91598a39e6c9"
-root_img_sha256 = "51083e9ab782f10d0db2a69aa08e053c683a78cf85adf4780fdcf504074b7434"
-efi_sha256 = "f21f3c21a90d3285c8bc63d5f939ef7a657f79fd623e74f9f12a1dda3f74f131"
-efi_live_sha256 = "89a786aa66271ff7e99ec6e6ecd211dc2bd5e28becf47cbe24d766ef8cb5fe97"
+roothash = "f59e908fc8e7e45c5876dbbd6a986d500714bda26eb3283e9c1a96ce697923bb"
+root_img_sha256 = "c3ca5db0b3b116e64798cf69310e47c79bef761868c27621ac097dd8581ec9ad"
+efi_sha256 = "a9479bb6b0eac73b8404fb893f8e2fdb6368fe2180aeeee1cd623db9a8605446"
+efi_live_sha256 = "e3700b28493a04bde1e51b6acec4d89317c24f3ff1eaa23736621d3e0269e61d"
 
 [kernel]
 release = "6.18.58-klos"
-config_sha256 = "2028890374324e5f0a8ca93c25776ed7c5a36b89ad9263ee44c726a8c7328e17"
+config_sha256 = "e94c0e26f2bfd47dfc6d286c25270c6cc6fff1893b1138833e6cf41e77cfc193"
 
 [[tool]]
 name = "compiler-rt"
@@ -38,7 +38,7 @@ input = "7188976a127aab8c6f204d8da9bc80fefefd99991ea34b15c4298d733ef80406"
 name = "chrony"
 version = "4.9-r1"
 sha256 = "38621897b1ad99bec313dd4f1a9a21252a296c753a7c96e957ba39f8c9245412"
-input = "72fee98eb8ed8b4a8a7ffc4f08aa9047e0417c1fc783d2d927bf242f7787e849"
+input = "351ea0c09d32dff1ebe44ce20a74cad261a5c1b98c9f3255c492c3a8f388adf2"
 
 [[package]]
 name = "cni-plugins"
@@ -193,8 +193,8 @@ input = "26855572f4333aac62c7c3847f58548fa81ace204924c9d4ed56c704dfb0795a"
 [[package]]
 name = "openssh"
 version = "10.6p1-r1"
-sha256 = "d91b2d821f3e2bd576a7967389182058a1ab1b9bf63f14ed8988e3981d18acc2"
-input = "d78ce930fdf8efae8d1e86af5b9a30b53ef76c08ccbac9421df1cafc2e2b1664"
+sha256 = "e572019f38abfcbf588cb53b01fb321be1f1cfb481bffb9c37765265739a8604"
+input = "056eee99eb760fb647a83d3983fdc6dce27975f49faf187999471478a6fc40dd"
 
 [[package]]
 name = "popt"

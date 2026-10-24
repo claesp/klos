@@ -4,14 +4,14 @@
 [image]
 flavor = "desktop"
 version = "2026.10.0"
-roothash = "bd5c7c69d06215121d0d5d02437845406dcf0ef091d1bf953d683617ce3a7855"
-root_img_sha256 = "aa6a3515eae543a2e77d4949ed1f69d7988000be1b3d9ba1cd23ffa825661c9a"
-efi_sha256 = "28d62d2f2fc600907a654dcc60e7b40c7af12ea915fe9693a376ed122fbe0bf3"
-efi_live_sha256 = "94cadf68a387c510d95c3c8f72f0c715909535715a7877e7abaceccd8d98f257"
+roothash = "23b4ea0704582b4eecafe0c98cddd464f8d22c836f0e48dd377e4dcd6a9318a6"
+root_img_sha256 = "7b2a52a4432f78cc735814c266030dc18e8bd381f084f9d2bffb2c206e76ca01"
+efi_sha256 = "077626649dbf9ca6a2b9e3a0769eea66e003944bd28b6973d141ac07e17916f6"
+efi_live_sha256 = "b51933ce9b764bf1fbf7b98171789fc376cd66e254220567b6b34ef562870b2b"
 
 [kernel]
 release = "6.18.58-klos"
-config_sha256 = "85e6c9c7d572e008dd8834967cb97ea2aa2c68309a998e38d9501c824ff1af95"
+config_sha256 = "7c544d340c1e725c51a8e84b7c4f8df96e8c9cadb13eea25654232279f4af775"
 
 [[tool]]
 name = "compiler-rt"
@@ -49,7 +49,7 @@ input = "4ba08caea3538ebac1a4c79f0e7d8de58c30e562c7df3d4a0388bce70501161f"
 name = "chrony"
 version = "4.9-r1"
 sha256 = "38621897b1ad99bec313dd4f1a9a21252a296c753a7c96e957ba39f8c9245412"
-input = "72fee98eb8ed8b4a8a7ffc4f08aa9047e0417c1fc783d2d927bf242f7787e849"
+input = "351ea0c09d32dff1ebe44ce20a74cad261a5c1b98c9f3255c492c3a8f388adf2"
 
 [[package]]
 name = "cryptsetup"
@@ -288,8 +288,8 @@ input = "26855572f4333aac62c7c3847f58548fa81ace204924c9d4ed56c704dfb0795a"
 [[package]]
 name = "openssh"
 version = "10.6p1-r1"
-sha256 = "d91b2d821f3e2bd576a7967389182058a1ab1b9bf63f14ed8988e3981d18acc2"
-input = "d78ce930fdf8efae8d1e86af5b9a30b53ef76c08ccbac9421df1cafc2e2b1664"
+sha256 = "e572019f38abfcbf588cb53b01fb321be1f1cfb481bffb9c37765265739a8604"
+input = "056eee99eb760fb647a83d3983fdc6dce27975f49faf187999471478a6fc40dd"
 
 [[package]]
 name = "pango"

@@ -18,6 +18,11 @@
 
 The base system has no setuid or setgid programs. There is no `su` or
 `sudo`. Administrators log in as root with an SSH key, or on the console.
+To start a program as another user, use `setpriv` (it needs no setuid).
+
+`kbuild image` stops if the image has a setuid or setgid file, or an
+executable script that the manifest does not allow. The test also searches
+the installed system for setuid and setgid files.
 
 ## The kernel
 

@@ -154,12 +154,17 @@ func assembleRootfs(m *Manifest, rootfs string) []string {
 }
 
 // checkScripts stops the build if the image has an executable script that
-// the manifest does not allow. KLOS has no interpreted programs, except the
-// shell for administrators and the scripts in [rootfs] scripts.
+// the manifest does not allow, or a setuid or setgid file. KLOS has no
+// interpreted programs, except the shell for administrators and the scripts
+// in [rootfs] scripts, and no setuid or setgid programs.
 func checkScripts(m *Manifest, rootfs string) {
 	var bad []string
 	filepath.Walk(rootfs, func(p string, info os.FileInfo, err error) error {
 		check(err)
+		if info.Mode()&(os.ModeSetuid|os.ModeSetgid) != 0 {
+			r, _ := filepath.Rel(rootfs, p)
+			bad = append(bad, r+" (setuid or setgid)")
+		}
 		if !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 {
 			return nil
 		}
@@ -181,7 +186,7 @@ func checkScripts(m *Manifest, rootfs string) {
 	})
 	if len(bad) > 0 {
 		sort.Strings(bad)
-		die("the image has scripts that the manifest does not allow:\n  %s", strings.Join(bad, "\n  "))
+		die("the image has files that are not allowed:\n  %s", strings.Join(bad, "\n  "))
 	}
 }
 

@@ -4,14 +4,14 @@
 [image]
 flavor = "server"
 version = "2026.10.0"
-roothash = "4dd975f4c27fc465b58a7b139c970ec45e28b86b6962be162e87e2f8247862f0"
-root_img_sha256 = "2a8b683987be0fa12ccf7147be2b2e11613e685ae43d60ab605c048a515f5047"
-efi_sha256 = "ea43fef461c64e6edf0275481236b4f2091129a30af79ca82bbb73b66d0bb0d0"
-efi_live_sha256 = "e1e1f922d3cc4ca66088a59ce04cedb2b522d2f840878973b14a70f1aff9d003"
+roothash = "b3a2c33737e21be11252b8a6d65b3a8f73ae1b53357526e0fb1107592481c9fe"
+root_img_sha256 = "730a3602d2b406dda36a8904f5d906adeb52ae2f835a78bca7c74ba5249c9a58"
+efi_sha256 = "a34cb23a2fc216c5e5fd799be98d8b76e894ccd1f11f09cb38e4cf84eec514a4"
+efi_live_sha256 = "6fed9fb543201a74ee3b736d08408b3e33f03ce894183b34d449212849f24292"
 
 [kernel]
 release = "6.18.58-klos"
-config_sha256 = "db7409fb7a1ee8a8431b1a051980715a48caf38918c7d42c31e7a6a25ac63d2a"
+config_sha256 = "d3023f09b583ec4b3be2ecaca61812b8113604f370f000d05cf6a005ccc0ec5b"
 
 [[tool]]
 name = "compiler-rt"
@@ -38,7 +38,7 @@ input = "7188976a127aab8c6f204d8da9bc80fefefd99991ea34b15c4298d733ef80406"
 name = "chrony"
 version = "4.9-r1"
 sha256 = "38621897b1ad99bec313dd4f1a9a21252a296c753a7c96e957ba39f8c9245412"
-input = "72fee98eb8ed8b4a8a7ffc4f08aa9047e0417c1fc783d2d927bf242f7787e849"
+input = "351ea0c09d32dff1ebe44ce20a74cad261a5c1b98c9f3255c492c3a8f388adf2"
 
 [[package]]
 name = "cryptsetup"
@@ -157,8 +157,8 @@ input = "26855572f4333aac62c7c3847f58548fa81ace204924c9d4ed56c704dfb0795a"
 [[package]]
 name = "openssh"
 version = "10.6p1-r1"
-sha256 = "d91b2d821f3e2bd576a7967389182058a1ab1b9bf63f14ed8988e3981d18acc2"
-input = "d78ce930fdf8efae8d1e86af5b9a30b53ef76c08ccbac9421df1cafc2e2b1664"
+sha256 = "e572019f38abfcbf588cb53b01fb321be1f1cfb481bffb9c37765265739a8604"
+input = "056eee99eb760fb647a83d3983fdc6dce27975f49faf187999471478a6fc40dd"
 
 [[package]]
 name = "popt"
