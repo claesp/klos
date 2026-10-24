@@ -55,6 +55,40 @@ use `-key-file FILE` (`-` is standard input).
 The TPM unlocks the disk from the next boot. Updates do not change PCR 7,
 because the same db key signs all KLOS versions.
 
+## TPM PIN
+
+A PIN adds a second factor: the TPM gives the key only for the expected
+Secure Boot state **and** the correct PIN. A stolen computer then does not
+unlock without the PIN.
+
+```sh
+klos tpm enroll -pin
+```
+
+The command asks for the passphrase, and then two times for the new PIN.
+Use 6 characters or more. In a script, use `-pin-file FILE`.
+
+At boot, `/init` asks for the TPM PIN on all consoles:
+
+- You have three tries.
+- An empty PIN skips the TPM, and `/init` asks for the passphrase.
+- After three wrong PINs, `/init` asks for the passphrase.
+
+How it works:
+
+- The policy of the sealed key has PolicyAuthValue after PolicyPCR. The auth
+  value of the key is a SHA-256 digest of the PIN.
+- The PIN goes into the salted session HMAC. It does not go over the bus as
+  text.
+- A key without a PIN has the attribute "no dictionary attack protection".
+  A key with a PIN does not have it. Thus the TPM counts the wrong PINs, and
+  after too many wrong PINs it stops all PIN tries for a time (lockout).
+  Then `/init` shows "the TPM is in lockout" and asks for the passphrase.
+- `klos tpm status` does not try to unseal a key with a PIN, because a wrong
+  try counts toward the lockout.
+
+To change or remove the PIN, enroll again (with or without `-pin`).
+
 ## When the TPM does not unlock
 
 These changes make a different PCR 7 value. Then the boot asks for the
@@ -95,4 +129,3 @@ klos tpm remove
   a dbx update, enroll the TPM key again.
 - Attacks on the TPM hardware or on the memory of the running computer are
   not in the scope.
-- A TPM PIN is not available yet.

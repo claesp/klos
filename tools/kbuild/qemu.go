@@ -26,6 +26,7 @@ import (
 const (
 	testPassphrase = "klos-test-passphrase"
 	testPassword   = "klos-test"
+	testPIN        = "246813"
 	ovmfCode       = "/usr/share/OVMF/OVMF_CODE.fd"
 	ovmfVars       = "/usr/share/OVMF/OVMF_VARS.fd"
 )
@@ -205,12 +206,18 @@ func (v *vm) sh(command string, timeout time.Duration) string {
 // unlock types the passphrase, or sees that the TPM unlocked the disk. It
 // returns true for a TPM unlock.
 func (v *vm) unlock() bool {
-	m := v.expect(`(Passphrase for /dev/\S+: |unlocked /dev/\S+ with the TPM)`, 3*time.Minute)
-	if strings.HasPrefix(m[1], "Passphrase") {
-		v.send(testPassphrase + "\n")
-		return false
+	for {
+		m := v.expect(`(Passphrase for /dev/\S+: |TPM PIN for /dev/\S+ [^:]*: |unlocked /dev/\S+ with the TPM)`, 3*time.Minute)
+		switch {
+		case strings.HasPrefix(m[1], "Passphrase"):
+			v.send(testPassphrase + "\n")
+			return false
+		case strings.HasPrefix(m[1], "TPM PIN"):
+			v.send(testPIN + "\n")
+		default:
+			return true
+		}
 	}
-	return true
 }
 
 func (v *vm) unlockAndLogin(version string) bool {
@@ -402,9 +409,15 @@ func cmdTest(args []string) {
 		}
 		logf("test 6: the TPM did not unlock (PCR 7 changed); the passphrase unlocked the disk")
 		vm2.sh("klos tpm status | grep -q 'PCR 7: different'", time.Minute)
-		vm2.sh("printf %s '"+testPassphrase+"' | klos tpm enroll -key-file -", 2*time.Minute)
+		logf("test 6: enroll the TPM key again, with a PIN")
+		vm2.sh("printf %s '"+testPIN+"' > /tmp/pin && printf %s '"+testPassphrase+"' | klos tpm enroll -key-file - -pin-file /tmp/pin && rm /tmp/pin", 2*time.Minute)
+		vm2.sh("klos tpm status | grep -q 'PIN)'", time.Minute)
 		vm2.send("reboot\n")
-		tpmUnlocks(true, vm2.unlockAndLogin(v1), "test 6 (after the new enrollment)")
+		vm2.expect(`TPM PIN for /dev/\S+ [^:]*: `, 3*time.Minute)
+		vm2.send("000000\n")
+		vm2.expect(`the TPM PIN is not correct`, time.Minute)
+		logf("test 6: the TPM refused a wrong PIN")
+		tpmUnlocks(true, vm2.unlockAndLogin(v1), "test 6 (with the correct PIN)")
 	}
 	vm2.send("poweroff\n")
 	vm2.waitExit(2 * time.Minute)

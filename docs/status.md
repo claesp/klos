@@ -16,6 +16,7 @@ This document shows what works now and what is planned. "Tested" means that
 | Firewall (nftables), SSH (keys only, no OpenSSL), DHCP, NTP | Tested |
 | Secure Boot: signed EFI binaries, key enrollment, refusal of unsigned binaries, dbx revocation | Tested (OVMF) |
 | TPM2 unlock (PCR 7 and 15, salted sessions, passphrase fallback, new enrollment) | Tested (swtpm) |
+| TPM PIN (PolicyAuthValue, TPM lockout protection, wrong PIN refused) | Tested (swtpm) |
 | No setuid programs, no scripts except the shell and the dhcpcd hook | Tested (build check and test) |
 | Kubernetes flavor: containerd, crun, CNI plugins, kubelet, kubeadm | Tested (preflight, not a full cluster) |
 | Desktop flavor: sway, foot, mesa (softpipe, virgl), seatd, devd | Tested (headless sway) |
@@ -25,7 +26,6 @@ This document shows what works now and what is planned. "Tested" means that
 | Function | Notes |
 |----------|-------|
 | Secure Boot with Microsoft keys | An option to keep the Microsoft certificates in db, for option ROMs. |
-| TPM PIN | A PIN in addition to the TPM policy. |
 | LLVM for the target | Necessary for Mesa llvmpipe and the AMD radeonsi driver. |
 | Mesa hardware drivers | Intel iris and AMD radeonsi need LLVM or mesa-clc for the target. |
 | Firmware for the desktop | The linux-firmware files (kernel.org, signed) for Wi-Fi and graphics. |

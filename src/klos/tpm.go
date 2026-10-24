@@ -17,6 +17,11 @@ package main
 // again before the next boot. The sessions are salted with the storage root
 // key (SRK) and encrypt the key, and /init compares the SRK name with the
 // enrolled name, so that a different TPM cannot answer.
+//
+// With a PIN ("klos tpm enroll -pin"), the policy also has PolicyAuthValue:
+// the TPM gives the key only with the PIN. The object then does not have
+// the "no dictionary attack" attribute, so the TPM lockout limits the PIN
+// guesses.
 
 import (
 	"bytes"
@@ -50,7 +55,21 @@ const (
 	lockMessage = "klos: disk unlocked"
 )
 
-var errNoToken = errors.New("no TPM key is enrolled")
+var (
+	errNoToken  = errors.New("no TPM key is enrolled")
+	errWrongPIN = errors.New("the TPM PIN is not correct")
+	errLockout  = errors.New("the TPM is in lockout after too many wrong PINs")
+	errSkipped  = errors.New("no TPM PIN")
+)
+
+const minPINLength = 6
+
+// pinAuth is the TPM auth value of a PIN (a SHA-256 digest, the size of
+// the name algorithm).
+func pinAuth(pin string) []byte {
+	d := sha256.Sum256([]byte("klos-tpm-pin\x00" + pin))
+	return d[:]
+}
 
 // tpmTokenData is the JSON of the LUKS2 token.
 type tpmTokenData struct {
@@ -62,6 +81,7 @@ type tpmTokenData struct {
 	Private  string   `json:"tpm2_private"`
 	PCRs     []int    `json:"tpm2_pcrs"`
 	PCR7     string   `json:"tpm2_pcr7"`
+	PIN      bool     `json:"tpm2_pin"`
 }
 
 type luksMetadata struct {
@@ -149,8 +169,8 @@ func readPCR(t transport.TPM, pcr uint) ([]byte, error) {
 }
 
 // pcrPolicy is the policy digest for PolicyPCR with PCR 7 = pcr7 and
-// PCR 15 = zero.
-func pcrPolicy(pcr7 []byte) ([]byte, error) {
+// PCR 15 = zero, and PolicyAuthValue if the key has a PIN.
+func pcrPolicy(pcr7 []byte, pin bool) ([]byte, error) {
 	h := sha256.New()
 	h.Write(pcr7)
 	h.Write(make([]byte, sha256.Size))
@@ -164,6 +184,11 @@ func pcrPolicy(pcr7 []byte) ([]byte, error) {
 	}
 	if err := cmd.Update(calc); err != nil {
 		return nil, err
+	}
+	if pin {
+		if err := (tpm2.PolicyAuthValue{}).Update(calc); err != nil {
+			return nil, err
+		}
 	}
 	return calc.Hash().Digest, nil
 }
@@ -183,8 +208,9 @@ func lockPCR() {
 	}.Execute(t)
 }
 
-// tpmUnseal unseals the disk key of a token.
-func tpmUnseal(tok *tpmTokenData) ([]byte, error) {
+// tpmUnseal unseals the disk key of a token. pin is used only if the token
+// has a PIN.
+func tpmUnseal(tok *tpmTokenData, pin string) ([]byte, error) {
 	pubB, err1 := base64.StdEncoding.DecodeString(tok.Public)
 	privB, err2 := base64.StdEncoding.DecodeString(tok.Private)
 	if err1 != nil || err2 != nil {
@@ -220,8 +246,11 @@ func tpmUnseal(tok *tpmTokenData) ([]byte, error) {
 		return nil, fmt.Errorf("load the sealed key: %w", err)
 	}
 	defer flush(t, load.ObjectHandle)
-	sess, closeSess, err := tpm2.PolicySession(t, tpm2.TPMAlgSHA256, 16,
-		tpm2.Salted(parent.Handle, *parentPub), tpm2.AESEncryption(128, tpm2.EncryptOut))
+	opts := []tpm2.AuthOption{tpm2.Salted(parent.Handle, *parentPub), tpm2.AESEncryption(128, tpm2.EncryptOut)}
+	if tok.PIN {
+		opts = append(opts, tpm2.Auth(pinAuth(pin)))
+	}
+	sess, closeSess, err := tpm2.PolicySession(t, tpm2.TPMAlgSHA256, 16, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -229,22 +258,52 @@ func tpmUnseal(tok *tpmTokenData) ([]byte, error) {
 	if _, err := (tpm2.PolicyPCR{PolicySession: sess.Handle(), Pcrs: pcrSelection(pcrSecBoot, pcrLock)}).Execute(t); err != nil {
 		return nil, err
 	}
+	if tok.PIN {
+		if _, err := (tpm2.PolicyAuthValue{PolicySession: sess.Handle()}).Execute(t); err != nil {
+			return nil, err
+		}
+	}
 	rsp, err := tpm2.Unseal{ItemHandle: tpm2.AuthHandle{Handle: load.ObjectHandle, Name: load.Name, Auth: sess}}.Execute(t)
 	if err != nil {
+		msg := err.Error()
+		switch {
+		case strings.Contains(msg, "TPM_RC_LOCKOUT"):
+			return nil, errLockout
+		case tok.PIN && (strings.Contains(msg, "TPM_RC_AUTH_FAIL") || strings.Contains(msg, "TPM_RC_BAD_AUTH")):
+			return nil, errWrongPIN
+		}
 		return nil, fmt.Errorf("the TPM policy refused the key (did the Secure Boot state change?): %w", err)
 	}
 	return rsp.OutData.Buffer, nil
 }
 
-// tpmUnlock is the /init step: unlock the LUKS2 device with the TPM.
-func tpmUnlock(dev string) error {
+// tpmUnlock is the /init step: unlock the LUKS2 device with the TPM. For a
+// key with a PIN, askPIN gets the PIN (three tries). An empty PIN means:
+// use the passphrase.
+func tpmUnlock(dev string, askPIN func() (string, error), warn func(error)) error {
 	id, tok, err := findTPMToken(dev)
 	if err != nil {
 		return err
 	}
-	key, err := tpmUnseal(tok)
-	if err != nil {
-		return err
+	var key []byte
+	for try := 1; ; try++ {
+		pin := ""
+		if tok.PIN {
+			if pin, err = askPIN(); err != nil {
+				return err
+			}
+			if pin == "" {
+				return errSkipped
+			}
+		}
+		key, err = tpmUnseal(tok, pin)
+		if err == nil {
+			break
+		}
+		if !errors.Is(err, errWrongPIN) || try == 3 {
+			return err
+		}
+		warn(err)
 	}
 	if len(tok.Keyslots) != 1 {
 		return fmt.Errorf("token %s has no keyslot", id)
@@ -359,12 +418,39 @@ func cmdTPM(args []string) error {
 func tpmEnroll(args []string) error {
 	fs := flag.NewFlagSet("tpm enroll", flag.ExitOnError)
 	keyFile := fs.String("key-file", "", "read the current passphrase from this file (- is standard input)")
+	usePIN := fs.Bool("pin", false, "the TPM also needs a PIN (the command asks for it)")
+	pinFile := fs.String("pin-file", "", "read the PIN from this file (implies -pin)")
 	fs.Parse(args)
 	if err := requireRoot(); err != nil {
 		return err
 	}
 	if isLive() {
 		return errors.New("enroll the TPM on the installed system")
+	}
+	pin := ""
+	if *pinFile != "" {
+		b, err := os.ReadFile(*pinFile)
+		if err != nil {
+			return err
+		}
+		pin = strings.TrimRight(string(b), "\n")
+	} else if *usePIN {
+		a, err := readSecret("New TPM PIN: ")
+		if err != nil {
+			return err
+		}
+		b, err := readSecret("Type the TPM PIN again: ")
+		if err != nil {
+			return err
+		}
+		if a != b {
+			return errors.New("the PINs are not the same")
+		}
+		pin = a
+	}
+	hasPIN := *pinFile != "" || *usePIN
+	if hasPIN && len(pin) < minPINLength {
+		return fmt.Errorf("use a PIN with %d characters or more", minPINLength)
 	}
 	if secureBootState() != "enabled" {
 		return errors.New("Secure Boot is not enabled; without it, PCR 7 does not protect the disk key (read docs/tpm.md)")
@@ -387,7 +473,7 @@ func tpmEnroll(args []string) error {
 	if err != nil {
 		return err
 	}
-	policy, err := pcrPolicy(pcr7)
+	policy, err := pcrPolicy(pcr7, hasPIN)
 	if err != nil {
 		return err
 	}
@@ -399,7 +485,8 @@ func tpmEnroll(args []string) error {
 	sealed, err := tpm2.Create{
 		ParentHandle: tpm2.AuthHandle{Handle: parent.Handle, Name: parent.Name, Auth: tpm2.PasswordAuth(nil)},
 		InSensitive: tpm2.TPM2BSensitiveCreate{Sensitive: &tpm2.TPMSSensitiveCreate{
-			Data: tpm2.NewTPMUSensitiveCreate(&tpm2.TPM2BSensitiveData{Buffer: key}),
+			UserAuth: tpm2.TPM2BAuth{Buffer: authFor(hasPIN, pin)},
+			Data:     tpm2.NewTPMUSensitiveCreate(&tpm2.TPM2BSensitiveData{Buffer: key}),
 		}},
 		InPublic: tpm2.New2B(tpm2.TPMTPublic{
 			Type:    tpm2.TPMAlgKeyedHash,
@@ -407,7 +494,8 @@ func tpmEnroll(args []string) error {
 			ObjectAttributes: tpm2.TPMAObject{
 				FixedTPM:    true,
 				FixedParent: true,
-				NoDA:        true,
+				// With a PIN, the TPM lockout counts the wrong PINs.
+				NoDA: !hasPIN,
 			},
 			AuthPolicy: tpm2.TPM2BDigest{Buffer: policy},
 			Parameters: tpm2.NewTPMUPublicParms(tpm2.TPMAlgKeyedHash,
@@ -449,6 +537,7 @@ func tpmEnroll(args []string) error {
 		Private:  base64.StdEncoding.EncodeToString(tpm2.Marshal(sealed.OutPrivate)),
 		PCRs:     []int{pcrSecBoot, pcrLock},
 		PCR7:     hex.EncodeToString(pcr7),
+		PIN:      hasPIN,
 	}
 	js, err := json.Marshal(tok)
 	if err != nil {
@@ -457,7 +546,11 @@ func tpmEnroll(args []string) error {
 	if err := cryptsetupFiles([][]byte{js}, "token", "import", "--json-file=/proc/self/fd/3", part.Dev); err != nil {
 		return err
 	}
-	fmt.Printf("The TPM key is in keyslot %s. From the next boot, the TPM unlocks the disk.\n", slot)
+	if hasPIN {
+		fmt.Printf("The TPM key is in keyslot %s. From the next boot, the TPM and the PIN unlock the disk.\n", slot)
+	} else {
+		fmt.Printf("The TPM key is in keyslot %s. From the next boot, the TPM unlocks the disk.\n", slot)
+	}
 	fmt.Println("The passphrase stays valid. Keep it: you need it if the Secure Boot state changes.")
 	return nil
 }
@@ -500,7 +593,11 @@ func tpmStatus() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("TPM key: enrolled (keyslot %s, PCRs %v)\n", strings.Join(tok.Keyslots, ","), tok.PCRs)
+	pinText := "no PIN"
+	if tok.PIN {
+		pinText = "PIN"
+	}
+	fmt.Printf("TPM key: enrolled (keyslot %s, PCRs %v, %s)\n", strings.Join(tok.Keyslots, ","), tok.PCRs, pinText)
 	t, err := openTPM(0)
 	if err != nil {
 		fmt.Printf("TPM: %v\n", err)
@@ -515,11 +612,14 @@ func tpmStatus() error {
 		}
 	}
 	// Try to unseal the key now. After /init locked PCR 15, the TPM must
-	// refuse. The key is not shown.
-	if _, err := tpmUnseal(tok); err != nil {
-		fmt.Println("unseal in this boot: refused (correct after the boot)")
-	} else {
-		fmt.Println("unseal in this boot: POSSIBLE (PCR 15 is not locked)")
+	// refuse. The key is not shown. A key with a PIN is not tried: a wrong
+	// PIN counts toward the TPM lockout.
+	if !tok.PIN {
+		if _, err := tpmUnseal(tok, ""); err != nil {
+			fmt.Println("unseal in this boot: refused (correct after the boot)")
+		} else {
+			fmt.Println("unseal in this boot: POSSIBLE (PCR 15 is not locked)")
+		}
 	}
 	if pcr15, err := readPCR(t, pcrLock); err == nil {
 		if bytes.Equal(pcr15, make([]byte, sha256.Size)) {
@@ -527,6 +627,13 @@ func tpmStatus() error {
 		} else {
 			fmt.Println("PCR 15: locked (the TPM does not unseal the key before the next boot)")
 		}
+	}
+	return nil
+}
+
+func authFor(hasPIN bool, pin string) []byte {
+	if hasPIN {
+		return pinAuth(pin)
 	}
 	return nil
 }

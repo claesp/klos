@@ -10,7 +10,7 @@
 | Small attack surface | No interpreters (except a shell), no setuid programs, no unnecessary daemons, no kernel modules on servers. |
 | Signed updates | Update bundles have an Ed25519 signature. |
 | Secure Boot | The EFI binaries have a Secure Boot signature. The signature covers the kernel, the initramfs and the command line with the root hash. |
-| TPM2 unlock | The TPM unseals the disk key only for the expected Secure Boot state (PCR 7), and only once in each boot (PCR 15). |
+| TPM2 unlock | The TPM unseals the disk key only for the expected Secure Boot state (PCR 7), and only once in each boot (PCR 15). An optional PIN, with the TPM lockout, adds a second factor. |
 | Safe updates | Trial boots with watchdog and automatic rollback. |
 | Hardened code | Clang hardening flags, libc++ hardening, kernel CFI and KSPP options. |
 | Firewall | nftables drops all incoming traffic except SSH and ICMP. |

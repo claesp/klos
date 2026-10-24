@@ -27,7 +27,8 @@ firmware and the serial console. It does these steps:
 
 9. Apply a dbx update that revokes the test update. The changed PCR 7 must
    stop the TPM unlock, and the passphrase must unlock the disk. Then enroll
-   the TPM key again, and check the TPM unlock.
+   the TPM key again, with a PIN. At the next boot, type a wrong PIN (the
+   TPM must refuse it), then the correct PIN, and check the TPM unlock.
 
 The installer of the test enrolls the KLOS Secure Boot keys, so steps 4 to
 9 run with Secure Boot enabled. After step 5, the test enrolls a TPM key

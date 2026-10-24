@@ -120,11 +120,15 @@ func setupInstalled(c map[string]string) error {
 		return err
 	}
 	unlocked := false
-	switch err := tpmUnlock(part.Dev); {
+	askPIN := func() (string, error) {
+		return readSecret("TPM PIN for " + part.Dev + " (empty: use the passphrase): ")
+	}
+	warn := func(err error) { ilog("%v", err) }
+	switch err := tpmUnlock(part.Dev, askPIN, warn); {
 	case err == nil:
 		unlocked = true
 		ilog("unlocked %s with the TPM", part.Dev)
-	case errors.Is(err, errNoToken):
+	case errors.Is(err, errNoToken), errors.Is(err, errSkipped):
 	default:
 		ilog("the TPM did not unlock the disk: %v", err)
 	}

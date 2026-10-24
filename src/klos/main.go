@@ -36,8 +36,8 @@ Commands:
   secureboot apply [-append] VAR FILE
                          Write a signed update to db, dbx, KEK or PK.
   tpm status             Show the TPM key of the disk.
-  tpm enroll [-key-file F]
-                         Seal a disk key in the TPM (PCR 7 and 15).
+  tpm enroll [-key-file F] [-pin | -pin-file F]
+                         Seal a disk key in the TPM (PCR 7 and 15, optional PIN).
   tpm remove [-key-file F]
                          Remove the TPM key from the disk.
   rollback               Make the previous version the default again.

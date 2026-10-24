@@ -4,14 +4,14 @@
 [image]
 flavor = "desktop"
 version = "2026.10.0"
-roothash = "c77d009cb78b976009f2a7863771f3c9978ab89d4a8681ad5c7361d9449374e4"
-root_img_sha256 = "c43a9c81c7a22ee0db24c9e1fc4eeb5dc8e0ccbfd340b26eb6ea764d7dd22ff1"
-efi_sha256 = "6216ea4f960dff3eb9b3f7351e6a78e04b1ae09f84a68afe68886ae40e99bf82"
-efi_live_sha256 = "f3f3af209884e5e5919604b83126f7dd240003c569356c4657073d45a1951777"
+roothash = "8d762ce6ee2cbfb03dcf157c2ed4bb6e9849f4f57795e02c1c9ba2956a35c5dc"
+root_img_sha256 = "f9b8b013f748457d2d8d711e99a777c7a832f8b2f4e80dbb97ab76f918ed8498"
+efi_sha256 = "c3a037e4812be49beef9d9dbfe50fdd0e474b7c9cb2323e5b9fc0701bb12e03a"
+efi_live_sha256 = "8cb2a985820c3bf8dc04ad1e0ca1d4dcde8b3caabaf1927864f3060589d230a5"
 
 [kernel]
 release = "6.18.58-klos"
-config_sha256 = "2b502b7846308c3d7f3905e26fbc9d2a68675c10f3fd21bd825e8956af8617c7"
+config_sha256 = "b7814bef3f3483e9ba1907c3f3b6fbb2f364c3eb1e2ee1836e4aa2e08edfb751"
 
 [[tool]]
 name = "compiler-rt"
@@ -162,8 +162,8 @@ input = "df175ce23ebd361b77084bb657a3e7f9081e8a1361fdcd19853ce47a09e7629e"
 [[package]]
 name = "klos-tools"
 version = "0.1.0-r1"
-sha256 = "4695672af75a84c7d1a84bee081e6d7abda9d19d6e374a039be20cb5443ab9bd"
-input = "f9f4c05fb07ade5a5741fbd6052a1ddc65ec15db06cf1182591adaba68229762"
+sha256 = "7acd5746a6ff1db6fda501edec726d3957a508aef9288475661fa71dcb72f0a6"
+input = "fc2265becb499ea21b30e5e12cce7cdfaa54f5903bb9d32a5b180850f36a03bf"
 
 [[package]]
 name = "kmod"
