@@ -5,7 +5,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/hex"
 	"fmt"
+	"hash"
 	"io"
 	"net/http"
 	"os"
@@ -117,6 +121,18 @@ func verifySignature(s Source, path string) {
 	case "minisign":
 		verr = runCapture(&stderr, "minisign", "-V", "-q", "-p",
 			filepath.Join(KEYS, s.Key[0]+".pub"), "-x", sig, "-m", data)
+	case "pgp-checksums":
+		// The signature file is a signed OpenPGP message with a
+		// checksum list. gpgv writes the signed text only if the
+		// signature is good.
+		ring := gpgKeyring(s.Key, tmp)
+		var text bytes.Buffer
+		cmd := exec.Command("gpgv", "--keyring", ring, "--output", "-", sig)
+		cmd.Stdout, cmd.Stderr = &text, &stderr
+		verr = cmd.Run()
+		if verr == nil {
+			verr = checkChecksumList(text.String(), filepath.Base(s.URL), data)
+		}
 	default:
 		die("unknown signature type %q", s.SignatureType)
 	}
@@ -125,6 +141,40 @@ func verifySignature(s Source, path string) {
 		die("signature check failed for %s:\n%s", filepath.Base(path), stderr.String())
 	}
 	logf("signature good: %s", s.filename())
+}
+
+// checkChecksumList finds the line for name in a sha256sum(1) or
+// sha512sum(1) list, and compares the value with the file at path. The
+// length of the value selects the algorithm.
+func checkChecksumList(list, name, path string) error {
+	for _, l := range strings.Split(list, "\n") {
+		f := strings.Fields(l)
+		if len(f) != 2 || strings.TrimPrefix(f[1], "*") != name {
+			continue
+		}
+		var h hash.Hash
+		switch len(f[0]) {
+		case 64:
+			h = sha256.New()
+		case 128:
+			h = sha512.New()
+		default:
+			return fmt.Errorf("%s: unknown checksum length %d", name, len(f[0]))
+		}
+		in, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer closeQuietly(in)
+		if _, err := io.Copy(h, in); err != nil {
+			return err
+		}
+		if got := hex.EncodeToString(h.Sum(nil)); got != strings.ToLower(f[0]) {
+			return fmt.Errorf("%s: the signed checksum is %s, the file has %s", name, f[0], got)
+		}
+		return nil
+	}
+	return fmt.Errorf("the signed checksum list has no line for %s", name)
 }
 
 // runCapture runs a command and keeps its error output in stderr.

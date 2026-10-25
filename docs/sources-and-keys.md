@@ -42,6 +42,7 @@ in the recipes (`key = ["musl"]` is `keys/musl.asc`).
 | zstd.asc | Zstandard Release Signing Key | 4EF4 AC63 455F C9F4 545D 9B7D EF8F E995 28B5 2FFD | keyserver.ubuntu.com |
 | freedesktop-emersion.asc | Simon Ser | 34FF 9526 CFEF 0E97 A340 E2E4 0FDE 7BE0 E88F 5E48 | keyserver.ubuntu.com |
 | pixman-cairo.asc | Matt Turner | 3BB6 39E5 6F86 1FA2 E865 0569 0FDD 682D 974C A72A | keyserver.ubuntu.com |
+| cairo-ebassi.asc | Emmanuele Bassi | 53EF 3DC3 B63E 2899 271B D263 22E8 091E EA11 BBB7 | keyserver.ubuntu.com, compared with keys.openpgp.org and gitlab.gnome.org |
 | mesa-release.asc | Eric Engestrom | 5755 1DE1 5B96 8F63 41C2 48F6 8D8E 31AF C324 28A6 | keyserver.ubuntu.com |
 | libevdev-whot.asc | Peter Hutterer (Who-T) | 3C2C 43D9 447D 5938 EF45 51EB E23B 7E70 B467 F0BF | keyserver.ubuntu.com |
 | xkeyboard-config.asc | Sergey Udaltsov | FFB4 CCD2 75AA A422 F5F9 808E 0661 D98F C933 A145 | keyserver.ubuntu.com |
@@ -61,14 +62,12 @@ only a pinned SHA-256 value:
 
 - toybox, dash, dinit, popt, json-c, libaio, argp-standalone, mtdev,
   libudev-zero, seatd, libinput, libxkbcommon, libffi, fribidi, harfbuzz,
-  utf8proc, tllist, hwdata, cairo, libpng, the DejaVu fonts, containerd, the CNI plugins,
+  utf8proc, tllist, hwdata, libpng, the DejaVu fonts, containerd, the CNI plugins,
   cri-tools (upstream publishes no signatures, or only signed Git tags)
 - glib, pango, fontconfig, libaio (upstream publishes SHA-256 or SHA-512
   values; the pinned values agree with them)
 - Kubernetes (dl.k8s.io publishes the SHA-256 value and Sigstore signatures;
   kbuild does not check Sigstore signatures yet)
-- pixman (upstream signs a `.sha512` file; kbuild does not check this
-  format yet)
 - the Python build modules (PyPI publishes the SHA-256 values)
 - the Mozilla CA bundle from curl.se (served with HTTPS only)
 - Go (go.dev publishes the SHA-256 values with HTTPS)

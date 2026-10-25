@@ -87,7 +87,7 @@ could link to a library of the builder.
 | `url` | The official download address. |
 | `sha256` | The SHA-256 value of the file. It is mandatory. |
 | `signature` | The address of the signature file, if upstream signs the release. |
-| `signature-type` | `pgp` (default) or `minisign`. |
+| `signature-type` | `pgp` (default), `minisign` or `pgp-checksums`. With `pgp-checksums`, the signature file is a signed OpenPGP message that contains a `sha256sum` or `sha512sum` list. kbuild checks the message, then it compares the file with the line for the file name. |
 | `signed-content` | `uncompressed` if the signature is for the `.tar` file in a `.tar.xz` file (kernel.org does this). |
 | `key` | A list of key names in `keys/` (`keys/<name>.asc`). |
 | `filename` | A different file name in the cache. |

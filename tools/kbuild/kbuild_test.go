@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -101,5 +102,29 @@ func TestReadConfigFragments(t *testing.T) {
 	}
 	if text != "CONFIG_A=y\nCONFIG_B=y\nCONFIG_S=\"x\"\nCONFIG_C=m\n" {
 		t.Errorf("text = %q", text)
+	}
+}
+
+func TestCheckChecksumList(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "a.tar.xz")
+	if err := os.WriteFile(p, []byte("data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s256 := "3a6eb0790f39ac87c94f3856b2dd2c5d110e6811602261a9a923d3bb23adc8b7"
+	s512 := "77c7ce9a5d86bb386d443bb96390faa120633158699c8844c30b13ab0bf92760b7e4416aea397db91b4ac0e5dd56b8ef7e4b066162ab1fdc088319ce6defc876"
+	for _, c := range []struct {
+		list string
+		ok   bool
+	}{
+		{s256 + " *a.tar.xz\n", true},
+		{s512 + "  a.tar.xz\n", true},
+		{s256 + "  b.tar.xz\n", false},
+		{strings.Repeat("0", 64) + "  a.tar.xz\n", false},
+		{"abc  a.tar.xz\n", false},
+	} {
+		if err := checkChecksumList(c.list, "a.tar.xz", p); (err == nil) != c.ok {
+			t.Errorf("%q: error %v", c.list, err)
+		}
 	}
 }

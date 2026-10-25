@@ -5,11 +5,14 @@ summary = "2D graphics library"
 license = "LGPL-2.1-only OR MPL-1.1"
 homepage = "https://cairographics.org/"
 build-depends = ["pixman", "freetype", "fontconfig", "libpng", "zlib", "glib", "expat"]
-# Upstream does not sign this release. The SHA-256 is pinned.
 
+# Upstream signs a SHA-256 checksum list (a signed OpenPGP message).
 [[source]]
 url = "https://cairographics.org/releases/cairo-1.18.4.tar.xz"
 sha256 = "445ed8208a6e4823de1226a74ca319d3600e83f6369f99b14265006599c32ccb"
+signature = "https://cairographics.org/releases/cairo-1.18.4.tar.xz.sha256sum.asc"
+signature-type = "pgp-checksums"
+key = ["cairo-ebassi"]
 
 [build]
 script = '''
