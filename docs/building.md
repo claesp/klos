@@ -50,6 +50,7 @@ The build uses approximately 40 GB of disk space and 16 GB of memory.
 |---------|----------|
 | `./klos bootstrap` | Verify Alpine and make the builder image. |
 | `./klos shell` | Open a shell in the builder (no network). |
+| `./klos check` | Run gofmt, go vet and the Go unit tests of kbuild and the klos tool. |
 | `./klos keygen` | Make a key pair for update bundles in `secrets/`. |
 | `./klos fetch <target>...` | Download and verify the sources of packages or flavors. |
 | `./klos build [-force] <package>...` | Build packages and their dependencies. |

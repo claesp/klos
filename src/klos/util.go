@@ -5,6 +5,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -57,6 +58,12 @@ func output(name string, args ...string) (string, error) {
 		return "", fmt.Errorf("%s %s: %w", name, strings.Join(args, " "), err)
 	}
 	return string(out), nil
+}
+
+// closeQuietly closes a file that klos only read. A close error of a
+// read-only file has no effect on the data.
+func closeQuietly(c io.Closer) {
+	_ = c.Close()
 }
 
 func lvm(args ...string) error {

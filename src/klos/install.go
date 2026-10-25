@@ -52,7 +52,7 @@ func readInstallConfig(path string) (*installConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer closeQuietly(f)
 	s := bufio.NewScanner(f)
 	for s.Scan() {
 		l := strings.TrimSpace(s.Text())
@@ -206,10 +206,12 @@ func cmdInstallService(args []string) error {
 }
 
 func cmdInstall(args []string) error {
-	fs := flag.NewFlagSet("install", flag.ExitOnError)
+	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	cfgPath := fs.String("config", "", "configuration file (key=value)")
 	yes := fs.Bool("yes", false, "do not ask for confirmation")
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 	if err := requireRoot(); err != nil {
 		return err
 	}
@@ -261,7 +263,9 @@ func cmdInstall(args []string) error {
 	if err := runInput(key, "cryptsetup", "open", "--type", "luks2", "--key-file=-", luks.Dev, cryptName); err != nil {
 		return err
 	}
-	defer run("cryptsetup", "close", cryptName)
+	// The deferred steps clean up after an error. The error of the main
+	// step is the error to report, so their errors are not.
+	defer func() { _ = run("cryptsetup", "close", cryptName) }()
 	pv := "/dev/mapper/" + cryptName
 	if err := lvm("pvcreate", "--yes", pv); err != nil {
 		return err
@@ -269,11 +273,11 @@ func cmdInstall(args []string) error {
 	if err := lvm("vgcreate", "--yes", vgName, pv); err != nil {
 		return err
 	}
-	defer lvm("vgchange", "-an", vgName)
+	defer func() { _ = lvm("vgchange", "-an", vgName) }()
 	if err := mount(esp.Dev, espMount, "vfat", syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_NOEXEC, "umask=0077,shortname=winnt"); err != nil {
 		return err
 	}
-	defer syscall.Unmount(espMount, 0)
+	defer func() { _ = syscall.Unmount(espMount, 0) }()
 	if err := installVersion(bundle, info, esp); err != nil {
 		return err
 	}
@@ -327,9 +331,11 @@ func cmdInstall(args []string) error {
 	syscall.Sync()
 	progress("KLOS is installed. Remove the installer media and start the computer.")
 	if c.PowerOff {
-		syscall.Unmount(espMount, 0)
-		lvm("vgchange", "-an", vgName)
-		run("cryptsetup", "close", cryptName)
+		// The installation is complete and synced; these steps are tidy-up
+		// before the power off.
+		_ = syscall.Unmount(espMount, 0)
+		_ = lvm("vgchange", "-an", vgName)
+		_ = run("cryptsetup", "close", cryptName)
 		syscall.Sync()
 		return run("poweroff")
 	}
@@ -338,7 +344,11 @@ func cmdInstall(args []string) error {
 
 func partitionDisk(disk string) error {
 	progress("make the partition table on /dev/%s", disk)
-	run("wipefs", "--all", "--force", "/dev/"+disk)
+	// Remove old signatures; sfdisk --wipe always does the same for the
+	// partition table, so a wipefs error is not fatal.
+	if err := run("wipefs", "--all", "--force", "/dev/"+disk); err != nil {
+		progress("wipefs: %v", err)
+	}
 	script := "label: gpt\n" +
 		"size=512MiB, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, name=\"" + espLabel + "\"\n" +
 		"type=CA7D7CCB-63ED-4C53-861C-1742536059CC, name=\"" + luksLabel + "\"\n"
@@ -377,15 +387,20 @@ func setupVar(c *installConfig) error {
 	if err := mount(lvPath(varLV), mnt, "ext4", syscall.MS_NOSUID|syscall.MS_NODEV, ""); err != nil {
 		return err
 	}
-	defer syscall.Unmount(mnt, 0)
+	defer func() { _ = syscall.Unmount(mnt, 0) }() // the caller syncs the disks
 	for _, d := range varDirs {
 		if err := os.MkdirAll(filepath.Join(mnt, d.path), 0o755); err != nil {
 			return err
 		}
-		os.Chmod(filepath.Join(mnt, d.path), d.mode)
+		if err := os.Chmod(filepath.Join(mnt, d.path), d.mode); err != nil {
+			return err
+		}
 	}
-	os.Symlink("../run", filepath.Join(mnt, "run"))
-	os.Symlink("../run/lock", filepath.Join(mnt, "lock"))
+	for _, l := range [][2]string{{"../run", "run"}, {"../run/lock", "lock"}} {
+		if err := os.Symlink(l[0], filepath.Join(mnt, l[1])); err != nil && !os.IsExist(err) {
+			return err
+		}
+	}
 	upper := filepath.Join(mnt, "lib/klos/etc/upper")
 	if err := os.WriteFile(filepath.Join(upper, "hostname"), []byte(c.Hostname+"\n"), 0o644); err != nil {
 		return err
@@ -496,8 +511,11 @@ func addUser(c *installConfig, mnt, upper string) error {
 		if err := os.WriteFile(filepath.Join(home, ".ssh/authorized_keys"), []byte(c.UserSSHKey+"\n"), 0o600); err != nil {
 			return err
 		}
-		os.Chown(filepath.Join(home, ".ssh"), id, id)
-		os.Chown(filepath.Join(home, ".ssh/authorized_keys"), id, id)
+		for _, p := range []string{".ssh", ".ssh/authorized_keys"} {
+			if err := os.Chown(filepath.Join(home, p), id, id); err != nil {
+				return err
+			}
+		}
 	}
 	return os.Chown(home, id, id)
 }

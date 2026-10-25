@@ -103,12 +103,8 @@ func (m *Manifest) merge(o *Manifest) {
 	m.Initramfs.Files = appendUniq(m.Initramfs.Files, o.Initramfs.Files)
 	m.Test.Commands = append(m.Test.Commands, o.Test.Commands...)
 	m.Test.QemuArgs = append(m.Test.QemuArgs, o.Test.QemuArgs...)
-	for _, u := range o.Users {
-		m.Users = append(m.Users, u)
-	}
-	for _, g := range o.Groups {
-		m.Groups = append(m.Groups, g)
-	}
+	m.Users = append(m.Users, o.Users...)
+	m.Groups = append(m.Groups, o.Groups...)
 }
 
 func loadManifest(name string, chain []string) *Manifest {

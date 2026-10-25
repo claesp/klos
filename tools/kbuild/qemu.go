@@ -52,12 +52,14 @@ func startTPM(dir string) []string {
 	state := filepath.Join(dir, "tpm")
 	mkdirAll(state)
 	sock := filepath.Join(dir, "swtpm.sock")
-	os.Remove(sock)
+	removeIfExists(sock)
 	cmd := exec.Command("swtpm", "socket", "--tpm2", "--tpmstate", "dir="+state,
 		"--ctrl", "type=unixio,path="+sock, "--terminate",
 		"--log", "file="+filepath.Join(dir, "swtpm.log"))
 	check(cmd.Start())
-	go cmd.Wait()
+	// swtpm stops when QEMU closes the socket (--terminate). Its exit
+	// status has no effect on the test; Wait only collects the process.
+	go func() { _ = cmd.Wait() }()
 	for i := 0; i < 50 && !exists(sock); i++ {
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -108,9 +110,11 @@ func startVM(args []string, logPath string) *vm {
 				v.mu.Lock()
 				v.buf = append(v.buf, b[:n]...)
 				v.mu.Unlock()
-				v.log.Write(b[:n])
+				if _, err := v.log.Write(b[:n]); err != nil {
+					logf("test: write the console log: %v", err)
+				}
 				if os.Getenv("KLOS_TEST_VERBOSE") != "" {
-					os.Stderr.Write(b[:n])
+					_, _ = os.Stderr.Write(b[:n]) // a copy for the person
 				}
 			}
 			if err != nil {
@@ -161,7 +165,7 @@ func (v *vm) expect(pattern string, timeout time.Duration) []string {
 		default:
 		}
 		if time.Now().After(end) {
-			v.cmd.Process.Kill()
+			_ = v.cmd.Process.Kill() // the test stops in any case
 			die("test: no %q after %s:\n%s", pattern, timeout, v.tail())
 		}
 		time.Sleep(100 * time.Millisecond)
@@ -171,7 +175,9 @@ func (v *vm) expect(pattern string, timeout time.Duration) []string {
 func (v *vm) send(s string) {
 	// Send slowly: the serial console has a small buffer.
 	for _, line := range strings.SplitAfter(s, "\n") {
-		io.WriteString(v.stdin, line)
+		if _, err := io.WriteString(v.stdin, line); err != nil {
+			die("test: write to the console: %v", err)
+		}
 		time.Sleep(50 * time.Millisecond)
 	}
 }
@@ -183,7 +189,7 @@ func (v *vm) waitExit(timeout time.Duration) {
 			die("test: QEMU: %v", err)
 		}
 	case <-time.After(timeout):
-		v.cmd.Process.Kill()
+		_ = v.cmd.Process.Kill() // the test stops in any case
 		die("test: QEMU did not stop after %s:\n%s", timeout, v.tail())
 	}
 }
@@ -267,24 +273,21 @@ func cmdTest(args []string) {
 	mkdirAll(tw)
 
 	// Two versions: the installed version and the update.
-	v1 := VERSION
-	v2 := VERSION + ".1"
-	buildImage(flavor)
-	VERSION = v2
-	buildImage(flavor)
-	update := filepath.Join(outDir(flavor), fmt.Sprintf("klos-%s-%s.tar", flavor, v2))
+	opt1 := defaultImageOptions()
+	opt2 := opt1
+	opt2.Version = opt1.Version + ".1"
+	v1, v2 := opt1.Version, opt2.Version
+	buildImage(flavor, opt1)
+	buildImage(flavor, opt2)
+	update := filepath.Join(outDir(flavor, v2), fmt.Sprintf("klos-%s-%s.tar", flavor, v2))
 	// v3 has a valid bundle signature, but its EFI binary has no Secure
 	// Boot signature. The firmware must refuse to start it.
-	v3 := v1 + ".2"
+	opt3 := imageOptions{Version: v1 + ".2", SecureBoot: false}
 	var unsigned string
-	if CONFIG.Image.SecureBoot {
-		VERSION = v3
-		CONFIG.Image.SecureBoot = false
-		buildImage(flavor)
-		CONFIG.Image.SecureBoot = true
-		unsigned = filepath.Join(outDir(flavor), fmt.Sprintf("klos-%s-%s.tar", flavor, v3))
+	if opt1.SecureBoot {
+		buildImage(flavor, opt3)
+		unsigned = filepath.Join(outDir(flavor, opt3.Version), fmt.Sprintf("klos-%s-%s.tar", flavor, opt3.Version))
 	}
-	VERSION = v1
 
 	hash := strings.TrimSpace(output("openssl", "passwd", "-6", "-salt", "klostest", testPassword))
 	conf := filepath.Join(tw, "install.conf")
@@ -299,7 +302,7 @@ func cmdTest(args []string) {
 		"poweroff=yes",
 		"secureboot=enroll",
 	}, "\n")+"\n", 0o600)
-	installer := buildInstaller(flavor, conf)
+	installer := buildInstaller(flavor, opt1, conf)
 
 	vars := filepath.Join(tw, "OVMF_VARS.fd")
 	copyFile(ovmfVars, vars)
@@ -307,7 +310,7 @@ func cmdTest(args []string) {
 	f, err := os.Create(disk)
 	check(err)
 	check(f.Truncate(8 << 30))
-	f.Close()
+	check(f.Close())
 
 	logf("test 1: install %s %s", flavor, v1)
 	tpmArgs := startTPM(tw)
@@ -330,10 +333,8 @@ func cmdTest(args []string) {
 		// It changes PCR 7, so the TPM key must stop working (test 6).
 		sbdir := filepath.Join(tw, "sbupdate")
 		mkdirAll(sbdir)
-		VERSION = v2
 		writeFile(filepath.Join(sbdir, "dbx-update.auth"),
-			string(dbxUpdate(ensureSecureBootKeys(), []string{filepath.Join(outDir(flavor), "klos.efi")})), 0o644)
-		VERSION = v1
+			string(dbxUpdate(ensureSecureBootKeys(), []string{filepath.Join(outDir(flavor, v2), "klos.efi")})), 0o644)
 		sbtar := filepath.Join(tw, "sbupdate.tar")
 		run(Cmd{Args: []string{"tar", "-C", sbdir, "-cf", sbtar, "dbx-update.auth"}})
 		drives = append(drives, "file="+sbtar+",format=raw,if=virtio,readonly=on")
@@ -350,12 +351,12 @@ func cmdTest(args []string) {
 	vm2.sh("dmsetup table klos-root | grep -q verity", 30*time.Second)
 	vm2.sh("echo test > /etc/klos-test-file && test -f /var/lib/klos/etc/upper/klos-test-file", 30*time.Second)
 	logf("test 2: read-only root, dm-verity, firewall and /etc overlay are good")
-	if CONFIG.Image.SecureBoot {
+	if opt1.SecureBoot {
 		vm2.sh("klos secureboot status | grep -q 'Secure Boot: enabled'", 30*time.Second)
 		logf("test 2: Secure Boot is enabled (the installer enrolled the KLOS keys)")
 	}
 	tpm := false
-	if tpmArgs != nil && CONFIG.Image.SecureBoot {
+	if tpmArgs != nil && opt1.SecureBoot {
 		vm2.sh("printf %s '"+testPassphrase+"' | klos tpm enroll -key-file -", 2*time.Minute)
 		vm2.sh("klos tpm status | grep -q 'unseal in this boot: refused'", time.Minute)
 		logf("test 2: the TPM key is enrolled; it cannot be unsealed again in this boot")
@@ -391,9 +392,9 @@ func cmdTest(args []string) {
 	logf("test 4: the rollback is good")
 
 	if unsigned != "" {
-		logf("test 5: install %s, which has no Secure Boot signature", v3)
+		logf("test 5: install %s, which has no Secure Boot signature", opt3.Version)
 		vm2.send("klos update -reboot /dev/vdc\n")
-		vm2.expect(`the next boot is a trial boot of `+regexp.QuoteMeta(v3), 5*time.Minute)
+		vm2.expect(`the next boot is a trial boot of `+regexp.QuoteMeta(opt3.Version), 5*time.Minute)
 		vm2.expect(`Access Denied`, 3*time.Minute)
 		logf("test 5: the firmware refused the unsigned EFI binary")
 		tpmUnlocks(tpm, vm2.unlockAndLogin(v1), "test 5")

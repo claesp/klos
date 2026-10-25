@@ -65,9 +65,11 @@ func cmdSecureBoot(args []string) error {
 }
 
 func secureBootEnroll(args []string) error {
-	fs := flag.NewFlagSet("secureboot enroll", flag.ExitOnError)
+	fs := flag.NewFlagSet("secureboot enroll", flag.ContinueOnError)
 	dir := fs.String("dir", sbFiles, "directory with db.auth, KEK.auth and PK.auth")
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 	if err := requireRoot(); err != nil {
 		return err
 	}
@@ -98,9 +100,11 @@ func secureBootEnroll(args []string) error {
 // KEK or PK. For example, a dbx update from "./klos revoke" revokes old
 // EFI binaries. The firmware checks the signature of the update.
 func secureBootApply(args []string) error {
-	fs := flag.NewFlagSet("secureboot apply", flag.ExitOnError)
+	fs := flag.NewFlagSet("secureboot apply", flag.ContinueOnError)
 	appendWrite := fs.Bool("append", false, "add to the variable (for db and dbx updates)")
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 	if fs.NArg() != 2 {
 		return errors.New("usage: klos secureboot apply [-append] db|dbx|KEK|PK FILE")
 	}

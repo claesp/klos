@@ -19,6 +19,7 @@ Usage: ./klos <command> [arguments]
 Host commands:
   bootstrap            Verify Alpine and build the bootstrap builder image.
   shell                Open a shell in the builder (no network).
+  check                Run gofmt, go vet and the Go unit tests.
   keygen               Make a development key pair for update bundles.
 
 Build commands (run in the builder):
@@ -89,6 +90,18 @@ KBUILD_SH='cd /klos/tools/kbuild && GOCACHE=/klos/work/gocache GOFLAGS=-mod=vend
 	GOTOOLCHAIN=local go build -trimpath -o /klos/work/bin/kbuild . && \
 	exec /klos/work/bin/kbuild "$@"'
 
+# The Go checks of "./klos check": gofmt, go vet and the unit tests.
+CHECK_SH='set -e
+export GOCACHE=/klos/work/gocache GOFLAGS=-mod=vendor GOTOOLCHAIN=local CGO_ENABLED=0
+for m in tools/kbuild src/klos; do
+	cd /klos/$m
+	bad=$(gofmt -l $(ls *.go))
+	[ -z "$bad" ] || { echo "klos check: gofmt: $m: $bad"; exit 1; }
+	go vet ./...
+	go test -count=1 ./...
+done
+echo "klos check: all Go checks passed"'
+
 # kbuild <network: yes|no> <kvm: yes|no> <kbuild arguments...>
 # The QEMU commands (kvm=yes) use the test image, which also has swtpm.
 kbuild() {
@@ -106,6 +119,7 @@ cmd=$1; shift
 case $cmd in
 	bootstrap) cmd_bootstrap ;;
 	shell) run_builder no no "$IMAGE" bash -l ;;
+	check) run_builder no no "$IMAGE" sh -c "$CHECK_SH" ;;
 	keygen) kbuild no no keygen "$@" ;;
 	fetch) kbuild yes no fetch "$@" ;;
 	build|image|installer|verify)

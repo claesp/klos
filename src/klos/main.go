@@ -16,6 +16,8 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -84,6 +86,9 @@ func main() {
 		usage()
 	default:
 		usage()
+	}
+	if errors.Is(err, flag.ErrHelp) {
+		os.Exit(0) // the flag package showed the help
 	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "klos: %v\n", err)

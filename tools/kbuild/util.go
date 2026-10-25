@@ -125,7 +125,7 @@ func writeFile(p, content string, mode os.FileMode) {
 func sha256File(p string) string {
 	f, err := os.Open(p)
 	check(err)
-	defer f.Close()
+	defer closeQuietly(f)
 	h := sha256.New()
 	_, err = io.Copy(h, f)
 	check(err)
@@ -135,7 +135,7 @@ func sha256File(p string) string {
 func copyFile(src, dst string) {
 	in, err := os.Open(src)
 	check(err)
-	defer in.Close()
+	defer closeQuietly(in)
 	st, err := in.Stat()
 	check(err)
 	mkdirAll(filepath.Dir(dst))
@@ -146,7 +146,7 @@ func copyFile(src, dst string) {
 	check(out.Close())
 }
 
-// Cmd describes a command for run().
+// Cmd describes a command for run and tryRun.
 type Cmd struct {
 	Args   []string
 	Dir    string
@@ -154,10 +154,10 @@ type Cmd struct {
 	Stdin  io.Reader
 	Stdout io.Writer
 	Quiet  bool // drop stdout
-	NoFail bool // return the error instead of stopping
 }
 
-func run(c Cmd) error {
+// tryRun runs a command and returns its error.
+func tryRun(c Cmd) error {
 	cmd := exec.Command(c.Args[0], c.Args[1:]...)
 	cmd.Dir = c.Dir
 	if c.Env != nil {
@@ -171,11 +171,23 @@ func run(c Cmd) error {
 		cmd.Stdout = nil
 	}
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err != nil && !c.NoFail {
-		die("command failed: %s: %v", strings.Join(c.Args, " "), err)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s: %w", strings.Join(c.Args, " "), err)
 	}
-	return err
+	return nil
+}
+
+// run runs a command and stops kbuild if the command fails.
+func run(c Cmd) {
+	if err := tryRun(c); err != nil {
+		die("command failed: %v", err)
+	}
+}
+
+// closeQuietly closes a file that kbuild only read. A close error of a
+// read-only file has no effect on the data.
+func closeQuietly(c io.Closer) {
+	_ = c.Close()
 }
 
 // output runs a command and returns its standard output.
@@ -185,6 +197,13 @@ func output(args ...string) string {
 		die("command failed: %s: %v", strings.Join(args, " "), err)
 	}
 	return string(out)
+}
+
+// removeIfExists removes a file. A file that does not exist is not an error.
+func removeIfExists(p string) {
+	if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
+		die("remove %s: %v", p, err)
+	}
 }
 
 func uniqSorted(in []string) []string {

@@ -38,7 +38,7 @@ var kmsg *os.File
 func ilog(format string, a ...any) {
 	msg := fmt.Sprintf(format, a...)
 	if kmsg != nil {
-		fmt.Fprintf(kmsg, "<6>klos-init: %s\n", msg)
+		_, _ = fmt.Fprintf(kmsg, "<6>klos-init: %s\n", msg) // the kernel log is a copy
 	}
 	consoleWrite("klos-init: " + msg + "\n")
 }
@@ -48,7 +48,7 @@ func ifail(err error) {
 	ilog("the computer restarts in 30 seconds")
 	time.Sleep(30 * time.Second)
 	syscall.Sync()
-	syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART)
+	_ = syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART) // returns only on failure
 	select {}
 }
 
@@ -63,7 +63,9 @@ func mount(src, target, fstype string, flags uintptr, data string) error {
 }
 
 func initMain() {
-	os.Setenv("PATH", "/usr/bin")
+	if err := os.Setenv("PATH", "/usr/bin"); err != nil {
+		ifail(err)
+	}
 	for _, m := range []struct {
 		src, target, fs string
 		flags           uintptr
@@ -80,9 +82,13 @@ func initMain() {
 	}
 	kmsg, _ = os.OpenFile("/dev/kmsg", os.O_WRONLY, 0)
 	if _, err := os.Stat("/sys/firmware/efi"); err == nil {
-		mount("efivarfs", efivarsDir, "efivarfs", syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_NOEXEC, "")
+		if err := mount("efivarfs", efivarsDir, "efivarfs", syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_NOEXEC, ""); err != nil {
+			ilog("no UEFI variables (no trial boot watchdog): %v", err)
+		}
 	}
-	os.MkdirAll(runDir, 0o755)
+	if err := os.MkdirAll(runDir, 0o755); err != nil {
+		ifail(err)
+	}
 	c := kernelCmdline()
 	version := c["klos.version"]
 	ilog("KLOS %s (%s), mode %s", version, c["klos.flavor"], c["klos.mode"])
@@ -134,7 +140,9 @@ func setupInstalled(c map[string]string) error {
 	}
 	// Always lock PCR 15 before the next step, also after a failure: then
 	// the disk key cannot be unsealed again before the next boot.
-	lockPCR()
+	if err := lockPCR(); err != nil {
+		ilog("WARNING: could not lock TPM PCR %d: %v", pcrLock, err)
+	}
 	for try := 1; try <= 3 && !unlocked; try++ {
 		pass, err := readSecret("Passphrase for " + part.Dev + ": ")
 		if err != nil {
@@ -186,7 +194,7 @@ func runFsck(dev string) error {
 		case 2:
 			ilog("e2fsck repaired /var; restart")
 			syscall.Sync()
-			syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART)
+			_ = syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART) // returns only on failure
 		}
 	}
 	return err
@@ -235,7 +243,9 @@ func prepareRoot(live bool) error {
 			if err := os.Mkdir(p, d.mode); err != nil {
 				return err
 			}
-			os.Chmod(p, d.mode)
+			if err := os.Chmod(p, d.mode); err != nil {
+				return err
+			}
 		}
 	}
 	for _, l := range [][2]string{{"run", "../run"}, {"lock", "../run/lock"}} {
@@ -253,7 +263,9 @@ func prepareRoot(live bool) error {
 		return err
 	}
 	if live {
-		os.WriteFile(runDir+"/live", nil, 0o644)
+		if err := os.WriteFile(runDir+"/live", nil, 0o644); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -277,16 +289,24 @@ func armWatchdog(version string) {
 	if err != nil || (len(order) > 0 && order[0] == cur) {
 		return
 	}
+	// The marker comes first: "klos bless" stops the watchdog only if the
+	// marker exists. Without the marker, do not start the watchdog.
+	if err := os.WriteFile(runDir+"/trial", []byte(strconv.Itoa(int(cur))), 0o644); err != nil {
+		ilog("trial boot, but no trial marker (no watchdog): %v", err)
+		return
+	}
 	f, err := os.OpenFile("/dev/watchdog", os.O_WRONLY, 0)
 	if err != nil {
 		ilog("trial boot, but there is no watchdog: %v", err)
 		return
 	}
 	timeout := int32(300)
-	syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), wdiocSetTimeout, uintptr(unsafe.Pointer(&timeout)))
-	// Closing without the magic character "V" keeps the timer running.
-	f.Close()
-	os.WriteFile(runDir+"/trial", []byte(strconv.Itoa(int(cur))), 0o644)
+	if _, _, e := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), wdiocSetTimeout, uintptr(unsafe.Pointer(&timeout))); e != 0 {
+		ilog("watchdog: cannot set the timeout (the default timeout applies): %v", e)
+	}
+	// Closing without the magic character "V" keeps the timer running, so
+	// a close error has no effect.
+	_ = f.Close()
 	ilog("trial boot of %s: the watchdog restarts the computer in %d s without 'klos bless'", version, timeout)
 }
 
@@ -316,7 +336,7 @@ func switchRoot(init string) error {
 		return err
 	}
 	if kmsg != nil {
-		kmsg.Close()
+		_ = kmsg.Close() // the new init opens its own log
 	}
 	return syscall.Exec(init, []string{init}, []string{"PATH=/usr/bin", "TERM=linux"})
 }
@@ -337,6 +357,6 @@ func removeInitramfs(dir string, dev uint64) {
 		if e.IsDir() {
 			removeInitramfs(p, dev)
 		}
-		os.Remove(p)
+		_ = os.Remove(p) // frees memory only; the next init does not need it
 	}
 }

@@ -200,20 +200,22 @@ func inputHash(r *Recipe) string {
 		walkRoots = append(walkRoots, filepath.Join(TOP, r.Package.LocalSource))
 	}
 	for _, root := range walkRoots {
-		filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
-			check(err)
+		check(filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
 			if info.Mode().IsRegular() {
 				files = append(files, p)
 			}
 			return nil
-		})
+		}))
 	}
 	sort.Strings(files)
 	for _, f := range files {
 		b, err := os.ReadFile(f)
 		check(err)
 		relp, _ := filepath.Rel(TOP, f)
-		fmt.Fprintf(h, "%s\x00%d\x00", relp, len(b))
+		_, _ = fmt.Fprintf(h, "%s\x00%d\x00", relp, len(b)) // hash.Hash.Write never fails
 		h.Write(b)
 	}
 	// Host packages do not get the target flags or the recipe helper
@@ -233,7 +235,7 @@ func inputHash(r *Recipe) string {
 	h.Write(commonJSON)
 	deps := uniqSorted(append(append([]string{}, r.BuildDepends...), r.HostDepends...))
 	for _, d := range deps {
-		fmt.Fprintf(h, "%s=%s\x00", d, inputHash(recipe(d)))
+		_, _ = fmt.Fprintf(h, "%s=%s\x00", d, inputHash(recipe(d))) // hash.Hash.Write never fails
 	}
 	sum := hex.EncodeToString(h.Sum(nil))
 	hashCache[r.Name] = sum

@@ -72,7 +72,9 @@ func modprobe(aliases []string) {
 
 func coldplug() {
 	seen := map[string]bool{}
-	filepath.WalkDir("/sys/devices", func(p string, d os.DirEntry, err error) error {
+	// sysfs entries can go away during the walk; skip the entries that
+	// cannot be read. The walk function never returns an error.
+	_ = filepath.WalkDir("/sys/devices", func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -92,9 +94,10 @@ func coldplug() {
 	sort.Strings(aliases)
 	devLog("coldplug: %d device aliases", len(aliases))
 	modprobe(aliases)
-	// Load the modules of devices that the first modules added.
+	// Give the new drivers time to make their device nodes, then set the
+	// groups and modes of all device nodes.
 	time.Sleep(time.Second)
-	filepath.WalkDir("/dev", func(p string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir("/dev", func(p string, d os.DirEntry, err error) error {
 		if err == nil && !d.IsDir() {
 			applyRules(p)
 		}
@@ -130,8 +133,12 @@ func applyRules(dev string) {
 			continue
 		}
 		if gid, ok := lookupGroup(r.group); ok {
-			os.Chown(dev, 0, gid)
-			os.Chmod(dev, r.mode)
+			if err := os.Chown(dev, 0, gid); err != nil {
+				devLog("chown %s: %v", dev, err)
+			}
+			if err := os.Chmod(dev, r.mode); err != nil {
+				devLog("chmod %s: %v", dev, err)
+			}
 		}
 	}
 }
@@ -157,7 +164,11 @@ func cmdDevd(args []string) error {
 	if err := syscall.Bind(fd, &syscall.SockaddrNetlink{Family: syscall.AF_NETLINK, Groups: ueventGroupKernel}); err != nil {
 		return err
 	}
-	syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF, 4<<20)
+	// A large buffer keeps the events of a burst (many new devices). The
+	// default buffer also works, with the risk of ENOBUFS.
+	if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF, 4<<20); err != nil {
+		devLog("receive buffer: %v", err)
+	}
 	coldplug()
 	libudev := &syscall.SockaddrNetlink{Family: syscall.AF_NETLINK, Groups: ueventGroupLibudev}
 	buf := make([]byte, 64<<10)
@@ -183,6 +194,8 @@ func cmdDevd(args []string) error {
 				applyRules("/dev/" + dn)
 			}
 		}
-		syscall.Sendto(fd, msg, 0, libudev)
+		// Without listeners, or with a full listener, the message is lost;
+		// libudev-zero then sees the device at its next scan of sysfs.
+		_ = syscall.Sendto(fd, msg, 0, libudev)
 	}
 }

@@ -51,39 +51,50 @@ func kernelSource() string {
 var configLine = regexp.MustCompile(`^(CONFIG_[A-Za-z0-9_]+)=(.*)$`)
 
 // readConfigFragments returns the options of the fragments, in order.
+// readFragment returns the options of one configuration fragment, in order.
+func readFragment(p string) ([][2]string, error) {
+	f, err := os.Open(p)
+	if err != nil {
+		return nil, err
+	}
+	defer closeQuietly(f)
+	var opts [][2]string
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		l := strings.TrimSpace(s.Text())
+		if l == "" || strings.HasPrefix(l, "#") {
+			continue
+		}
+		m := configLine.FindStringSubmatch(l)
+		if m == nil {
+			return nil, fmt.Errorf("bad line %q", l)
+		}
+		opts = append(opts, [2]string{m[1], m[2]})
+	}
+	return opts, s.Err()
+}
+
+// readConfigFragments returns the options of the fragments, in order. A
+// later fragment replaces the value of an earlier fragment.
 func readConfigFragments(names []string) ([][2]string, string) {
 	var opts [][2]string
-	var text strings.Builder
+	index := map[string]int{}
 	for _, n := range names {
 		p := filepath.Join(TOP, "kernel", "config", n+".config")
-		f, err := os.Open(p)
+		frag, err := readFragment(p)
 		if err != nil {
 			die("kernel config fragment %s: %v", rel(p), err)
 		}
-		s := bufio.NewScanner(f)
-		for s.Scan() {
-			l := strings.TrimSpace(s.Text())
-			if l == "" || strings.HasPrefix(l, "#") {
+		for _, o := range frag {
+			if i, ok := index[o[0]]; ok {
+				opts[i][1] = o[1]
 				continue
 			}
-			m := configLine.FindStringSubmatch(l)
-			if m == nil {
-				die("%s: bad line %q", rel(p), l)
-			}
-			// A later fragment replaces the value of an earlier fragment.
-			replaced := false
-			for i := range opts {
-				if opts[i][0] == m[1] {
-					opts[i][1] = m[2]
-					replaced = true
-				}
-			}
-			if !replaced {
-				opts = append(opts, [2]string{m[1], m[2]})
-			}
+			index[o[0]] = len(opts)
+			opts = append(opts, o)
 		}
-		f.Close()
 	}
+	var text strings.Builder
 	for _, o := range opts {
 		if o[1] == "n" {
 			fmt.Fprintf(&text, "# %s is not set\n", o[0])
@@ -162,7 +173,7 @@ func (kb *kernelBuild) configure(m *Manifest) {
 		}
 	}
 	if len(bad) > 0 {
-		os.Remove(frag)
+		removeIfExists(frag) // configure again next time
 		die("kernel config for %s does not agree with the fragments:\n  %s",
 			kb.flavor, strings.Join(bad, "\n  "))
 	}
@@ -258,7 +269,7 @@ authorityKeyIdentifier=keyid
 `, 0o600)
 	run(Cmd{Args: []string{"openssl", "req", "-new", "-nodes", "-utf8", "-sha512", "-days", "36500",
 		"-batch", "-x509", "-config", conf, "-outform", "PEM", "-out", path, "-keyout", path}, Quiet: true})
-	os.Remove(conf)
+	check(os.Remove(conf))
 	check(os.Chmod(path, 0o600))
 	logf("made the kernel module signing key %s", rel(path))
 }

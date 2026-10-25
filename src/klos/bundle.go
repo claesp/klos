@@ -13,6 +13,7 @@ package main
 
 import (
 	"archive/tar"
+	"context"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"crypto/x509"
@@ -68,8 +69,12 @@ func loadPublicKey(path string) (ed25519.PublicKey, error) {
 	return pk, nil
 }
 
+// bundleDownloadTimeout limits the download of one update bundle.
+const bundleDownloadTimeout = 2 * time.Hour
+
 // fetchBundle makes a local directory with the bundle files from a
-// directory, a tar file or an https:// URL of a tar file.
+// directory, a tar file (or a block device with tar data) or an https://
+// URL of a tar file.
 func fetchBundle(src, workdir string) (string, error) {
 	if strings.HasPrefix(src, "http://") {
 		return "", errors.New("use https:// for bundles")
@@ -80,24 +85,11 @@ func fetchBundle(src, workdir string) (string, error) {
 		}
 		tmp := filepath.Join(workdir, "download.tar")
 		fmt.Printf("download %s\n", src)
-		client := &http.Client{Timeout: 2 * time.Hour}
-		resp, err := client.Get(src)
-		if err != nil {
-			return "", err
+		ctx, cancel := context.WithTimeout(context.Background(), bundleDownloadTimeout)
+		defer cancel()
+		if err := downloadFile(ctx, src, tmp); err != nil {
+			return "", fmt.Errorf("download %s: %w", src, err)
 		}
-		defer resp.Body.Close()
-		if resp.StatusCode != 200 {
-			return "", fmt.Errorf("%s: %s", src, resp.Status)
-		}
-		f, err := os.Create(tmp)
-		if err != nil {
-			return "", err
-		}
-		if _, err := io.Copy(f, resp.Body); err != nil {
-			f.Close()
-			return "", err
-		}
-		f.Close()
 		src = tmp
 	}
 	st, err := os.Stat(src)
@@ -108,43 +100,76 @@ func fetchBundle(src, workdir string) (string, error) {
 		return src, nil
 	}
 	dir := filepath.Join(workdir, "bundle")
-	os.RemoveAll(dir)
+	if err := os.RemoveAll(dir); err != nil {
+		return "", err
+	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err
 	}
+	if err := extractBundle(src, dir); err != nil {
+		return "", fmt.Errorf("read the bundle %s: %w", src, err)
+	}
+	return dir, nil
+}
+
+func downloadFile(ctx context.Context, url, dest string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer closeQuietly(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("HTTP %s", resp.Status)
+	}
+	return writeFileFrom(dest, resp.Body, 0o600)
+}
+
+// extractBundle copies the bundle files from a tar archive into dir. It
+// ignores all other entries.
+func extractBundle(src, dir string) error {
 	f, err := os.Open(src)
 	if err != nil {
-		return "", err
+		return err
 	}
-	defer f.Close()
-	tr := tar.NewReader(f)
+	defer closeQuietly(f)
 	allowed := map[string]bool{"bundle.json": true, "bundle.sig": true}
 	for _, n := range bundleFiles {
 		allowed[n] = true
 	}
+	tr := tar.NewReader(f)
 	for {
 		h, err := tr.Next()
-		if err == io.EOF {
-			break
+		if errors.Is(err, io.EOF) {
+			return nil
 		}
 		if err != nil {
-			return "", err
+			return err
 		}
 		name := filepath.Base(filepath.Clean(h.Name))
 		if h.Typeflag != tar.TypeReg || !allowed[name] {
 			continue
 		}
-		out, err := os.OpenFile(filepath.Join(dir, name), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
-		if err != nil {
-			return "", err
+		if err := writeFileFrom(filepath.Join(dir, name), tr, 0o600); err != nil {
+			return err
 		}
-		if _, err := io.Copy(out, tr); err != nil {
-			out.Close()
-			return "", err
-		}
-		out.Close()
 	}
-	return dir, nil
+}
+
+// writeFileFrom writes the data of r to a new file.
+func writeFileFrom(path string, r io.Reader, mode os.FileMode) error {
+	out, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, r); err != nil {
+		_ = out.Close() // the copy error is the error to report
+		return err
+	}
+	return out.Close()
 }
 
 // verifyBundle checks the signature, then the size and SHA-256 of each file.
@@ -183,7 +208,7 @@ func verifyBundle(dir, pubkey string) (*BundleInfo, error) {
 		}
 		h := sha256.New()
 		size, err := io.Copy(h, f)
-		f.Close()
+		closeQuietly(f)
 		if err != nil {
 			return nil, err
 		}

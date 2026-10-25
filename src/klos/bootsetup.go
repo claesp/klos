@@ -129,7 +129,7 @@ func confLines(path string) [][]string {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer closeQuietly(f)
 	var out [][]string
 	s := bufio.NewScanner(f)
 	for s.Scan() {
@@ -181,7 +181,9 @@ func makeDirs() error {
 			if err := os.MkdirAll(l[1], 0o755); err != nil {
 				return err
 			}
-			os.Chmod(l[1], os.FileMode(mode)|modeBits(mode))
+			if err := os.Chmod(l[1], os.FileMode(mode)|modeBits(mode)); err != nil {
+				return err
+			}
 			if err := os.Lchown(l[1], uid, gid); err != nil {
 				return err
 			}
@@ -240,7 +242,7 @@ func loopbackUp() error {
 	if err != nil {
 		return err
 	}
-	defer syscall.Close(fd)
+	defer func() { _ = syscall.Close(fd) }() // a socket only for the ioctl
 	var ifr [40]byte
 	copy(ifr[:], "lo")
 	if _, _, e := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.SIOCGIFFLAGS, uintptr(unsafe.Pointer(&ifr[0]))); e != 0 {
@@ -279,7 +281,9 @@ func userRuntimeDirs() error {
 		if err := os.Mkdir(d, 0o700); err != nil && !os.IsExist(err) {
 			return err
 		}
-		os.Chmod(d, 0o700)
+		if err := os.Chmod(d, 0o700); err != nil {
+			return err
+		}
 		if err := os.Chown(d, uid, gid); err != nil {
 			return err
 		}

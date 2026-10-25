@@ -55,7 +55,12 @@ func mountESP() (*Partition, func(), error) {
 		syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_NOEXEC, "umask=0077,shortname=winnt"); err != nil {
 		return nil, nil, err
 	}
-	return p, func() { syscall.Sync(); syscall.Unmount(espMount, 0) }, nil
+	return p, func() {
+		syscall.Sync()
+		// The files are synced; an unmount error leaves the ESP mounted
+		// until the next boot, with no loss of data.
+		_ = syscall.Unmount(espMount, 0)
+	}, nil
 }
 
 func espPath(win string) string {
@@ -68,7 +73,7 @@ func copyAtomic(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer closeQuietly(in)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o700); err != nil {
 		return err
 	}
@@ -78,14 +83,16 @@ func copyAtomic(src, dst string) error {
 		return err
 	}
 	if _, err := io.Copy(out, in); err != nil {
-		out.Close()
+		_ = out.Close() // the first error is the error to report
 		return err
 	}
 	if err := out.Sync(); err != nil {
-		out.Close()
+		_ = out.Close() // the first error is the error to report
 		return err
 	}
-	out.Close()
+	if err := out.Close(); err != nil {
+		return err
+	}
 	return os.Rename(tmp, dst)
 }
 
@@ -101,17 +108,17 @@ func writeImage(img, dev string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer closeQuietly(in)
 	out, err := os.OpenFile(dev, os.O_WRONLY, 0)
 	if err != nil {
 		return err
 	}
 	if _, err := io.CopyBuffer(out, in, make([]byte, 4<<20)); err != nil {
-		out.Close()
+		_ = out.Close() // the first error is the error to report
 		return err
 	}
 	if err := out.Sync(); err != nil {
-		out.Close()
+		_ = out.Close() // the first error is the error to report
 		return err
 	}
 	return out.Close()
@@ -143,10 +150,12 @@ func installVersion(dir string, info *BundleInfo, esp *Partition) error {
 }
 
 func cmdUpdate(args []string) error {
-	fs := flag.NewFlagSet("update", flag.ExitOnError)
+	fs := flag.NewFlagSet("update", flag.ContinueOnError)
 	reboot := fs.Bool("reboot", false, "restart after the update")
 	downgrade := fs.Bool("allow-downgrade", false, "accept an older version")
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 	if fs.NArg() != 1 {
 		return errors.New("usage: klos update [-reboot] <bundle>")
 	}
@@ -157,7 +166,11 @@ func cmdUpdate(args []string) error {
 		return errors.New("the installer cannot update; use 'klos install'")
 	}
 	work := filepath.Join("/var/tmp", "klos-update")
-	defer os.RemoveAll(work)
+	defer func() {
+		if err := os.RemoveAll(work); err != nil {
+			fmt.Fprintf(os.Stderr, "klos: remove the temporary files %s: %v\n", work, err)
+		}
+	}()
 	dir, err := fetchBundle(fs.Arg(0), work)
 	if err != nil {
 		return err
@@ -195,7 +208,9 @@ func cmdUpdate(args []string) error {
 	}
 	defer umount()
 	if err := installVersion(dir, info, esp); err != nil {
-		lvm("lvremove", "--yes", vgName+"/"+osLVPrefix+info.Version)
+		if rerr := lvm("lvremove", "--yes", vgName+"/"+osLVPrefix+info.Version); rerr != nil {
+			fmt.Fprintf(os.Stderr, "klos: remove the incomplete volume: %v\n", rerr)
+		}
 		return err
 	}
 	if efiAvailable() {
@@ -271,7 +286,9 @@ func collectVersions(running string, keep int) error {
 				return err
 			}
 		}
-		os.Remove(espPath(espFile(v)))
+		if err := os.Remove(espPath(espFile(v))); err != nil && !os.IsNotExist(err) {
+			return err
+		}
 		if err := lvm("lvremove", "--yes", vgName+"/"+osLVPrefix+v); err != nil {
 			return err
 		}
@@ -288,7 +305,11 @@ func disarmWatchdog() error {
 	if err != nil {
 		return err
 	}
-	f.Write([]byte("V"))
+	// The magic character "V" stops the timer when the file closes.
+	if _, err := f.Write([]byte("V")); err != nil {
+		_ = f.Close() // the write error is the error to report
+		return err
+	}
 	if err := f.Close(); err != nil {
 		return err
 	}

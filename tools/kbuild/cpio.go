@@ -50,10 +50,27 @@ func (c *cpioWriter) chardev(name string, perm, major, minor uint32) {
 	c.entries[name] = cpioEntry{name: name, mode: cpioChr | perm, rmajor: major, rminor: minor}
 }
 
+// errWriter keeps the first write error, so that the writer code can check
+// the error one time at the end.
+type errWriter struct {
+	w   io.Writer
+	err error
+}
+
+func (e *errWriter) Write(p []byte) (int, error) {
+	if e.err != nil {
+		return 0, e.err
+	}
+	var n int
+	n, e.err = e.w.Write(p)
+	return n, e.err
+}
+
 func (c *cpioWriter) write(path string) {
 	f, err := os.Create(path)
 	check(err)
-	w := bufio.NewWriter(f)
+	bw := bufio.NewWriter(f)
+	w := &errWriter{w: bw}
 	var names []string
 	for n := range c.entries {
 		names = append(names, n)
@@ -62,7 +79,7 @@ func (c *cpioWriter) write(path string) {
 	ino := uint32(1)
 	pad := func(n int) {
 		if r := n % 4; r != 0 {
-			w.Write(make([]byte, 4-r))
+			_, _ = w.Write(make([]byte, 4-r)) // errWriter keeps the error
 		}
 	}
 	hdr := func(e cpioEntry, ino uint32) {
@@ -70,12 +87,12 @@ func (c *cpioWriter) write(path string) {
 		if e.mode&0o170000 == cpioDir {
 			nlink = 2
 		}
-		fmt.Fprintf(w, "070701%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X",
+		_, _ = fmt.Fprintf(w, "070701%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X",
 			ino, e.mode, 0, 0, nlink, uint32(SDE), len(e.data), 0, 0,
 			e.rmajor, e.rminor, len(e.name)+1, 0)
-		io.WriteString(w, e.name+"\x00")
+		_, _ = io.WriteString(w, e.name+"\x00")
 		pad(110 + len(e.name) + 1)
-		w.Write(e.data)
+		_, _ = w.Write(e.data)
 		pad(len(e.data))
 	}
 	for _, n := range names {
@@ -83,6 +100,7 @@ func (c *cpioWriter) write(path string) {
 		ino++
 	}
 	hdr(cpioEntry{name: "TRAILER!!!"}, 0)
-	check(w.Flush())
+	check(w.err)
+	check(bw.Flush())
 	check(f.Close())
 }

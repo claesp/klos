@@ -147,7 +147,9 @@ func srk(t transport.TPM) (tpm2.NamedHandle, *tpm2.TPMTPublic, error) {
 }
 
 func flush(t transport.TPM, h tpm2.TPMHandle) {
-	tpm2.FlushContext{FlushHandle: h}.Execute(t)
+	// The TPM also flushes transient objects at the next boot, so a flush
+	// error has no lasting effect.
+	_, _ = tpm2.FlushContext{FlushHandle: h}.Execute(t)
 }
 
 func pcrSelection(pcrs ...uint) tpm2.TPMLPCRSelection {
@@ -194,18 +196,25 @@ func pcrPolicy(pcr7 []byte, pin bool) ([]byte, error) {
 }
 
 // lockPCR extends PCR 15. After this, the TPM does not unseal the disk key
-// before the next boot.
-func lockPCR() {
+// before the next boot. A computer without a TPM is not an error.
+func lockPCR() error {
+	if _, err := os.Stat(tpmDevice); err != nil {
+		return nil
+	}
 	t, err := openTPM(0)
 	if err != nil {
-		return
+		return err
 	}
-	defer t.Close()
+	defer closeQuietly(t)
 	d := sha256.Sum256([]byte(lockMessage))
-	tpm2.PCRExtend{
+	_, err = tpm2.PCRExtend{
 		PCRHandle: tpm2.AuthHandle{Handle: tpm2.TPMHandle(pcrLock), Auth: tpm2.PasswordAuth(nil)},
 		Digests:   tpm2.TPMLDigestValues{Digests: []tpm2.TPMTHA{{HashAlg: tpm2.TPMAlgSHA256, Digest: d[:]}}},
 	}.Execute(t)
+	if err != nil {
+		return fmt.Errorf("extend PCR %d: %w", pcrLock, err)
+	}
+	return nil
 }
 
 // tpmUnseal unseals the disk key of a token. pin is used only if the token
@@ -228,7 +237,7 @@ func tpmUnseal(tok *tpmTokenData, pin string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer t.Close()
+	defer closeQuietly(t)
 	parent, parentPub, err := srk(t)
 	if err != nil {
 		return nil, err
@@ -254,7 +263,7 @@ func tpmUnseal(tok *tpmTokenData, pin string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer closeSess()
+	defer func() { _ = closeSess() }() // the session also ends with the TPM connection
 	if _, err := (tpm2.PolicyPCR{PolicySession: sess.Handle(), Pcrs: pcrSelection(pcrSecBoot, pcrLock)}).Execute(t); err != nil {
 		return nil, err
 	}
@@ -318,22 +327,22 @@ func tpmUnlock(dev string, askPIN func() (string, error), warn func(error)) erro
 func cryptsetupFiles(secrets [][]byte, args ...string) error {
 	cmd := exec.Command("cryptsetup", args...)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
-	var writers []*os.File
 	for _, s := range secrets {
 		r, w, err := os.Pipe()
 		if err != nil {
 			return err
 		}
 		cmd.ExtraFiles = append(cmd.ExtraFiles, r)
-		writers = append(writers, w)
 		go func(w *os.File, s []byte) {
-			w.Write(s)
-			w.Close()
+			// A short write gives cryptsetup a wrong key, and cryptsetup
+			// then fails; the error of cryptsetup is the error to report.
+			_, _ = w.Write(s)
+			_ = w.Close()
 		}(w, s)
 	}
 	err := cmd.Run()
 	for _, f := range cmd.ExtraFiles {
-		f.Close()
+		closeQuietly(f) // our copy of the read end
 	}
 	if err != nil {
 		return fmt.Errorf("cryptsetup %s: %w", args[0], err)
@@ -416,11 +425,13 @@ func cmdTPM(args []string) error {
 }
 
 func tpmEnroll(args []string) error {
-	fs := flag.NewFlagSet("tpm enroll", flag.ExitOnError)
+	fs := flag.NewFlagSet("tpm enroll", flag.ContinueOnError)
 	keyFile := fs.String("key-file", "", "read the current passphrase from this file (- is standard input)")
 	usePIN := fs.Bool("pin", false, "the TPM also needs a PIN (the command asks for it)")
 	pinFile := fs.String("pin-file", "", "read the PIN from this file (implies -pin)")
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 	if err := requireRoot(); err != nil {
 		return err
 	}
@@ -453,7 +464,7 @@ func tpmEnroll(args []string) error {
 		return fmt.Errorf("use a PIN with %d characters or more", minPINLength)
 	}
 	if secureBootState() != "enabled" {
-		return errors.New("Secure Boot is not enabled; without it, PCR 7 does not protect the disk key (read docs/tpm.md)")
+		return errors.New("enroll needs Secure Boot: without it, PCR 7 does not protect the disk key (read docs/tpm.md)")
 	}
 	part, err := luksPartition()
 	if err != nil {
@@ -463,7 +474,7 @@ func tpmEnroll(args []string) error {
 	if err != nil {
 		return err
 	}
-	defer t.Close()
+	defer closeQuietly(t)
 	parent, parentPub, err := srk(t)
 	if err != nil {
 		return err
@@ -556,9 +567,11 @@ func tpmEnroll(args []string) error {
 }
 
 func tpmRemove(args []string) error {
-	fs := flag.NewFlagSet("tpm remove", flag.ExitOnError)
+	fs := flag.NewFlagSet("tpm remove", flag.ContinueOnError)
 	keyFile := fs.String("key-file", "", "read the passphrase from this file (- is standard input)")
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 	if err := requireRoot(); err != nil {
 		return err
 	}
@@ -603,7 +616,7 @@ func tpmStatus() error {
 		fmt.Printf("TPM: %v\n", err)
 		return nil
 	}
-	defer t.Close()
+	defer closeQuietly(t)
 	if pcr7, err := readPCR(t, pcrSecBoot); err == nil {
 		if hex.EncodeToString(pcr7) == tok.PCR7 {
 			fmt.Println("PCR 7: the same as at the enrollment (the next boot can unlock)")

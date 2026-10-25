@@ -52,17 +52,27 @@ func cmdRunEnv(args []string) error {
 	if i+1 >= len(args) {
 		return errors.New("usage: klos run-env FILE... -- PROGRAM [ARG...]")
 	}
-	var argv []string
-	for _, a := range args[i+1:] {
-		if len(a) > 2 && a[0] == '@' && a[len(a)-1] == '@' {
-			argv = append(argv, strings.Fields(vars[a[1:len(a)-1]])...)
-			continue
-		}
-		argv = append(argv, a)
+	argv := expandArgs(args[i+1:], vars)
+	if len(argv) == 0 {
+		return errors.New("run-env: no program")
 	}
 	prog, err := exec.LookPath(argv[0])
 	if err != nil {
 		return err
 	}
 	return syscall.Exec(prog, argv, os.Environ())
+}
+
+// expandArgs puts the words of vars[KEY] in place of each "@KEY@" argument.
+// An unknown or empty KEY gives no words.
+func expandArgs(args []string, vars map[string]string) []string {
+	argv := make([]string, 0, len(args))
+	for _, a := range args {
+		if len(a) > 2 && a[0] == '@' && a[len(a)-1] == '@' {
+			argv = append(argv, strings.Fields(vars[a[1:len(a)-1]])...)
+			continue
+		}
+		argv = append(argv, a)
+	}
+	return argv
 }

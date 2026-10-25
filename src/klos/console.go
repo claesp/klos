@@ -54,15 +54,19 @@ func readSecret(prompt string) (string, error) {
 		}
 		var t syscall.Termios
 		if ioctlTermios(f.Fd(), syscall.TCGETS, &t) != nil {
-			f.Close()
+			closeQuietly(f) // not a terminal
 			continue
 		}
 		raw := t
 		raw.Lflag &^= syscall.ECHO
 		raw.Lflag |= syscall.ICANON
-		ioctlTermios(f.Fd(), syscall.TCSETS, &raw)
+		if ioctlTermios(f.Fd(), syscall.TCSETS, &raw) != nil {
+			// Without "no echo", the secret would show; do not use it.
+			closeQuietly(f)
+			continue
+		}
 		ttys = append(ttys, tty{f, t})
-		f.WriteString(prompt)
+		_, _ = f.WriteString(prompt) // a console that fails here gets no input
 		go func(f *os.File) {
 			var b []byte
 			one := make([]byte, 1)
@@ -92,11 +96,13 @@ func readSecret(prompt string) (string, error) {
 			break
 		}
 	}
+	// Restore the terminals. These steps are best effort: the secret is
+	// read already, and a failure only changes the terminal display.
 	for _, t := range ttys {
-		ioctlTermios(t.f.Fd(), syscall.TCSETS, &t.old)
-		t.f.WriteString("\n")
+		_ = ioctlTermios(t.f.Fd(), syscall.TCSETS, &t.old)
+		_, _ = t.f.WriteString("\n")
 		// Closing the file stops the other readers.
-		t.f.Close()
+		closeQuietly(t.f)
 	}
 	return res.text, res.err
 }
@@ -110,11 +116,13 @@ func consoleWrite(msg string) {
 		if err != nil {
 			continue
 		}
-		f.WriteString(msg)
-		f.Close()
+		// Messages are best effort: one console with an error must not
+		// stop the messages on the other consoles.
+		_, _ = f.WriteString(msg)
+		closeQuietly(f)
 		wrote = true
 	}
 	if !wrote {
-		os.Stdout.WriteString(msg)
+		_, _ = os.Stdout.WriteString(msg)
 	}
 }

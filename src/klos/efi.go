@@ -59,7 +59,7 @@ func clearImmutable(path string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer closeQuietly(f)
 	var flags int32
 	if _, _, e := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), fsIocGetFlags,
 		uintptr(unsafe.Pointer(&flags))); e != 0 {
@@ -98,7 +98,7 @@ func efiWriteVar(name, guid string, attrs uint32, data []byte) error {
 	}
 	// efivarfs needs the attributes and the data in one write.
 	if _, err := f.Write(buf); err != nil {
-		f.Close()
+		_ = f.Close() // the write error is the error to report
 		return fmt.Errorf("%s: %w", name, err)
 	}
 	return f.Close()

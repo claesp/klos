@@ -45,7 +45,7 @@ func readGPT(disk string) ([]Partition, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer closeQuietly(f)
 	hdr := make([]byte, 92)
 	if _, err := f.ReadAt(hdr, int64(bs)); err != nil {
 		return nil, err

@@ -15,6 +15,7 @@ options = { no-strip = true }
 script = '''
 export PATH="$HOST_GO/opt/klos/go/bin:$PATH" CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v2
 export GOFLAGS="-mod=vendor -trimpath -buildvcs=false"
-go vet .
+go vet ./...
+go test -count=1 ./...
 go build -ldflags="-s -w -buildid=" -o "$DESTDIR/usr/bin/klos" .
 '''

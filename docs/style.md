@@ -22,8 +22,25 @@ Keep all documentation in `docs/`, except `README.md`.
 
 ## Code
 
-- Go: use `gofmt`. Use only the standard library in `src/klos`.
-  `tools/kbuild` can use vendored modules (`vendor/`).
+- Go: follow the usual Go patterns (the project uses the golang-patterns
+  rules):
+  - Use `gofmt`. `go vet` must not show problems.
+  - Do not ignore an error without a reason. Write `_ =` and a comment when
+    an error has no effect (for example a best-effort cleanup). Use
+    `closeQuietly` for files that the program only read.
+  - Wrap errors with context: `fmt.Errorf("enroll %s: %w", name, err)`.
+  - Use sentinel errors (`errNoToken`) and check them with `errors.Is`.
+  - Do not use naked returns or `panic` for errors.
+  - Give network operations a context with a time limit.
+  - Do not change package-level state during a command; give settings
+    as parameters (for example `imageOptions`).
+  - Subcommands parse their flags with `flag.ContinueOnError` and return
+    the error.
+  - Write unit tests for functions without side effects.
+  - Run `./klos check` before a commit (gofmt, go vet and the tests).
+- Go modules: `src/klos` uses the standard library and the vendored
+  go-tpm module. `tools/kbuild` uses vendored modules (`vendor/`). Vendor
+  each new module, and keep the list of modules short.
 - Shell: use POSIX `sh` for the host script `klos`. Recipe scripts use bash.
 - Each source file starts with `SPDX-License-Identifier: BSD-2-Clause`.
 - Write comments with the same STE rules.

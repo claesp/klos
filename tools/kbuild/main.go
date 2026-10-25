@@ -57,7 +57,7 @@ func main() {
 	exe, err := os.Executable()
 	if err == nil && os.Getenv("KLOS_TOP") == "" {
 		// The binary is in work/bin; the repository is two levels up.
-		os.Setenv("KLOS_TOP", filepath.Dir(filepath.Dir(filepath.Dir(exe))))
+		check(os.Setenv("KLOS_TOP", filepath.Dir(filepath.Dir(filepath.Dir(exe)))))
 	}
 	initPaths()
 	c, ok := commands[os.Args[1]]
@@ -68,7 +68,7 @@ func main() {
 }
 
 func cmdFlags(name string, args []string, force *bool) []string {
-	fs := flag.NewFlagSet(name, flag.ExitOnError)
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	if force != nil {
 		fs.BoolVar(force, "force", false, "build again even if the output is current")
 	} else {
@@ -76,7 +76,9 @@ func cmdFlags(name string, args []string, force *bool) []string {
 		fs.Bool("force", false, "ignored")
 		fs.String("config", "", "ignored")
 	}
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		die("%s: %v", name, err)
+	}
 	if fs.NArg() == 0 && name != "list" {
 		die("%s: no targets given", name)
 	}
@@ -137,7 +139,7 @@ func cmdHash(args []string) {
 		mkdirAll(WORK)
 		download(u, tmp)
 		fmt.Printf("%s  %s\n", sha256File(tmp), u)
-		os.Remove(tmp)
+		check(os.Remove(tmp))
 	}
 }
 

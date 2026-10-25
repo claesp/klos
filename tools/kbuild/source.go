@@ -4,6 +4,8 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -25,25 +27,46 @@ func (s Source) path() string {
 	return filepath.Join(SRCCACHE, s.SHA256[:16]+"-"+s.filename())
 }
 
+// downloadTimeout limits one download (the largest sources are about 700 MB).
+const downloadTimeout = 30 * time.Minute
+
 func download(url, dest string) {
 	logf("download %s", url)
-	client := &http.Client{Timeout: 30 * time.Minute}
-	req, err := http.NewRequest("GET", url, nil)
-	check(err)
+	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
+	defer cancel()
+	if err := fetchURL(ctx, url, dest); err != nil {
+		die("download %s: %v", url, err)
+	}
+}
+
+// fetchURL writes the contents of url to dest (through dest.part).
+func fetchURL(ctx context.Context, url, dest string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
 	req.Header.Set("User-Agent", "klos-kbuild/1")
-	resp, err := client.Do(req)
-	check(err)
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		die("download %s: HTTP %s", url, resp.Status)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer closeQuietly(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("HTTP %s", resp.Status)
 	}
 	tmp := dest + ".part"
 	f, err := os.Create(tmp)
-	check(err)
-	_, err = io.Copy(f, resp.Body)
-	check(err)
-	check(f.Close())
-	check(os.Rename(tmp, dest))
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		_ = f.Close() // the copy error is the error to report
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp, dest)
 }
 
 // gpgKeyring makes a binary keyring from the armored key files in keys/.
@@ -57,7 +80,7 @@ func gpgKeyring(keys []string, dir string) string {
 			die("missing key file %s", asc)
 		}
 		run(Cmd{Args: []string{"gpg", "--dearmor"}, Stdin: in, Stdout: &buf})
-		in.Close()
+		closeQuietly(in)
 	}
 	check(os.WriteFile(ring, buf.Bytes(), 0o644))
 	return ring
@@ -76,14 +99,14 @@ func verifySignature(s Source, path string) {
 	}
 	tmp, err := os.MkdirTemp("", "kbuild-sig")
 	check(err)
-	defer os.RemoveAll(tmp)
+	defer func() { _ = os.RemoveAll(tmp) }() // temporary files only
 	data := path
 	if s.SignedContent == "uncompressed" {
 		data = filepath.Join(tmp, "data")
 		f, err := os.Create(data)
 		check(err)
 		run(Cmd{Args: []string{"xz", "-dc", path}, Stdout: f})
-		f.Close()
+		check(f.Close())
 	}
 	var verr error
 	var stderr bytes.Buffer
@@ -98,7 +121,7 @@ func verifySignature(s Source, path string) {
 		die("unknown signature type %q", s.SignatureType)
 	}
 	if verr != nil {
-		os.Remove(sig)
+		_ = os.Remove(sig) // download it again next time; the build stops
 		die("signature check failed for %s:\n%s", filepath.Base(path), stderr.String())
 	}
 	logf("signature good: %s", s.filename())
@@ -119,7 +142,7 @@ func fetchSource(s Source) string {
 	}
 	download(s.URL, p)
 	if got := sha256File(p); got != s.SHA256 {
-		os.Rename(p, p+".bad")
+		_ = os.Rename(p, p+".bad") // keep the file for inspection; the build stops
 		die("SHA-256 mismatch for %s\n  expected %s\n  got      %s", s.URL, s.SHA256, got)
 	}
 	verifySignature(s, p)

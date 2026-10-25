@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -89,7 +90,19 @@ func detUUID(parts ...string) string {
 
 func imageDir(flavor string) string { return filepath.Join(WORK, "image", flavor) }
 
-func outDir(flavor string) string { return filepath.Join(OUT, "images", flavor, VERSION) }
+// imageOptions are the settings of one image build.
+type imageOptions struct {
+	Version    string // the OS version
+	SecureBoot bool   // sign the EFI binaries
+}
+
+// defaultImageOptions are the settings from config/klos.toml (and
+// KLOS_VERSION).
+func defaultImageOptions() imageOptions {
+	return imageOptions{Version: VERSION, SecureBoot: CONFIG.Image.SecureBoot}
+}
+
+func outDir(flavor, version string) string { return filepath.Join(OUT, "images", flavor, version) }
 
 // listTarball returns the non-directory paths in a package tarball.
 func listTarball(tb string) []string {
@@ -172,8 +185,10 @@ func assembleRootfs(m *Manifest, rootfs string) []string {
 // in [rootfs] scripts, and no setuid or setgid programs.
 func checkScripts(m *Manifest, rootfs string) {
 	var bad []string
-	filepath.Walk(rootfs, func(p string, info os.FileInfo, err error) error {
-		check(err)
+	check(filepath.Walk(rootfs, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if info.Mode()&(os.ModeSetuid|os.ModeSetgid) != 0 {
 			r, _ := filepath.Rel(rootfs, p)
 			bad = append(bad, r+" (setuid or setgid)")
@@ -184,8 +199,8 @@ func checkScripts(m *Manifest, rootfs string) {
 		f, err := os.Open(p)
 		check(err)
 		head := make([]byte, 2)
-		n, _ := f.Read(head)
-		f.Close()
+		n, _ := io.ReadFull(f, head) // a short file is not a script
+		closeQuietly(f)
 		if n == 2 && string(head) == "#!" {
 			r, _ := filepath.Rel(rootfs, p)
 			for _, pat := range m.Rootfs.Scripts {
@@ -196,7 +211,7 @@ func checkScripts(m *Manifest, rootfs string) {
 			bad = append(bad, r)
 		}
 		return nil
-	})
+	}))
 	if len(bad) > 0 {
 		sort.Strings(bad)
 		die("the image has files that are not allowed:\n  %s", strings.Join(bad, "\n  "))
@@ -234,13 +249,13 @@ func writeServices(m *Manifest, rootfs string) {
 	}
 }
 
-func writeOSRelease(m *Manifest, rootfs string) {
+func writeOSRelease(m *Manifest, rootfs, version string) {
 	d := CONFIG.Distribution
 	writeFile(filepath.Join(rootfs, "usr/lib/os-release"), fmt.Sprintf(
 		"NAME=%q\nID=%s\nVERSION_ID=%s\nVERSION=%q\nPRETTY_NAME=%q\nVARIANT=%q\nVARIANT_ID=%s\n",
-		d.Name, d.ID, VERSION, VERSION+" ("+m.Flavor.Name+")",
-		d.Name+" "+VERSION+" ("+m.Flavor.Name+")", m.Flavor.Description, m.Flavor.Name), 0o644)
-	os.Remove(filepath.Join(rootfs, "etc/os-release"))
+		d.Name, d.ID, version, version+" ("+m.Flavor.Name+")",
+		d.Name+" "+version+" ("+m.Flavor.Name+")", m.Flavor.Description, m.Flavor.Name), 0o644)
+	removeIfExists(filepath.Join(rootfs, "etc/os-release"))
 	symlink("../usr/lib/os-release", filepath.Join(rootfs, "etc/os-release"))
 }
 
@@ -326,13 +341,15 @@ func addELF(c *cpioWriter, rootfs, rel string, seen map[string]bool) {
 	c.file(rel, uint32(st.Mode().Perm()), data)
 	f, err := elf.Open(p)
 	if err != nil {
-		return
+		return // not an ELF file
 	}
-	defer f.Close()
+	defer closeQuietly(f)
 	for _, prog := range f.Progs {
 		if prog.Type == elf.PT_INTERP {
 			b := make([]byte, prog.Filesz)
-			prog.ReadAt(b, 0)
+			if _, err := prog.ReadAt(b, 0); err != nil {
+				die("%s: read the ELF interpreter: %v", rel, err)
+			}
 			addELF(c, rootfs, strings.TrimRight(string(b), "\x00"), seen)
 		}
 	}
@@ -378,26 +395,27 @@ func fileInfo(p string) BundleFile {
 	return BundleFile{Size: st.Size(), SHA256: sha256File(p)}
 }
 
-func buildImage(flavor string) *BuildRecord {
+func buildImage(flavor string, opt imageOptions) *BuildRecord {
+	version := opt.Version
 	m := flavorManifest(flavor)
 	iw := imageDir(flavor)
 	rootfs := filepath.Join(iw, "rootfs")
 	removeAll(iw)
 	mkdirAll(rootfs)
-	logf("image %s %s: assemble the root file system", flavor, VERSION)
+	logf("image %s %s: assemble the root file system", flavor, version)
 	pkgs := assembleRootfs(m, rootfs)
 	writeAccounts(m, rootfs)
 	writeServices(m, rootfs)
-	writeOSRelease(m, rootfs)
+	writeOSRelease(m, rootfs, version)
 	sk, pub := signingKey()
 	copyFile(pub, filepath.Join(rootfs, "usr/share/klos/bundle.pub"))
 	var sbKeys map[string]*sbKey
-	if CONFIG.Image.SecureBoot {
+	if opt.SecureBoot {
 		sbKeys = ensureSecureBootKeys()
 		writeSecureBootFiles(sbKeys, filepath.Join(rootfs, "usr/share/klos/secureboot"))
 	}
 	var list strings.Builder
-	rec := &BuildRecord{Flavor: flavor, Version: VERSION, HostPackages: map[string]string{}}
+	rec := &BuildRecord{Flavor: flavor, Version: version, HostPackages: map[string]string{}}
 	for _, p := range pkgs {
 		meta := pkgMeta(p)
 		rec.Packages = append(rec.Packages, *meta)
@@ -419,18 +437,18 @@ func buildImage(flavor string) *BuildRecord {
 
 	logf("image %s: make the erofs image", flavor)
 	img := filepath.Join(iw, "root.img")
-	uuid := detUUID("erofs", flavor, VERSION)
+	uuid := detUUID("erofs", flavor, version)
 	run(Cmd{Args: []string{"mkfs.erofs", "-zlz4hc,12", "-T", strconv.FormatInt(SDE, 10),
 		"--ignore-mtime", "--all-root", "-U", uuid, img, rootfs}, Quiet: true})
 	st, err := os.Stat(img)
 	check(err)
 	dataSize := (st.Size() + 4095) / 4096 * 4096
 	check(os.Truncate(img, dataSize))
-	salt := hex.EncodeToString(det("verity", flavor, VERSION))
+	salt := hex.EncodeToString(det("verity", flavor, version))
 	vout := output("veritysetup", "format", img, img,
 		"--hash-offset="+strconv.FormatInt(dataSize, 10),
 		"--data-blocks="+strconv.FormatInt(dataSize/4096, 10),
-		"--salt="+salt, "--uuid="+detUUID("verity", flavor, VERSION))
+		"--salt="+salt, "--uuid="+detUUID("verity", flavor, version))
 	roothash := ""
 	for _, l := range strings.Split(vout, "\n") {
 		if strings.HasPrefix(l, "Root hash:") {
@@ -449,7 +467,7 @@ func buildImage(flavor string) *BuildRecord {
 	cpio := filepath.Join(iw, "initramfs.cpio")
 	buildInitramfs(m, rootfs, cpio)
 	cmdline := strings.Join(append(append([]string{}, m.Kernel.Cmdline...),
-		"klos.version="+VERSION, "klos.flavor="+flavor,
+		"klos.version="+version, "klos.flavor="+flavor,
 		"klos.verity="+roothash, "klos.hashoffset="+strconv.FormatInt(dataSize, 10)), " ")
 	rec.Cmdline = cmdline
 	efi := filepath.Join(iw, "klos.efi")
@@ -464,7 +482,7 @@ func buildImage(flavor string) *BuildRecord {
 	rec.Kernel = kb.release()
 	rec.KernelConfig = sha256File(filepath.Join(kb.obj, ".config"))
 
-	od := outDir(flavor)
+	od := outDir(flavor, version)
 	removeAll(od)
 	mkdirAll(od)
 	for _, f := range []string{"root.img", "klos.efi", "klos-live.efi"} {
@@ -473,7 +491,7 @@ func buildImage(flavor string) *BuildRecord {
 	copyFile(filepath.Join(kb.obj, ".config"), filepath.Join(od, "kernel.config"))
 	writeFile(filepath.Join(od, "packages.txt"), list.String(), 0o644)
 	info := BundleInfo{
-		Distribution: CONFIG.Distribution.Name, Flavor: flavor, Version: VERSION,
+		Distribution: CONFIG.Distribution.Name, Flavor: flavor, Version: version,
 		Created: SDE, SlotSize: slot, RootHash: roothash, HashOffset: dataSize,
 		Files: map[string]BundleFile{
 			"root.img": fileInfo(filepath.Join(od, "root.img")),
@@ -485,7 +503,7 @@ func buildImage(flavor string) *BuildRecord {
 	writeFile(filepath.Join(od, "bundle.json"), string(data), 0o644)
 	writeFile(filepath.Join(od, "bundle.sig"),
 		base64.StdEncoding.EncodeToString(ed25519.Sign(sk, data))+"\n", 0o644)
-	tarball := filepath.Join(od, fmt.Sprintf("klos-%s-%s.tar", flavor, VERSION))
+	tarball := filepath.Join(od, fmt.Sprintf("klos-%s-%s.tar", flavor, version))
 	run(Cmd{Args: []string{"tar", "-C", od, "--format=posix",
 		"--pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime",
 		fmt.Sprintf("--mtime=@%d", SDE), "--owner=0", "--group=0", "--numeric-owner",
@@ -497,7 +515,7 @@ func buildImage(flavor string) *BuildRecord {
 	rec.BundleTarball = rel(tarball)
 	b, _ := json.MarshalIndent(rec, "", " ")
 	writeFile(filepath.Join(od, "build.json"), string(b)+"\n", 0o644)
-	logf("image %s %s is ready in %s", flavor, VERSION, rel(od))
+	logf("image %s %s is ready in %s", flavor, version, rel(od))
 	logf("  root hash %s", roothash)
 	logf("  root.img  %s (%d MiB)", rec.RootImage, info.Files["root.img"].Size>>20)
 	logf("  klos.efi  %s", rec.EFI)
@@ -508,11 +526,11 @@ func cmdImage(args []string) {
 	if len(args) != 1 {
 		die("usage: image <flavor>")
 	}
-	buildImage(args[0])
+	buildImage(args[0], defaultImageOptions())
 }
 
 func readBuildRecord(flavor string) *BuildRecord {
-	p := filepath.Join(outDir(flavor), "build.json")
+	p := filepath.Join(outDir(flavor, VERSION), "build.json")
 	b, err := os.ReadFile(p)
 	if err != nil {
 		die("no image for %s %s (run './klos image %s')", flavor, VERSION, flavor)
@@ -578,12 +596,13 @@ func cmdVerify(args []string) {
 	removeAll(PKGOUT)
 	removeAll(filepath.Join(OUT, "images", flavor))
 	removeAll(filepath.Join(WORK, "kernel", flavor))
-	rec := buildImage(flavor)
+	rec := buildImage(flavor, defaultImageOptions())
 	got := lockText(rec)
 	if got != string(want) {
 		diffPath := filepath.Join(OUT, flavor+".lock")
 		writeFile(diffPath, got, 0o644)
-		run(Cmd{Args: []string{"diff", "-u", lockPath, diffPath}, NoFail: true})
+		// diff exits with 1 when the files are different; show the output only.
+		_ = tryRun(Cmd{Args: []string{"diff", "-u", lockPath, diffPath}})
 		die("the build is not the same as %s", rel(lockPath))
 	}
 	logf("verify %s: the build is the same as %s", flavor, rel(lockPath))

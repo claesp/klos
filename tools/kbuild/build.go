@@ -405,7 +405,7 @@ func elfType(p string) elf.Type {
 	if err != nil {
 		return elf.ET_NONE
 	}
-	defer f.Close()
+	defer closeQuietly(f)
 	return f.Type
 }
 
@@ -426,13 +426,15 @@ func postprocess(r *Recipe, dest string, env []string) {
 		return strip
 	}
 	var files []string
-	filepath.WalkDir(dest, func(p string, d fs.DirEntry, err error) error {
-		check(err)
+	check(filepath.WalkDir(dest, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 		if d.Type().IsRegular() {
 			files = append(files, p)
 		}
 		return nil
-	})
+	}))
 	for _, p := range files {
 		if strings.HasSuffix(p, ".la") {
 			check(os.Remove(p))
@@ -459,13 +461,15 @@ func postprocess(r *Recipe, dest string, env []string) {
 
 func removeEmptyDirs(root string) {
 	var dirs []string
-	filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
-		check(err)
+	check(filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 		if d.IsDir() && p != root {
 			dirs = append(dirs, p)
 		}
 		return nil
-	})
+	}))
 	sort.Slice(dirs, func(i, j int) bool { return len(dirs[i]) > len(dirs[j]) })
 	for _, d := range dirs {
 		if ents, _ := os.ReadDir(d); len(ents) == 0 {
@@ -475,18 +479,20 @@ func removeEmptyDirs(root string) {
 }
 
 // scanELF returns the sonames that files in dir provide and need.
-func scanELF(dir string) (provides, needed map[string]bool) {
-	provides, needed = map[string]bool{}, map[string]bool{}
-	filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
-		check(err)
+func scanELF(dir string) (map[string]bool, map[string]bool) {
+	provides, needed := map[string]bool{}, map[string]bool{}
+	check(filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 		if !d.Type().IsRegular() {
 			return nil
 		}
 		f, err := elf.Open(p)
 		if err != nil {
-			return nil
+			return nil // not an ELF file
 		}
-		defer f.Close()
+		defer closeQuietly(f)
 		if f.Type != elf.ET_EXEC && f.Type != elf.ET_DYN {
 			return nil
 		}
@@ -502,8 +508,8 @@ func scanELF(dir string) (provides, needed map[string]bool) {
 			}
 		}
 		return nil
-	})
-	return
+	}))
+	return provides, needed
 }
 
 // makeTarball writes a reproducible, zstd-compressed tar archive of dir.
@@ -590,10 +596,11 @@ func buildOne(r *Recipe) {
 	cmd := exec.Command("bash", "-e", "-u", "-o", "pipefail", "-x", "-c", script)
 	cmd.Dir, cmd.Env, cmd.Stdout, cmd.Stderr = S, env, lf, lf
 	err = cmd.Run()
-	lf.Close()
+	check(lf.Close())
 	if err != nil {
+		// The tail of the log helps; the build stops in any case.
 		tail, _ := exec.Command("tail", "-n", "60", logfile).Output()
-		os.Stderr.Write(tail)
+		_, _ = os.Stderr.Write(tail)
 		die("build of %s failed; read %s", r.Name, rel(logfile))
 	}
 	postprocess(r, dest, env)
