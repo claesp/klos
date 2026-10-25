@@ -1,0 +1,30 @@
+# vulkaninfo: shows the Vulkan devices and their properties. The other
+# Vulkan tools (vkcube, the mock driver) are not built.
+[package]
+name = "vulkan-tools"
+version = "1.4.363.0"
+summary = "vulkaninfo"
+license = "Apache-2.0"
+homepage = "https://github.com/KhronosGroup/Vulkan-Tools"
+# vulkaninfo opens libvulkan.so.1 with dlopen, so the dependency is here.
+depends = ["vulkan-loader"]
+build-depends = ["vulkan-headers", "vulkan-loader", "wayland", "wayland-protocols", "libffi", "expat"]
+# GitHub makes the archive from the tag vulkan-sdk-1.4.363.0. No signature.
+
+[package.options]
+run-tools = ["wayland-scanner"]
+
+[[source]]
+url = "https://github.com/KhronosGroup/Vulkan-Tools/archive/refs/tags/vulkan-sdk-1.4.363.0.tar.gz"
+filename = "vulkan-tools-1.4.363.0.tar.gz"
+sha256 = "6cbeb83294434e636a0c78760f1a6dfe3e50c1bab0cffa154603ce73e70508f1"
+
+[build]
+script = '''
+kcmake -DCMAKE_BUILD_TYPE=Release -DVULKAN_HEADERS_INSTALL_DIR="$SYSROOT/usr" \
+	-DBUILD_CUBE=OFF -DBUILD_ICD=OFF -DBUILD_VULKANINFO=ON -DBUILD_TESTS=OFF \
+	-DBUILD_WSI_XCB_SUPPORT=OFF -DBUILD_WSI_XLIB_SUPPORT=OFF \
+	-DBUILD_WSI_WAYLAND_SUPPORT=ON -DBUILD_WSI_DIRECTFB_SUPPORT=OFF
+kninja
+kninja_install
+'''

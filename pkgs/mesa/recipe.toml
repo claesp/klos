@@ -6,6 +6,13 @@
 #   virgl     the virtio GPU of virtual machines
 #   llvmpipe  the fast software renderer (needs LLVM)
 #   softpipe  the reference software renderer
+# The Vulkan drivers:
+#   radv      AMD graphics
+#   anv       Intel graphics, gen 9 and later ("intel")
+#   lavapipe  software Vulkan (needs LLVM) ("swrast")
+#   venus     Vulkan through the virtio GPU ("virtio")
+# NVK (NVIDIA) needs Rust, which KLOS does not have yet.
+# glslangValidator compiles the Vulkan meta shaders at build time.
 # mesa_clc (the OpenCL C compiler for the Intel drivers) is a target
 # program; Meson runs it in the builder through the exe_wrapper of the
 # kbuild cross file. It is not installed.
@@ -16,11 +23,11 @@ summary = "OpenGL and EGL graphics drivers"
 license = "MIT"
 homepage = "https://mesa3d.org/"
 build-depends = ["libdrm", "wayland", "wayland-protocols", "expat", "zlib", "zstd",
-  "llvm-target", "elfutils", "spirv-tools", "spirv-headers", "spirv-llvm-translator"]
+  "llvm-target", "elfutils", "spirv-tools", "spirv-headers", "spirv-llvm-translator", "glslang"]
 host-depends = ["python-build-modules"]
 
 [package.options]
-run-tools = ["wayland-scanner", "llvm-config"]
+run-tools = ["wayland-scanner", "llvm-config", "glslangValidator"]
 
 [[source]]
 url = "https://archive.mesa3d.org/mesa-26.2.5.tar.xz"
@@ -31,7 +38,8 @@ key = ["mesa-release"]
 [build]
 script = '''
 export PYTHONPATH="$HOST_PYTHON_BUILD_MODULES/opt/klos/toolchain/python"
-kmeson -Dplatforms=wayland -Dvulkan-drivers= \
+kmeson -Dplatforms=wayland -Dvulkan-drivers=amd,intel,swrast,virtio \
+	-Dintel-rt=disabled -Dvulkan-layers= \
 	-Dgallium-drivers=radeonsi,iris,crocus,nouveau,virgl,llvmpipe,softpipe \
 	-Dllvm=enabled -Dshared-llvm=enabled -Damd-use-llvm=true -Dglx=disabled -Degl=enabled -Dgbm=enabled -Dgles1=disabled \
 	-Dgles2=enabled -Dopengl=true -Dvalgrind=disabled -Dlibunwind=disabled \

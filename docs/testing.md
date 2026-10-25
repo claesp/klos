@@ -51,7 +51,7 @@ as root on the serial console. Each command must exit with 0.
 | `base` | DHCP gives a default route. |
 | `server` | sshd, chronyd and dhcpcd run. There is no module support. There are no setuid or setgid files. |
 | `kubernetes` | containerd answers `crictl`. crun, kubelet, kubeadm and kubectl run. The kubeadm preflight checks pass (without the image pull). IP forwarding and the bridge and overlay features are present. |
-| `desktop` | seatd runs and `klos devd` loaded virtio-net. The test user exists. sway starts with the headless back end, and `swaymsg` gets its version. foot runs, and fontconfig finds the DejaVu fonts. The firmware files are present, and the kernel loads and checks `regulatory.db` when cfg80211 loads. libgallium has the iris, crocus, radeonsi, nouveau, virtio_gpu and llvmpipe drivers. sway starts with the GLES2 renderer on the virtio GPU, and the renderer is llvmpipe (Mesa with LLVM). |
+| `desktop` | seatd runs and `klos devd` loaded virtio-net. The test user exists. sway starts with the headless back end, and `swaymsg` gets its version. foot runs, and fontconfig finds the DejaVu fonts. The firmware files are present, and the kernel loads and checks `regulatory.db` when cfg80211 loads. The Vulkan ICD files of radv, anv, lavapipe and venus are present, and `vulkaninfo` finds the lavapipe device. libgallium has the iris, crocus, radeonsi, nouveau, virtio_gpu and llvmpipe drivers. sway starts with the GLES2 renderer on the virtio GPU, and the renderer is llvmpipe (Mesa with LLVM). |
 
 The test installation makes the user `klos` (UID 1000) with the password
 `klos-test`.

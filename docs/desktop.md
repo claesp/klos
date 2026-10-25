@@ -41,7 +41,20 @@ Mesa has these OpenGL drivers:
 | `llvmpipe` | A fast software renderer (when there is no GPU) |
 | `softpipe` | The reference software renderer |
 
-`llvmpipe` and `radeonsi` use LLVM at run time (`libLLVM.so` from the
+Mesa also has these Vulkan drivers. The Vulkan loader (`libvulkan.so`)
+finds them through the files in `/usr/share/vulkan/icd.d`:
+
+| Driver | Hardware |
+|--------|----------|
+| `radv` | AMD graphics |
+| `anv` | Intel graphics, generation 9 (Skylake) and later |
+| `lavapipe` | Software Vulkan (with LLVM) |
+| `venus` | Vulkan through the virtio GPU (needs Venus support on the host) |
+
+`vulkaninfo --summary` shows the Vulkan devices. NVK (Vulkan for NVIDIA)
+needs Rust, which KLOS does not have yet.
+
+`llvmpipe`, `lavapipe` and `radeonsi` use LLVM at run time (`libLLVM.so` from the
 `llvm-target` package). The Intel drivers need `mesa_clc` at build time;
 it is not in the image. Read [toolchain.md](toolchain.md).
 
@@ -78,7 +91,7 @@ firmware only from the verified OS image.
 
 ## Limits of this version
 
-- There are no Vulkan drivers yet (Mesa is built with OpenGL drivers only).
+- There is no Vulkan driver for NVIDIA (NVK needs Rust).
 - The image has firmware only for the drivers in the desktop kernel (see
   Firmware). Other devices that need firmware do not work.
 - There is no sound server and no web browser yet.

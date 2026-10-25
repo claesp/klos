@@ -1,0 +1,21 @@
+# Vulkan API headers and the registry (for the loader and the tools).
+[package]
+name = "vulkan-headers"
+version = "1.4.363.0"
+summary = "Vulkan header files and API registry"
+license = "Apache-2.0 OR MIT"
+homepage = "https://github.com/KhronosGroup/Vulkan-Headers"
+implicit-deps = false
+# GitHub makes the archive from the tag vulkan-sdk-1.4.363.0. No signature.
+
+[[source]]
+url = "https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/vulkan-sdk-1.4.363.0.tar.gz"
+filename = "vulkan-headers-1.4.363.0.tar.gz"
+sha256 = "4a078be12bef21cfebc09d878b77a63cff9d68f899254a0b00d0e37ef73e7f7e"
+
+[build]
+script = '''
+cmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DVULKAN_HEADERS_ENABLE_TESTS=OFF \
+	-DVULKAN_HEADERS_ENABLE_MODULE=OFF
+DESTDIR="$DESTDIR" ninja -C build install
+'''

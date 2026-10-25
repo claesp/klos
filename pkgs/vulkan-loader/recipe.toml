@@ -1,0 +1,25 @@
+# The Vulkan loader (libvulkan.so). It finds the drivers through the ICD
+# files in /usr/share/vulkan/icd.d. Only the Wayland window system.
+[package]
+name = "vulkan-loader"
+version = "1.4.363.0"
+summary = "Vulkan ICD loader"
+license = "Apache-2.0"
+homepage = "https://github.com/KhronosGroup/Vulkan-Loader"
+build-depends = ["vulkan-headers", "wayland", "libffi", "expat"]
+# GitHub makes the archive from the tag vulkan-sdk-1.4.363.0. No signature.
+
+[[source]]
+url = "https://github.com/KhronosGroup/Vulkan-Loader/archive/refs/tags/vulkan-sdk-1.4.363.0.tar.gz"
+filename = "vulkan-loader-1.4.363.0.tar.gz"
+sha256 = "941eff558fc74f248745fb7df367640cf89a8457f216dae498a74ae14b6ba6f7"
+
+[build]
+script = '''
+kcmake -DCMAKE_BUILD_TYPE=Release -DVULKAN_HEADERS_INSTALL_DIR="$SYSROOT/usr" \
+	-DBUILD_WSI_XCB_SUPPORT=OFF -DBUILD_WSI_XLIB_SUPPORT=OFF \
+	-DBUILD_WSI_WAYLAND_SUPPORT=ON -DBUILD_TESTS=OFF \
+	-DFALLBACK_DATA_DIRS=/usr/share -DFALLBACK_CONFIG_DIRS=/etc
+kninja
+kninja_install
+'''
