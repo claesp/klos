@@ -110,4 +110,10 @@ gecos = "nobody"
 [test]
 commands = [
   "for i in $(seq 60); do ip route | grep -q default && break; sleep 1; done; ip route | grep -q default || { ip addr; ip route; cat /var/log/dhcpcd.log; false; }",
+  "sleep 5; pgrep chronyd && grep -q 'Loaded seccomp filter' /var/log/chronyd.log || { cat /var/log/chronyd.log; dmesg | grep type=1326; false; }",
+  # The test VM has no network. A second chronyd (without the filter) is a
+  # local NTP server, so that the chronyd with the filter gets NTP packets.
+  "printf 'port 11123\\nbindaddress 127.0.0.1\\nallow 127.0.0.1\\nlocal stratum 8\\ncmdport 0\\npidfile /run/chrony/test-server.pid\\n' > /etc/chrony/test-server.conf && chronyd -x -u chrony -f /etc/chrony/test-server.conf",
+  "echo 'server 127.0.0.1 port 11123 iburst minpoll -4 maxpoll -4' >> /etc/chrony/chrony.conf && dinitctl restart chronyd && for i in $(seq 60); do grep -q 'Selected source 127.0.0.1' /var/log/chronyd.log && break; sleep 1; done; sleep 5; grep -q 'Selected source 127.0.0.1' /var/log/chronyd.log && pgrep -f 'chronyd -d -u chrony -F 1' || { cat /var/log/chronyd.log; dmesg | grep type=1326; false; }",
+  "sed -i '/port 11123/d' /etc/chrony/chrony.conf && kill $(cat /run/chrony/test-server.pid) && rm /etc/chrony/test-server.conf && dinitctl restart chronyd",
 ]

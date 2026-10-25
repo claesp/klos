@@ -1,13 +1,12 @@
 # NTP client and server. libcap lets chronyd run as the user "chrony".
-# The chrony seccomp filter (-F) does not allow all system calls of musl,
-# so KLOS does not use it (see docs/status.md).
+# libseccomp gives the system call filter (chronyd -F 1).
 [package]
 name = "chrony"
 version = "4.9"
 summary = "NTP client and server"
 license = "GPL-2.0-only"
 homepage = "https://chrony-project.org/"
-build-depends = ["libcap"]
+build-depends = ["libcap", "libseccomp"]
 
 [[source]]
 url = "https://chrony-project.org/releases/chrony-4.9.tar.gz"
@@ -22,7 +21,7 @@ script = '''
 	--host-system=Linux --host-machine=x86_64 \
 	--without-nettle --without-gnutls --without-nss --without-tomcrypt \
 	--without-editline --disable-readline \
-	--with-user=chrony --disable-sechash
+	--with-user=chrony --disable-sechash --enable-scfilter
 kmake
 make DESTDIR="$DESTDIR" install
 '''
