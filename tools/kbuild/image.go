@@ -20,6 +20,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -94,6 +95,10 @@ func imageDir(flavor string) string { return filepath.Join(WORK, "image", flavor
 type imageOptions struct {
 	Version    string // the OS version
 	SecureBoot bool   // sign the EFI binaries
+	// Users and Groups are system accounts in addition to the manifest
+	// accounts. The test uses them to check the account merge of updates.
+	Users  []User
+	Groups []Group
 }
 
 // defaultImageOptions are the settings from config/klos.toml (and
@@ -404,7 +409,10 @@ func buildImage(flavor string, opt imageOptions) *BuildRecord {
 	mkdirAll(rootfs)
 	logf("image %s %s: assemble the root file system", flavor, version)
 	pkgs := assembleRootfs(m, rootfs)
-	writeAccounts(m, rootfs)
+	accounts := *m
+	accounts.Users = append(slices.Clone(m.Users), opt.Users...)
+	accounts.Groups = append(slices.Clone(m.Groups), opt.Groups...)
+	writeAccounts(&accounts, rootfs)
 	writeServices(m, rootfs)
 	writeOSRelease(m, rootfs, version)
 	sk, pub := signingKey()

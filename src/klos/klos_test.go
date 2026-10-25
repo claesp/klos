@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -213,5 +214,47 @@ func TestConfFiles(t *testing.T) {
 	want := []string{filepath.Join(b, "10-x.conf"), filepath.Join(a, "20-y.conf")}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("confFiles = %q, want %q", got, want)
+	}
+}
+
+func accountLines(s string) *accountFile {
+	return &accountFile{lines: strings.Split(strings.TrimSpace(s), "\n")}
+}
+
+func TestMergeAccountFiles(t *testing.T) {
+	img := map[string]*accountFile{
+		"passwd": accountLines("root:x:0:0:root:/root:/bin/sh\nsshd:x:22:22::/var/empty:/bin/false\nnew:x:90:90::/var/empty:/bin/false\nclash:x:1000:1000::/:/bin/false"),
+		"group":  accountLines("root:x:0:\nsshd:x:22:\nvideo:x:27:new,old\nnew:x:90:new\nclashg:x:1000:"),
+		"shadow": accountLines("root:!:1::::::\nsshd:!:1::::::\nnew:!:1::::::\nclash:!:1::::::"),
+	}
+	local := map[string]*accountFile{
+		"passwd": accountLines("root:x:0:0:root:/root:/bin/sh\nsshd:x:22:22::/var/empty:/bin/false\nklos:x:1000:1000:klos:/home/klos:/bin/sh"),
+		"group":  accountLines("root:x:0:\nsshd:x:22:\nvideo:x:27:klos\nklos:x:1000:"),
+		"shadow": accountLines("root:HASH:0::::::\nsshd:!:1::::::\nklos:HASH:0::::::"),
+	}
+	r := mergeAccountFiles(img, local)
+	if strings.Join(r.users, ",") != "new" || strings.Join(r.groups, ",") != "new" {
+		t.Fatalf("added users %v, groups %v", r.users, r.groups)
+	}
+	if len(r.warnings) != 2 {
+		t.Fatalf("warnings: %v", r.warnings)
+	}
+	wantGroup := "root:x:0:\nsshd:x:22:\nvideo:x:27:klos,new\nklos:x:1000:\nnew:x:90:new\n"
+	if got := local["group"].String(); got != wantGroup {
+		t.Fatalf("group:\n%s\nwant:\n%s", got, wantGroup)
+	}
+	if got := local["shadow"].String(); !strings.HasSuffix(got, "klos:HASH:0::::::\nnew:!:1::::::\n") || !strings.HasPrefix(got, "root:HASH:") {
+		t.Fatalf("shadow:\n%s", got)
+	}
+	if !r.changed["passwd"] || !r.changed["group"] || !r.changed["shadow"] {
+		t.Fatalf("changed: %v", r.changed)
+	}
+	// A second merge changes nothing.
+	if r := mergeAccountFiles(img, local); len(r.changed) != 0 {
+		t.Fatalf("second merge changed %v", r.changed)
+	}
+	// Without a local file, there is no merge.
+	if r := mergeAccountFiles(img, map[string]*accountFile{}); len(r.changed) != 0 {
+		t.Fatalf("merge without local files changed %v", r.changed)
 	}
 }

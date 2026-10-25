@@ -46,6 +46,22 @@ Note: a changed file stays in the upper layer after an update. If a new
 version changes the default of that file, your file stays. Compare the
 files after an update.
 
+### System accounts
+
+The files `/etc/passwd`, `/etc/group` and `/etc/shadow` are an exception.
+The installer adds your user to these files, thus they are in the upper
+layer. At each boot, before `/init` mounts the overlay, it adds the system
+accounts of the image to the files in the upper layer:
+
+- It adds a user or a group of the image that is not in the file.
+- It adds a new user to the groups that the image gives to that user.
+- It adds the shadow entry of a new user. The password is locked.
+
+The merge does not remove or change entries. If a version does not have a
+system user, the user stays in the files. If the ID of a new user or group
+is used by a different name, `/init` does not add it, and it shows a warning
+on the console.
+
 ## Directories at boot
 
 `klos boot-setup` makes the directories in `/usr/lib/klos/dirs.d/*.conf`

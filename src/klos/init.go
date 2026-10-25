@@ -258,6 +258,11 @@ func prepareRoot(live bool) error {
 	}
 	// /etc is the read-only /etc of the image, with the local changes in
 	// an overlay upper layer on /var. Read docs/filesystem.md.
+	// A local copy of passwd, group or shadow hides the file of the image,
+	// so add the system accounts of this version to the local copy.
+	if err := mergeAccounts(sysroot+"/etc", v+"/lib/klos/etc/upper"); err != nil {
+		ilog("warning: merge of the system accounts: %v", err)
+	}
 	opts := "lowerdir=" + sysroot + "/etc,upperdir=" + v + "/lib/klos/etc/upper,workdir=" + v + "/lib/klos/etc/work"
 	if err := mount("overlay", sysroot+"/etc", "overlay", syscall.MS_NOSUID|syscall.MS_NODEV, opts); err != nil {
 		return err

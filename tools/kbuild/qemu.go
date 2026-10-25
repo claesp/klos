@@ -276,6 +276,10 @@ func cmdTest(args []string) {
 	opt1 := defaultImageOptions()
 	opt2 := opt1
 	opt2.Version = opt1.Version + ".1"
+	// The update has a new system user. The installed system has its own
+	// /etc/passwd (the installer added a user), so /init must merge it.
+	opt2.Users = []User{{Name: "klostest", UID: 899, GID: 899, Home: "/var/empty", Shell: "/bin/false", Groups: []string{"klostest"}}}
+	opt2.Groups = []Group{{Name: "klostest", GID: 899}}
 	v1, v2 := opt1.Version, opt2.Version
 	buildImage(flavor, opt1)
 	buildImage(flavor, opt2)
@@ -381,7 +385,9 @@ func cmdTest(args []string) {
 	vm2.login(v2)
 	vm2.waitBlessed(v2)
 	vm2.sh("test ! -f /run/klos/trial && test -f /etc/klos-test-file", 30*time.Second)
-	logf("test 3: the update, the trial boot and the bless are good; /etc changes are kept")
+	vm2.sh("grep -q '^klostest:x:899:899:' /etc/passwd && grep -q '^klostest:x:899:klostest$' /etc/group && "+
+		"grep -q '^klostest:!:' /etc/shadow && grep -q '^klos:' /etc/passwd", 30*time.Second)
+	logf("test 3: the update, the trial boot and the bless are good; /etc changes are kept; the new system user is merged")
 
 	logf("test 4: roll back to %s", v1)
 	vm2.sh("klos rollback", time.Minute)
