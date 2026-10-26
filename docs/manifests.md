@@ -46,6 +46,8 @@ enable = ["sshd"]
 | `[rootfs] exclude` | Paths that the image does not get (for example build-only tools). |
 | `[rootfs] package-exclude` | `package:pattern` entries: paths of one package that the image does not get. |
 | `[test] commands` | Shell commands that `./klos test` runs on the installed system. Each command must exit with 0. |
+| `[test] qemu-args` | More QEMU arguments for the test (for example a GPU). |
+| `[test] secureboot` | The `secureboot` value of the test installation: `enroll` (default) or `enroll-microsoft`. |
 | `[initramfs] files` | Programs to copy into the initramfs, with their libraries. |
 | `[[users]]` | User accounts: `name`, `uid`, `gid`, `home`, `shell`, `gecos`, `groups`. |
 | `[[groups]]` | Groups: `name`, `gid`. |

@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"os"
 	"path/filepath"
@@ -78,5 +79,36 @@ func TestAuthVariableLayout(t *testing.T) {
 		if string(esl[:16]) != string(guidBytes(guidCertX509)) {
 			t.Fatalf("%s.auth: no X.509 signature list", n)
 		}
+	}
+}
+
+func TestMicrosoftAuthFiles(t *testing.T) {
+	dir := t.TempDir()
+	SECRETS = dir
+	TOP = dir
+	keys := ensureSecureBootKeys()
+	out := filepath.Join(dir, "out")
+	certs := filepath.Join(out, "microsoft", "certs")
+	if err := os.MkdirAll(certs, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Any certificate is good for the layout test.
+	for _, n := range []string{"KEK-a.der", "db-a.der", "db-b.der"} {
+		if err := os.WriteFile(filepath.Join(certs, n), keys["PK"].cert.Raw, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeSecureBootFiles(keys, out)
+	for n, want := range map[string]int{"KEK": 1, "db": 2} {
+		b, err := os.ReadFile(filepath.Join(out, "microsoft", n+".auth"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := bytes.Count(b, guidBytes(guidMicrosoftOwner)); got != want {
+			t.Errorf("%s: %d Microsoft entries, want %d", n, got, want)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(out, "microsoft", "PK.auth")); err == nil {
+		t.Error("microsoft/PK.auth exists")
 	}
 }

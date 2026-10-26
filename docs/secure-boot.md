@@ -52,6 +52,9 @@ Each OS image contains the files for the enrollment of the keys, in
 | `KEK.auth` | The KEK certificate, as a variable update that PK signed. |
 | `PK.auth` | The PK certificate, as a variable update that PK signed. |
 | `*.crt` | The certificates (PEM). |
+| `microsoft/db.auth` | The db certificate and the Microsoft db certificates, as a variable update that KEK signed. |
+| `microsoft/KEK.auth` | The KEK certificate and the Microsoft KEK certificates, as a variable update that PK signed. |
+| `microsoft/certs/*.der` | The Microsoft certificates (from the package `secureboot-microsoft`). |
 
 ## Enroll the keys
 
@@ -62,14 +65,15 @@ computers, the firmware setup has a function to clear the Secure Boot keys.
 and of Microsoft. After the enrollment, the firmware starts only KLOS EFI
 binaries. Some graphics cards and network cards have firmware (option ROMs)
 that only Microsoft signed. On such a computer, the screen or the network
-boot can stop working. Keep a copy of the old keys, or make sure that you
-can clear the keys in the firmware setup again.
+boot can stop working. Use the Microsoft certificates (see below) on such a
+computer. Also keep a copy of the old keys, or make sure that you can clear
+the keys in the firmware setup again.
 
 There are two methods:
 
-- In the installer: put `secureboot=enroll` in `install.conf`. The installer
-  enrolls the keys at the end of the installation, if the firmware is in
-  Setup Mode.
+- In the installer: put `secureboot=enroll` or `secureboot=enroll-microsoft`
+  in `install.conf`. The installer enrolls the keys at the end of the
+  installation, if the firmware is in Setup Mode.
 - On an installed system:
 
   ```sh
@@ -79,6 +83,32 @@ There are two methods:
 
 `klos secureboot enroll` writes db, then KEK, then PK. When PK is set, the
 firmware leaves Setup Mode. Secure Boot is active from the next boot.
+
+### The Microsoft certificates
+
+With `klos secureboot enroll -microsoft` (or `secureboot=enroll-microsoft`
+in `install.conf`), db and KEK also contain these Microsoft certificates:
+
+| Variable | Certificate | Function |
+|----------|-------------|----------|
+| db | Microsoft Corporation UEFI CA 2011 | Signs the option ROMs of most cards that are in use. |
+| db | Microsoft Option ROM UEFI CA 2023 | Signs the option ROMs of new cards. |
+| KEK | Microsoft Corporation KEK CA 2011 | Signs db and dbx updates from Microsoft. |
+| KEK | Microsoft Corporation KEK 2K CA 2023 | Signs db and dbx updates from Microsoft. |
+
+The 2011 certificates expired in June 2026. The firmware does not check the
+dates of these certificates, thus option ROMs that the 2011 CA signed
+continue to work.
+
+KLOS does not enroll the Windows certificates, or "Microsoft UEFI CA 2023",
+which signs only boot loaders.
+
+**Caution:** the Microsoft UEFI CA 2011 also signs boot loaders of other
+operating systems (for example shim). With this certificate in db, the
+firmware also starts these boot loaders. The TPM key of the disk
+([tpm.md](tpm.md)) does not unseal after such a boot, because the PCR 7
+value is different. With the Microsoft KEK, Microsoft can also change db
+and dbx. Use the Microsoft certificates only if the computer needs them.
 
 ## Check the state
 
@@ -94,6 +124,9 @@ The command shows one of these states:
 | `disabled (Setup Mode: no platform key)` | You can enroll the keys. |
 | `disabled (keys are enrolled; ...)` | Secure Boot is off in the firmware setup. |
 | `not supported by the firmware` | The firmware has no Secure Boot. |
+
+The command also shows the number of entries in db, and how many of them
+are from Microsoft.
 
 `klos status` also shows the state.
 

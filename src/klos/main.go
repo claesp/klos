@@ -34,7 +34,8 @@ Commands:
                          is a trial boot of the new version.
   bless                  Mark the running version as good (dinit does this).
   secureboot status      Show the Secure Boot state.
-  secureboot enroll      Enroll the KLOS Secure Boot keys (Setup Mode only).
+  secureboot enroll [-microsoft]
+                         Enroll the KLOS Secure Boot keys (Setup Mode only).
   secureboot apply [-append] VAR FILE
                          Write a signed update to db, dbx, KEK or PK.
   tpm status             Show the TPM key of the disk.

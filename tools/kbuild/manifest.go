@@ -64,6 +64,9 @@ type Manifest struct {
 		Commands []string `toml:"commands"`
 		// QemuArgs are more QEMU arguments for the test (for example a GPU).
 		QemuArgs []string `toml:"qemu-args"`
+		// SecureBoot is the secureboot value of the test install.conf:
+		// enroll (the default) or enroll-microsoft.
+		SecureBoot string `toml:"secureboot"`
 	} `toml:"test"`
 	Users  []User  `toml:"users"`
 	Groups []Group `toml:"groups"`
@@ -103,6 +106,9 @@ func (m *Manifest) merge(o *Manifest) {
 	m.Initramfs.Files = appendUniq(m.Initramfs.Files, o.Initramfs.Files)
 	m.Test.Commands = append(m.Test.Commands, o.Test.Commands...)
 	m.Test.QemuArgs = append(m.Test.QemuArgs, o.Test.QemuArgs...)
+	if o.Test.SecureBoot != "" {
+		m.Test.SecureBoot = o.Test.SecureBoot
+	}
 	m.Users = append(m.Users, o.Users...)
 	m.Groups = append(m.Groups, o.Groups...)
 }

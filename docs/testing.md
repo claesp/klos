@@ -17,10 +17,14 @@ firmware and the serial console. It does these steps:
 4. Start the installed system. Type the passphrase and log in on the serial
    console.
 5. Check the version, the bless step, the read-only root, dm-verity, the
-   firewall and the `/etc` overlay. Then run the `[test] commands` of the
+   firewall, the `/etc` overlay and the db entries (with `[test] secureboot
+   = "enroll-microsoft"`, db must also contain the two Microsoft
+   certificates). Then run the `[test] commands` of the
    manifests (see below).
 6. Install the update with `klos update -reboot`. Check the trial boot and
-   the bless step. Check that the `/etc` changes are still there.
+   the bless step. Check that the `/etc` changes are still there. The update
+   has a new system user; check that `/init` added it to the local
+   `/etc/passwd`, `/etc/group` and `/etc/shadow`.
 7. Run `klos rollback` and restart. Check that the first version runs.
 8. Install an update whose EFI binary has no Secure Boot signature. Check
    that the firmware refuses it and that the first version starts again.

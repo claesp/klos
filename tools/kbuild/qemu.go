@@ -294,6 +294,10 @@ func cmdTest(args []string) {
 	}
 
 	hash := strings.TrimSpace(output("openssl", "passwd", "-6", "-salt", "klostest", testPassword))
+	enroll := flavorManifest(flavor).Test.SecureBoot
+	if enroll == "" {
+		enroll = "enroll"
+	}
 	conf := filepath.Join(tw, "install.conf")
 	writeFile(conf, strings.Join([]string{
 		"# Unattended test installation. Do not use these values on a real system.",
@@ -304,7 +308,7 @@ func cmdTest(args []string) {
 		"user=klos",
 		"user_password_hash=" + hash,
 		"poweroff=yes",
-		"secureboot=enroll",
+		"secureboot=" + enroll,
 	}, "\n")+"\n", 0o600)
 	installer := buildInstaller(flavor, opt1, conf)
 
@@ -358,6 +362,12 @@ func cmdTest(args []string) {
 	if opt1.SecureBoot {
 		vm2.sh("klos secureboot status | grep -q 'Secure Boot: enabled'", 30*time.Second)
 		logf("test 2: Secure Boot is enabled (the installer enrolled the KLOS keys)")
+		if enroll == "enroll-microsoft" {
+			vm2.sh("klos secureboot status | grep -q 'db entries: 3 (Microsoft: 2)'", 30*time.Second)
+			logf("test 2: db has the KLOS certificate and the two Microsoft certificates")
+		} else {
+			vm2.sh("klos secureboot status | grep -q 'db entries: 1 (Microsoft: 0)'", 30*time.Second)
+		}
 	}
 	tpm := false
 	if tpmArgs != nil && opt1.SecureBoot {

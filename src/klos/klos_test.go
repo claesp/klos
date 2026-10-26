@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
@@ -256,5 +257,31 @@ func TestMergeAccountFiles(t *testing.T) {
 	// Without a local file, there is no merge.
 	if r := mergeAccountFiles(img, map[string]*accountFile{}); len(r.changed) != 0 {
 		t.Fatalf("merge without local files changed %v", r.changed)
+	}
+}
+
+func TestCountSignatures(t *testing.T) {
+	// Two lists: one X.509 entry of another owner, and two SHA-256
+	// entries, one of them with the Microsoft owner.
+	list := func(entries ...[]byte) []byte {
+		sigSize := len(entries[0])
+		b := make([]byte, 28)
+		binary.LittleEndian.PutUint32(b[16:], uint32(28+sigSize*len(entries)))
+		binary.LittleEndian.PutUint32(b[24:], uint32(sigSize))
+		for _, e := range entries {
+			b = append(b, e...)
+		}
+		return b
+	}
+	other := guidBytes("11111111-2222-3333-4444-555555555555")
+	ms := guidBytes(microsoftOwner)
+	b := append(list(append(append([]byte{}, other...), make([]byte, 100)...)),
+		list(append(append([]byte{}, ms...), make([]byte, 32)...), append(append([]byte{}, other...), make([]byte, 32)...))...)
+	n, m := countSignatures(b, microsoftOwner)
+	if n != 3 || m != 1 {
+		t.Fatalf("got %d entries, %d Microsoft; want 3, 1", n, m)
+	}
+	if g := guidBytes("8be4df61-93ca-11d2-aa0d-00e098032b8c"); g[0] != 0x61 || g[4] != 0xca || g[8] != 0xaa {
+		t.Fatalf("guidBytes: % x", g)
 	}
 }

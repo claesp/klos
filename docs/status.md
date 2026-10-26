@@ -17,6 +17,7 @@ This document shows what works now and what is planned. "Tested" means that
 | Firewall (nftables), SSH (keys only, no OpenSSL), DHCP, NTP | Tested |
 | chronyd system call filter (`chronyd -F 1`, libseccomp) | Tested (with NTP packets from a local server) |
 | Secure Boot: signed EFI binaries, key enrollment, refusal of unsigned binaries, dbx revocation | Tested (OVMF) |
+| Secure Boot with the Microsoft certificates for option ROMs (`enroll-microsoft`) | Tested (OVMF) |
 | TPM2 unlock (PCR 7 and 15, salted sessions, passphrase fallback, new enrollment) | Tested (swtpm) |
 | TPM PIN (PolicyAuthValue, TPM lockout protection, wrong PIN refused) | Tested (swtpm) |
 | No setuid programs, no scripts except the shell and the dhcpcd hook | Tested (build check and test) |
@@ -30,7 +31,6 @@ This document shows what works now and what is planned. "Tested" means that
 
 | Function | Notes |
 |----------|-------|
-| Secure Boot with Microsoft keys | An option to keep the Microsoft certificates in db, for option ROMs. |
 | NVK, Rust | The NVIDIA Vulkan driver needs a Rust toolchain. |
 | A self-hosted stage | Build the build tools (cmake, python, perl) with KLOS too, so that Alpine is only the first compiler. |
 | A second, independent builder | Compare the results of two builders to detect a bad bootstrap builder. |

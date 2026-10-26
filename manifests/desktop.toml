@@ -49,6 +49,8 @@ gid = 97
 # on the virtio GPU (without virgl on the host, Mesa uses llvmpipe).
 [test]
 qemu-args = ["-device", "virtio-gpu-pci"]
+# A desktop computer often has a graphics card with an option ROM.
+secureboot = "enroll-microsoft"
 commands = [
   "pidof seatd && lsmod | grep -q virtio_net",
   "id klos | grep -q video && test -d /run/user/1000",

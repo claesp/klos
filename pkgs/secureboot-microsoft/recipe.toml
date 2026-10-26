@@ -1,0 +1,51 @@
+# The Microsoft UEFI certificates for "klos secureboot enroll -microsoft"
+# (docs/secure-boot.md). The firmware needs them to start the option ROMs
+# of most graphics and network cards. The files come from the Microsoft PKI
+# server. They are the same as the files in github.com/microsoft/
+# secureboot_objects, and their SHA-1 thumbprints are the published values.
+#
+#   KEK  Microsoft Corporation KEK CA 2011  31590bfd89c9d74ed087dfac66334b3931254b30
+#   KEK  Microsoft Corporation KEK 2K CA 2023  459ab6fb5e284d272d5e3e6abc8ed663829d632b
+#   db   Microsoft Corporation UEFI CA 2011  46def63b5ce61cf8ba0de2e6639c1019d0ed14f3
+#   db   Microsoft Option ROM UEFI CA 2023  3fb39e2b8bd183bf9e4594e72183ca60afcd4277
+#
+# The Windows certificates and "Microsoft UEFI CA 2023" (it signs only boot
+# loaders) are not included.
+[package]
+name = "secureboot-microsoft"
+version = "2023"
+summary = "Microsoft UEFI KEK and db certificates"
+license = "LicenseRef-Microsoft-Public-Certificates"
+homepage = "https://github.com/microsoft/secureboot_objects"
+implicit-deps = false
+
+[[source]]
+url = "https://www.microsoft.com/pkiops/certs/MicCorKEKCA2011_2011-06-24.crt"
+sha256 = "a1117f516a32cefcba3f2d1ace10a87972fd6bbe8fe0d0b996e09e65d802a503"
+filename = "KEK-microsoft-kek-ca-2011.der"
+extract = false
+
+[[source]]
+url = "https://www.microsoft.com/pkiops/certs/microsoft%20corporation%20kek%202k%20ca%202023.crt"
+sha256 = "3cd3f0309edae228767a976dd40d9f4affc4fbd5218f2e8cc3c9dd97e8ac6f9d"
+filename = "KEK-microsoft-kek-2k-ca-2023.der"
+extract = false
+
+[[source]]
+url = "https://www.microsoft.com/pkiops/certs/MicCorUEFCA2011_2011-06-27.crt"
+sha256 = "48e99b991f57fc52f76149599bff0a58c47154229b9f8d603ac40d3500248507"
+filename = "db-microsoft-uefi-ca-2011.der"
+extract = false
+
+[[source]]
+url = "https://www.microsoft.com/pkiops/certs/microsoft%20option%20rom%20uefi%20ca%202023.crt"
+sha256 = "e5be3e64c6e66a281457ecdece0d6d0787577aad2a3a0144262c10c14ba8d8f1"
+filename = "db-microsoft-option-rom-uefi-ca-2023.der"
+extract = false
+
+[build]
+script = '''
+for f in KEK-*.der db-*.der; do
+	install -D -m 0644 "$f" "$DESTDIR/usr/share/klos/secureboot/microsoft/certs/$f"
+done
+'''

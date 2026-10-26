@@ -40,18 +40,20 @@ import (
 )
 
 const (
-	guidCertX509     = "a5c059a1-94e4-4aa7-87b5-ab155c2bf072"
-	guidCertSHA256   = "c1c41626-504c-4092-aca9-41f936934328"
-	guidCertPKCS7    = "4aafd29d-68df-49ee-8aa9-347d375665a7"
-	guidEFIGlobal    = "8be4df61-93ca-11d2-aa0d-00e098032b8c"
-	guidImageSecDB   = "d719b2cb-3d3a-4596-a3bc-dad00e67656f"
-	sbVarAttributes  = 0x27 // NV, BS, RT, time-based authenticated write
-	sbVarAppend      = 0x40 // EFI_VARIABLE_APPEND_WRITE
-	winCertRevision  = 0x0200
-	winCertPKCS      = 0x0002
-	winCertEFIGUID   = 0x0ef1
-	sbKeyBits        = 2048 // the size that all UEFI firmware supports
-	sbCertValidYears = 30
+	guidCertX509   = "a5c059a1-94e4-4aa7-87b5-ab155c2bf072"
+	guidCertSHA256 = "c1c41626-504c-4092-aca9-41f936934328"
+	guidCertPKCS7  = "4aafd29d-68df-49ee-8aa9-347d375665a7"
+	guidEFIGlobal  = "8be4df61-93ca-11d2-aa0d-00e098032b8c"
+	guidImageSecDB = "d719b2cb-3d3a-4596-a3bc-dad00e67656f"
+	// The owner GUID of the Microsoft entries in KEK and db.
+	guidMicrosoftOwner = "77fa9abd-0359-4d32-bd60-28f4e78f784b"
+	sbVarAttributes    = 0x27 // NV, BS, RT, time-based authenticated write
+	sbVarAppend        = 0x40 // EFI_VARIABLE_APPEND_WRITE
+	winCertRevision    = 0x0200
+	winCertPKCS        = 0x0002
+	winCertEFIGUID     = 0x0ef1
+	sbKeyBits          = 2048 // the size that all UEFI firmware supports
+	sbCertValidYears   = 30
 )
 
 var sbKeyNames = []string{"PK", "KEK", "db"}
@@ -549,11 +551,39 @@ func writeSecureBootFiles(keys map[string]*sbKey, dir string) {
 		{"KEK", guidEFIGlobal, keys["KEK"], keys["PK"]},
 		{"db", guidImageSecDB, keys["db"], keys["KEK"]},
 	}
+	// The package secureboot-microsoft puts the Microsoft certificates in
+	// microsoft/certs/<variable>-<name>.der. If they are there, the
+	// microsoft/ directory gets KEK and db updates with the KLOS
+	// certificate and the Microsoft certificates.
+	msDir := filepath.Join(dir, "microsoft")
+	msCerts, err := filepath.Glob(filepath.Join(msDir, "certs", "*.der"))
+	check(err)
+	sort.Strings(msCerts)
 	for _, v := range vars {
 		esl := efiSignatureList(owner, v.key.cert.Raw)
 		writeFile(filepath.Join(dir, v.name+".auth"), string(authVariable(v.name, v.guid, sbVarAttributes, esl, v.signer, ts)), 0o644)
 		writeFile(filepath.Join(dir, v.name+".crt"),
 			string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: v.key.cert.Raw})), 0o644)
+		if v.name == "PK" || len(msCerts) == 0 {
+			continue
+		}
+		n := 0
+		for _, c := range msCerts {
+			if !strings.HasPrefix(filepath.Base(c), v.name+"-") {
+				continue
+			}
+			b, err := os.ReadFile(c)
+			check(err)
+			if _, err := x509.ParseCertificate(b); err != nil {
+				die("%s: %v", rel(c), err)
+			}
+			esl = append(esl, efiSignatureList(guidMicrosoftOwner, b)...)
+			n++
+		}
+		if n == 0 {
+			die("%s: no Microsoft certificates for %s", rel(msDir), v.name)
+		}
+		writeFile(filepath.Join(msDir, v.name+".auth"), string(authVariable(v.name, v.guid, sbVarAttributes, esl, v.signer, ts)), 0o644)
 	}
 }
 
