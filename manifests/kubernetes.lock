@@ -4,19 +4,19 @@
 [image]
 flavor = "kubernetes"
 version = "2026.10.0"
-roothash = "cb63a28b20ff8e7d496da016ec108fc42885adc2d3f7816325b9a6386414424e"
-root_img_sha256 = "7f3306793282abf5454e02b81ae88a70c1002e5400879958fa03890bc731d143"
-efi_sha256 = "f1eaf3fd30640b0f7872f2619d21423bf3b51fe2e9af9b3341031076ee471a67"
-efi_live_sha256 = "64468d7b9bba714b3ca9a35363b7689e42ceeacf2067c3ea47b8b21c13af4f4b"
+roothash = "2eb1baf67e24a04604be68eff23e29ac698b1b33be6eda7fb0108a7e7cae7d6d"
+root_img_sha256 = "dd128a8b8ec1b40b81430a9428d392fe84a7a396caa72abe0fcee901437c95fb"
+efi_sha256 = "710c6a5a37139ea8f1c93f6031b48ac5df2e0d3f57d575588c4728b8a60a6a3f"
+efi_live_sha256 = "494ba7f5f4e1d9a1011dfa9b12d5e2bf7afcaf38da2720e0c2b002b1a67a3025"
 
 [kernel]
 release = "6.18.58-klos"
-config_sha256 = "8c724136e47a6d13368cdce1e562c8c92b540f3a722da57f14d40d0aec9e252f"
+config_sha256 = "08b6a9b871117cd7c44e1941db49d565f9aba17d94fae4b83df34de92b44f60b"
 
 [[tool]]
 name = "compiler-rt"
 version = "23.1.4-r1"
-sha256 = "4538801954e4550b5349e2b12860c538d9456b59213b517471be975eabccc348"
+sha256 = "20a2e682b7d61a96af48b0f75a36b940ed826229867f1eaaade25d05a19726e6"
 
 [[tool]]
 name = "go"
@@ -26,197 +26,170 @@ sha256 = "d47a3dd9ee649404ac208b0a78551c8e04f7ad62b25ad834dbcf8e565c031dbd"
 [[tool]]
 name = "llvm"
 version = "23.1.4-r1"
-sha256 = "c507544dc0289b05c0999d64304c24e85ed57c4f53b72429018f1e6886e20fac"
+sha256 = "91199c84ef43d3ebd64784e46ad6cc83ce4395a6e6f51ca155f9e3ce834e1cce"
 
 [[package]]
 name = "ca-certificates"
 version = "2026.10.20-r1"
 sha256 = "7da31cb0179009beb6723f0c4bd281924bf637e0e8b6d4fcbd0906dc0df04ee8"
-input = "7188976a127aab8c6f204d8da9bc80fefefd99991ea34b15c4298d733ef80406"
 
 [[package]]
 name = "chrony"
 version = "4.9-r1"
-sha256 = "38621897b1ad99bec313dd4f1a9a21252a296c753a7c96e957ba39f8c9245412"
-input = "351ea0c09d32dff1ebe44ce20a74cad261a5c1b98c9f3255c492c3a8f388adf2"
+sha256 = "db58ade4bd3a1eaca900d58eff51e6694cdaa884aa98c50cf59f6e17eba4c695"
 
 [[package]]
 name = "cni-plugins"
 version = "1.9.1-r1"
 sha256 = "419e5e56ecf1efbd380f06dfb5b2b053ba8c76ddf7a801683650ee45022ae510"
-input = "026822030d75b300f3a21fa2b2889b0189f8cb1e50b68f187ebe161f7f93122a"
 
 [[package]]
 name = "containerd"
 version = "2.4.2-r1"
 sha256 = "7106131a084c5343e9a38170a5afa9394c899f51caaa20b3833b14e533ea20e8"
-input = "5834429716d5754264b04260ee75c1623f75aebb9a444d61ffb4ee42ad9d7eb8"
 
 [[package]]
 name = "cri-tools"
 version = "1.37.0-r1"
 sha256 = "747fe87805e27e8496203f9f270be8dc0214d9e56fe1e9151464072d006de262"
-input = "61c18ca26373e3b037cb6536c45f712c3a4599ce3d612d5987fa8a2241ff4bc5"
 
 [[package]]
 name = "crun"
 version = "1.30.1-r1"
-sha256 = "a52f769d8e853433a6f264c2947667f85c9fbb343b67687492b9ecfab87d3c39"
-input = "0c14a9da9b0c02d81c747a0134909437d7db1a7094ae070d46292a05e08ff918"
+sha256 = "cbf11cbc0118300a24d4aaf2bc028c4c870df9557fcba9a71d4099a6ee343eba"
 
 [[package]]
 name = "cryptsetup"
 version = "2.8.8-r1"
-sha256 = "89ea0067b153deb1e09aaee027947a7a81415a1630084a9c7ab5c0ae20877bd9"
-input = "317016b7a0aa3ca6eb7848265b1e4490cd101282bda1cb6d08dfdc66aca127fb"
+sha256 = "fcaee42c47055e75835c8530caaae62067e1e36aa266dc8cceb1ef24cfbb4144"
 
 [[package]]
 name = "dash"
 version = "0.5.13.5-r1"
-sha256 = "33c22cf46aac175d0599a30bcf98341e92ef37ad3ed9028ed0a511b3a9adb02c"
-input = "e66bfd5264b7202d3d7052ff62b795a82dd06068cef7ee4da5cbaafb491b224b"
+sha256 = "ba1c2f99ef3a007a58eb3e191dd28796f466b8b1be19d75513835fe0a64d7bfb"
 
 [[package]]
 name = "dhcpcd"
 version = "10.5.2-r1"
-sha256 = "fdc61628480129e33b2341dc1142f05f666488c16c10710c954f4c3f8fd7b705"
-input = "57319b939b823b23ffb4ba4202e99d66a5d074574b394f1159c9c80cd1ae1440"
+sha256 = "89611f1356ffcf0cb344960918546dbd46719dea229eabc18d20a20f5fa0a1dd"
 
 [[package]]
 name = "dinit"
 version = "0.22.1-r1"
-sha256 = "f66f38241c40e2fb5ed3e207070aec7b0d250c323d2f4a69076b5d9d864bfdce"
-input = "dd3f5fe2930da9c6f4222507a3747953f5a5dc75dd407082f097cc7579bd92b9"
+sha256 = "147b6016204facd391b46815d4725a85eee366540947e32b0cad3600cdfdac28"
 
 [[package]]
 name = "dosfstools"
 version = "4.2-r1"
-sha256 = "8ea3d432b62df8f16b055fc9e4b353344ba9717509ca4f6d141dd7be404ae06f"
-input = "6a20f88e003e2e62ea0b698dc7988b763abf65cb82f9e61ed213103e10a0c30a"
+sha256 = "da6e83d07f53bad19bacb3bc85edd671e4fec2eea04d22dbc3bb1d14072e77af"
 
 [[package]]
 name = "e2fsprogs"
 version = "1.47.4-r1"
-sha256 = "e73a35e9dfa331fee0b7378a84e916074c864eb11c4249fffbdb96638816eb8c"
-input = "554c174bcf186323ab71eb53d2e574059811f230da1e89505419ea28ac8a6a1d"
+sha256 = "bf3767699f3f9722c235b170aaef514a0a4d39386a252db4c8a4ed4ca6533f7f"
 
 [[package]]
 name = "filesystem"
 version = "1-r1"
 sha256 = "f1c5bd3f1c6c91d67a2bf7180dea7f3ad4ad3b78d461dbebbf9da63443109192"
-input = "6e7e9fd9cd06a4394f02176ebe63b406fc1034500674b68ec597780c07da8bce"
 
 [[package]]
 name = "iproute2"
 version = "7.3.0-r1"
-sha256 = "039e607d5f78fb4a32ffa58ecbcfd18258fce39295c9171a27bc94428e47769a"
-input = "035a1f1642d79dffa5c25e2fe55b621278f5927f81f93f7b741a43f7a16914e0"
+sha256 = "bcd34fbbfd6d8eebdfae19d614ba327f5dd0ba2f84b49331f3e5ce75f1b2de10"
 
 [[package]]
 name = "json-c"
 version = "0.19-r1"
-sha256 = "4db9cc1e789b378ffa6b515f4bbd867875b670ce52bb2085db78f8f00bf3a61e"
-input = "df175ce23ebd361b77084bb657a3e7f9081e8a1361fdcd19853ce47a09e7629e"
+sha256 = "69907cb37e45bf32584aaeb3b4f1b397a167712b84a45bc6599e4125b541799c"
 
 [[package]]
 name = "klos-tools"
 version = "0.1.0-r1"
-sha256 = "94cec588e4899f2762f05ac7630ce4db3b295138c41da8b46e15a083d3d51a12"
-input = "b7a6be4bb150934efe70f818ec0431ba4ee6e03e51428369d8c016ee628dadd3"
+sha256 = "07d9765e3c5345fdeae2a1e38e94cf20f550d3bdf8e41bbdfb48fbcd73287dee"
 
 [[package]]
 name = "kubernetes"
 version = "1.37.1-r1"
 sha256 = "75fe3ce18a6e5d1b938fbf91ca88f02f3bf57e5509345776276a854608a071ea"
-input = "0fac3fcc2b17ecc23fd092bddcee369610077495adaa85d6ac421753f143257f"
 
 [[package]]
 name = "libaio"
 version = "0.3.113-r1"
-sha256 = "200cea4a46a54d203d1c82779e09780ca802314150a4e48a118bd8cc9cd6d277"
-input = "7132f22eca481252dfabc18988b12b4df6fd9c51d8e35913bc22753d97d67264"
+sha256 = "9c88670c4b75ba4c40d98c27a3e23325b0915a4805c0a2f85934090cca5e12f8"
 
 [[package]]
 name = "libcap"
 version = "2.78-r1"
-sha256 = "b9373d524e89c1f59a0d81403c85566dfc49335bd26cce7a5ced8a699a0ff0a4"
-input = "f7ac48e2956751b76ef2b56c74063b6d06c0790770e7a7820f111c3d59ba82a2"
+sha256 = "d186610532b24f45744066666e28d0d561e402ee9b3868574ea593a52b7c1b8f"
 
 [[package]]
 name = "libcap-ng"
 version = "0.9.6-r1"
-sha256 = "848ab5c1a30de82be1da37b14935e424004acb05f7e333da965e1032b26a7567"
-input = "d8dc5f2e5073eb80a943647e85612376e88028d7fe5b868f94b4a22677be7102"
+sha256 = "4cfa3c9e8ccbb025b08dddf29b30c4109f6d47f70a66c71b42b8577fb9e472ec"
 
 [[package]]
 name = "libmnl"
 version = "1.0.5-r1"
-sha256 = "6a26748b45a4041ca072be804b9e146b518e6cdccacb11186d9c579cd1a3f59e"
-input = "703d6a238b298745789ee98c3f6288c84ba5aad96693b1dc62846d237b22bbf0"
+sha256 = "775a33de82e94d75537b55d9d7e23c1b36927ef78f982cf265eb699707a4170e"
 
 [[package]]
 name = "libnftnl"
 version = "1.3.2-r1"
-sha256 = "c48817cd6ec61ac2c9364568124210a9dd9dc94d45caabeaa2aec7fb41a059de"
-input = "1cee8e8e0ff8da44bd0c52b73287896c24dd2d481572d7beb2e43f3d1cb8df31"
+sha256 = "8810dab8cff3e6339bb14b98b9ff80857d192991c308779d8cb56b4017ffc4dd"
 
 [[package]]
 name = "libseccomp"
 version = "2.6.1-r1"
-sha256 = "18d401a5be807b13b784d1f86d1cfff87ecb6374e3382058da0d32ed7dcb280e"
-input = "8cca1b9fc5c6583a36d77bb677420477370d10fcf3defc49a7ad9de9735bfc9f"
+sha256 = "461c9a2e3cf5bb011f16b1f2f3c0943a4a9c30103f33e38f53fbb77d0d647ad9"
 
 [[package]]
 name = "llvm-runtimes"
 version = "23.1.4-r1"
-sha256 = "ec451d4eb21c328857d9ad280fe677a84dc44d20a304b0e580f885e596603fdf"
-input = "f2d75fe080aa9f78b80fcee3c3f3bbcb2efc18440d2f0bb97fb0891f27adc6cd"
+sha256 = "6d447e4f22bcdf53c1dc41370a4c386eaa65a783a2d179528976e1691fabfa05"
 
 [[package]]
 name = "lvm2"
 version = "2.03.43-r1"
-sha256 = "6ee69ff6fcdcbcd7f546e0face7746f93a581f134bc006d5879bdbb1844d21ec"
-input = "9bd330c625971b7b20611e769744a959a55fcbe025d97a34312855d5f42c3d3d"
+sha256 = "6a3e48bcafe835c13c4dc55916802c7894682fe965c7a65e335ade4ac758672e"
 
 [[package]]
 name = "musl"
 version = "1.2.6-r1"
-sha256 = "87512ec4c39213d288115b3a602722b107bf14386929178a8b5002c2a3dba116"
-input = "8dcaecb91f5a3a8f7e2a7cc2d6627d73d8f8c51f21810be31b4eae09a11a6f66"
+sha256 = "3579fda37eb250e373126c42aae454eef17932a8a081a35b2aecf068d5cfba6c"
 
 [[package]]
 name = "nftables"
 version = "1.1.7-r1"
-sha256 = "2e2b30a1d3e5c5d8160592937a9f259369a0d086b56ca8390e381746c195cc4f"
-input = "26855572f4333aac62c7c3847f58548fa81ace204924c9d4ed56c704dfb0795a"
+sha256 = "9dbb14ba3acb7212def55029925e08c6ef5fe62f27e6033dc91b25974d58de2a"
 
 [[package]]
 name = "openssh"
 version = "10.6p1-r1"
-sha256 = "e572019f38abfcbf588cb53b01fb321be1f1cfb481bffb9c37765265739a8604"
-input = "056eee99eb760fb647a83d3983fdc6dce27975f49faf187999471478a6fc40dd"
+sha256 = "0c07ee2a1125313996319d82f09785402c50763886ec43d7c94545c1409956af"
 
 [[package]]
 name = "popt"
 version = "1.19-r1"
-sha256 = "f52ef1aa2b96a64b006c37f66c0d1ce890caeb0d7c9bcc70755c15cb94ab2209"
-input = "5efcbd49379deea6c23df3c4fad1933377aad8fcd139d59058babf73a4b61b36"
+sha256 = "1d9229c7dfb059144a917a41c5c044c1e1ceb4de4b646ff03290da44aadd9f99"
+
+[[package]]
+name = "secureboot-microsoft"
+version = "2023-r1"
+sha256 = "5dce5b443a38222886697a18fc9d6bcdb91fb56009490176d0cc8713857dc131"
 
 [[package]]
 name = "toybox"
 version = "0.8.15-r1"
-sha256 = "5d5c9a65c2d8a33b97098a27921ad55f3c8d9dc888c325ab8b11c0273d7b27f7"
-input = "06b9eb0db0e024adeddbd70614bf7559046847cca15310e36920ef46e0c49652"
+sha256 = "4c7eff65eaa7d3a0bebfbabee88ffcd9968e53ac7907ea0ba923d6b625f723ec"
 
 [[package]]
 name = "util-linux"
 version = "2.42.4-r1"
-sha256 = "81b562d92d0285dc70fcfbfca6392876d90eef301a1bc614d08013e74d6dd6d1"
-input = "7aaf340872df8ea6d9592b4b7f81c51e26585901d65de45a950261d46a7b28e2"
+sha256 = "23926a061e18dc03e2af88551829cb84cb1c7867f0c3768c0aec66b08dd89293"
 
 [[package]]
 name = "zlib"
 version = "1.3.2-r1"
-sha256 = "49298ed437ac10f98328de1cf4b4089381ca4af2fabf098a6c6c3b4943740ed7"
-input = "0f2727844ef8c91d4b6d48068d4bdd88ecc9b1e1c9e26acacb4af0084d7118ed"
+sha256 = "c7ce9cbca2a444ef556c9f8784b414b8a9cbb6efbdd4c7772cf15607d48faec3"
 
