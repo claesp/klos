@@ -21,7 +21,8 @@ This document shows what works now and what is planned. "Tested" means that
 | TPM2 unlock (PCR 7 and 15, salted sessions, passphrase fallback, new enrollment) | Tested (swtpm) |
 | TPM PIN (PolicyAuthValue, TPM lockout protection, wrong PIN refused) | Tested (swtpm) |
 | No setuid programs, no scripts except the shell and the dhcpcd hook | Tested (build check and test) |
-| KLOS builder (stage 2): all build tools built by KLOS; Alpine supplies only the first compiler | Tested (`alpine-2` builds the server and kubernetes flavors; all tests pass) |
+| KLOS builder (stage 2): all build tools built by KLOS; Alpine supplies only the first compiler | Tested (`alpine-2` builds all three flavors; all tests pass) |
+| Two independent bootstrap builders (Alpine with Clang and musl, Arch Linux with GCC and glibc) | Checked: `./klos compare` gives the same image, kernel, packages and toolchain from `alpine-2` and `arch-2` for the server and kubernetes flavors |
 | SELinux in enforcing mode (KLOS policy, labeled erofs image, no mode or policy change after boot, W^X, confined dhcpcd and chronyd) | Tested (no denials in the test) |
 | Kubernetes flavor: containerd, crun, CNI plugins, kubelet, kubeadm | Tested (preflight, not a full cluster) |
 | Desktop flavor: sway, foot, seatd, devd | Tested (headless sway) |
@@ -34,7 +35,6 @@ This document shows what works now and what is planned. "Tested" means that
 | Function | Notes |
 |----------|-------|
 | NVK, Rust | The NVIDIA Vulkan driver needs a Rust toolchain. |
-| Comparison of two bootstrap builders | `arch-1` (Arch Linux, GCC, glibc) and `arch-2` work. The `arch-2` server build and `./klos compare server` are not complete yet. The desktop flavor is not yet built on `alpine-2`. |
 | SELinux domains for more services | sshd, containerd, kubelet and the desktop services are unconfined (`init_t`). |
 | Sound server, browser | The desktop has no sound server and no web browser yet. |
 | Other architectures | Only x86-64 now. |

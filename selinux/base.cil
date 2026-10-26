@@ -300,6 +300,9 @@
 	setattr bind getopt setopt shutdown)))
 (allow dhcpcd_t self (unix_stream_socket (bind listen accept)))
 (allow dhcpcd_t self (unix_dgram_socket (bind ioctl)))
+; dhcpcd asks the kernel for modules (8021q, nl80211). A confined daemon
+; must not load modules: devd loads the drivers of the devices.
+(dontaudit dhcpcd_t kernel_t (system (module_request)))
 ; dhcpcd reads the network namespace of the process (/proc/self/ns/net).
 (allow dhcpcd_t nsfs_t (file (getattr)))
 (allow dhcpcd_t dhcpc_port_t (udp_socket (name_bind)))
