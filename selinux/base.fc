@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# The SELinux file contexts of all flavors. Read docs/selinux.md.
+# The last line that matches a file applies: general lines come first.
+
+/.*					system_u:object_r:root_t:s0
+/					-d	system_u:object_r:root_t:s0
+
+/usr(/.*)?				system_u:object_r:usr_t:s0
+/usr/bin(/.*)?				system_u:object_r:bin_t:s0
+/usr/lib(/.*)?				system_u:object_r:lib_t:s0
+/usr/share(/.*)?			system_u:object_r:usr_t:s0
+/usr/bin/dash			--	system_u:object_r:shell_exec_t:s0
+/usr/bin/dinit			--	system_u:object_r:init_exec_t:s0
+/usr/bin/dhcpcd			--	system_u:object_r:dhcpcd_exec_t:s0
+/usr/bin/chronyd		--	system_u:object_r:chronyd_exec_t:s0
+/efi(/.*)?				system_u:object_r:boot_t:s0
+
+/etc(/.*)?				system_u:object_r:etc_t:s0
+/etc/shadow			--	system_u:object_r:shadow_t:s0
+/etc/resolv\.conf		--	system_u:object_r:net_conf_t:s0
+
+/var(/.*)?				system_u:object_r:var_t:s0
+/var/lib(/.*)?				system_u:object_r:var_lib_t:s0
+/var/log(/.*)?				system_u:object_r:var_log_t:s0
+/var/tmp(/.*)?				system_u:object_r:tmp_t:s0
+/var/home(/.*)?				system_u:object_r:home_t:s0
+/var/roothome(/.*)?			system_u:object_r:root_home_t:s0
+/var/lib/chrony(/.*)?			system_u:object_r:chronyd_var_lib_t:s0
+/var/lib/dhcpcd(/.*)?			system_u:object_r:dhcpcd_var_lib_t:s0
+# The /var/lib/klos/etc/upper lines come from the /etc lines (kbuild).
+
+/run(/.*)?				system_u:object_r:var_run_t:s0
+/run/chrony(/.*)?			system_u:object_r:chronyd_runtime_t:s0
+/run/dhcpcd(/.*)?			system_u:object_r:dhcpcd_runtime_t:s0
+/tmp(/.*)?				system_u:object_r:tmp_t:s0
+
+/dev(/.*)?				system_u:object_r:device_t:s0
+/dev/null			-c	system_u:object_r:null_device_t:s0
+/dev/zero			-c	system_u:object_r:null_device_t:s0
+/dev/full			-c	system_u:object_r:null_device_t:s0
+/dev/random			-c	system_u:object_r:random_device_t:s0
+/dev/urandom			-c	system_u:object_r:random_device_t:s0
+# The pseudo terminals and the mounted file systems in /dev keep their
+# labels from the policy (devpts, mqueue, hugetlbfs).
+/dev/pts(/.*)?				<<none>>
+/dev/mqueue(/.*)?			<<none>>
+/dev/hugepages(/.*)?			<<none>>
+/dev/shm(/.*)?				<<none>>

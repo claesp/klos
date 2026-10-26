@@ -49,6 +49,7 @@ The build uses approximately 40 GB of disk space and 16 GB of memory.
 | Command | Function |
 |---------|----------|
 | `./klos bootstrap` | Verify Alpine and make the builder image. |
+| `./klos selinux <flavor>` | Compile the SELinux policy of a flavor (read [selinux.md](selinux.md)). |
 | `./klos shell` | Open a shell in the builder (no network). |
 | `./klos check` | Run gofmt, go vet and the Go unit tests of kbuild and the klos tool. |
 | `./klos keygen` | Make a key pair for update bundles in `secrets/`. |

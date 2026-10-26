@@ -1,0 +1,7 @@
+; SPDX-License-Identifier: BSD-2-Clause
+;
+; The SELinux policy additions of the desktop flavor. Read docs/selinux.md.
+
+; The llvmpipe and lavapipe drivers of Mesa compile shaders to machine
+; code (a JIT compiler).
+(typeattributeset execmem_domain (init_t))

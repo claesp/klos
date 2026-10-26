@@ -1,0 +1,7 @@
+; SPDX-License-Identifier: BSD-2-Clause
+;
+; The SELinux policy additions of the kubernetes flavor. Read docs/selinux.md.
+
+; Containers can run programs with a JIT compiler (for example Java or
+; Node.js).
+(typeattributeset execmem_domain (init_t))

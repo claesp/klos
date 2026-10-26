@@ -57,6 +57,10 @@ func cmdBootSetup(args []string) error {
 		}
 		note(mount(m.src, m.target, m.fs, m.flags, m.data))
 	}
+	note(loadRunningContexts())
+	for _, d := range []string{"/tmp", "/dev/shm"} {
+		note(labelPath(d, d))
+	}
 	note(devLinks())
 	note(makeDirs())
 	note(applySysctl())
@@ -185,6 +189,9 @@ func makeDirs() error {
 				return err
 			}
 			if err := os.Lchown(l[1], uid, gid); err != nil {
+				return err
+			}
+			if err := labelPath(l[1], l[1]); err != nil {
 				return err
 			}
 		}

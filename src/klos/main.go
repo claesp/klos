@@ -38,6 +38,9 @@ Commands:
                          Enroll the KLOS Secure Boot keys (Setup Mode only).
   secureboot apply [-append] VAR FILE
                          Write a signed update to db, dbx, KEK or PK.
+  selinux status         Show the SELinux mode and the context of the process.
+  selinux relabel PATH...
+                         Label the files again from the file contexts.
   tpm status             Show the TPM key of the disk.
   tpm enroll [-key-file F] [-pin | -pin-file F]
                          Seal a disk key in the TPM (PCR 7 and 15, optional PIN).
@@ -81,6 +84,8 @@ func main() {
 		err = cmdDevd(args)
 	case "secureboot":
 		err = cmdSecureBoot(args)
+	case "selinux":
+		err = cmdSELinux(args)
 	case "tpm":
 		err = cmdTPM(args)
 	case "-h", "--help", "help":

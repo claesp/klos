@@ -14,6 +14,7 @@
 | Safe updates | Trial boots with watchdog and automatic rollback. |
 | Hardened code | Clang hardening flags, libc++ hardening, kernel CFI and KSPP options. |
 | Firewall | nftables drops all incoming traffic except SSH and ICMP. |
+| SELinux | Enforcing mode with a small KLOS policy. No process can load a policy or change the mode. No process can use writable and executable memory (except for JIT compilers on the kubernetes and desktop flavors). dhcpcd and chronyd are confined. Read [selinux.md](selinux.md). |
 | System call filter | chronyd runs with its seccomp filter (`chronyd -F 1`). The kernel stops chronyd if it uses a system call that is not on its list. |
 | SSH | Keys only; modern key exchange (ML-KEM hybrid), ciphers and MACs. OpenSSH has no OpenSSL dependency. |
 

@@ -5,7 +5,7 @@
 config = ["common", "hardening"]
 cmdline = ["ro", "panic=10", "oops=panic", "slab_nomerge", "init_on_alloc=1",
   "page_alloc.shuffle=1", "randomize_kstack_offset=on", "vsyscall=none",
-  "lockdown=integrity", "loglevel=4"]
+  "lockdown=integrity", "loglevel=4", "audit_backlog_limit=8192"]
 
 [packages]
 install = [
@@ -107,6 +107,11 @@ home = "/var/empty"
 shell = "/bin/false"
 gecos = "nobody"
 
+# The SELinux policy (selinux/). Read docs/selinux.md.
+[selinux]
+policy = ["base.cil"]
+file-contexts = ["base.fc"]
+
 # "klos test" runs these commands on all flavors.
 [test]
 commands = [
@@ -114,7 +119,7 @@ commands = [
   "sleep 5; pgrep chronyd && grep -q 'Loaded seccomp filter' /var/log/chronyd.log || { cat /var/log/chronyd.log; dmesg | grep type=1326; false; }",
   # The test VM has no network. A second chronyd (without the filter) is a
   # local NTP server, so that the chronyd with the filter gets NTP packets.
-  "printf 'port 11123\\nbindaddress 127.0.0.1\\nallow 127.0.0.1\\nlocal stratum 8\\ncmdport 0\\npidfile /run/chrony/test-server.pid\\n' > /etc/chrony/test-server.conf && chronyd -x -u chrony -f /etc/chrony/test-server.conf",
+  "printf 'port 11123\\nbindaddress 127.0.0.1\\nallow 127.0.0.1\\nlocal stratum 8\\ncmdport 0\\npidfile /run/chrony/test-server.pid\\n' > /etc/chrony/test-server.conf && chronyd -x -u chrony -f /etc/chrony/test-server.conf </dev/null >/dev/null 2>&1",
   "echo 'server 127.0.0.1 port 11123 iburst minpoll -4 maxpoll -4' >> /etc/chrony/chrony.conf && dinitctl restart chronyd && for i in $(seq 60); do grep -q 'Selected source 127.0.0.1' /var/log/chronyd.log && break; sleep 1; done; sleep 5; grep -q 'Selected source 127.0.0.1' /var/log/chronyd.log && pgrep -f 'chronyd -d -u chrony -F 1' || { cat /var/log/chronyd.log; dmesg | grep type=1326; false; }",
   "sed -i '/port 11123/d' /etc/chrony/chrony.conf && kill $(cat /run/chrony/test-server.pid) && rm /etc/chrony/test-server.conf && dinitctl restart chronyd",
 ]

@@ -21,6 +21,7 @@ This document shows what works now and what is planned. "Tested" means that
 | TPM2 unlock (PCR 7 and 15, salted sessions, passphrase fallback, new enrollment) | Tested (swtpm) |
 | TPM PIN (PolicyAuthValue, TPM lockout protection, wrong PIN refused) | Tested (swtpm) |
 | No setuid programs, no scripts except the shell and the dhcpcd hook | Tested (build check and test) |
+| SELinux in enforcing mode (KLOS policy, labeled erofs image, no mode or policy change after boot, W^X, confined dhcpcd and chronyd) | Tested (no denials in the test) |
 | Kubernetes flavor: containerd, crun, CNI plugins, kubelet, kubeadm | Tested (preflight, not a full cluster) |
 | Desktop flavor: sway, foot, seatd, devd | Tested (headless sway) |
 | Vulkan: radv, anv, lavapipe, venus, the Vulkan loader, vulkaninfo | Built; lavapipe tested (vulkaninfo) |
@@ -34,6 +35,7 @@ This document shows what works now and what is planned. "Tested" means that
 | NVK, Rust | The NVIDIA Vulkan driver needs a Rust toolchain. |
 | A self-hosted stage | Build the build tools (cmake, python, perl) with KLOS too, so that Alpine is only the first compiler. |
 | A second, independent builder | Compare the results of two builders to detect a bad bootstrap builder. |
+| SELinux domains for more services | sshd, containerd, kubelet and the desktop services are unconfined (`init_t`). |
 | Sound server, browser | The desktop has no sound server and no web browser yet. |
 | Other architectures | Only x86-64 now. |
 

@@ -5,6 +5,7 @@ package main
 // OS images and update bundles. Read docs/build-system.md and docs/updates.md.
 
 import (
+	"bufio"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
@@ -443,11 +444,25 @@ func buildImage(flavor string, opt imageOptions) *BuildRecord {
 	kb.configure(m)
 	kb.stage1(rootfs)
 
+	fc := buildSELinux(m, rootfs, kernelSource())
+
 	logf("image %s: make the erofs image", flavor)
 	img := filepath.Join(iw, "root.img")
 	uuid := detUUID("erofs", flavor, version)
-	run(Cmd{Args: []string{"mkfs.erofs", "-zlz4hc,12", "-T", strconv.FormatInt(SDE, 10),
-		"--ignore-mtime", "--all-root", "-U", uuid, img, rootfs}, Quiet: true})
+	// The tar archive has the SELinux labels (the builder cannot set
+	// security.selinux on the files of rootfs).
+	rootTar := filepath.Join(iw, "root.tar")
+	tf, err := os.Create(rootTar)
+	check(err)
+	bw := bufio.NewWriterSize(tf, 1<<20)
+	if err := writeLabeledTar(rootfs, fc, bw); err != nil {
+		die("image %s: %v", flavor, err)
+	}
+	check(bw.Flush())
+	check(tf.Close())
+	run(Cmd{Args: []string{"mkfs.erofs", "--tar=f", "-zlz4hc,12", "-T", strconv.FormatInt(SDE, 10),
+		"--ignore-mtime", "--all-root", "-U", uuid, img, rootTar}, Quiet: true})
+	check(os.Remove(rootTar))
 	st, err := os.Stat(img)
 	check(err)
 	dataSize := (st.Size() + 4095) / 4096 * 4096
@@ -474,7 +489,13 @@ func buildImage(flavor string, opt imageOptions) *BuildRecord {
 	logf("image %s: make the initramfs and the EFI binaries", flavor)
 	cpio := filepath.Join(iw, "initramfs.cpio")
 	buildInitramfs(m, rootfs, cpio)
-	cmdline := strings.Join(append(append([]string{}, m.Kernel.Cmdline...),
+	args := append([]string{}, m.Kernel.Cmdline...)
+	if fc != nil && seMode(m) == "enforcing" {
+		// SELinux enforces from the policy load: no process (not even
+		// /init) needs the permission to change the mode.
+		args = append(args, "enforcing=1")
+	}
+	cmdline := strings.Join(append(args,
 		"klos.version="+version, "klos.flavor="+flavor,
 		"klos.verity="+roothash, "klos.hashoffset="+strconv.FormatInt(dataSize, 10)), " ")
 	rec.Cmdline = cmdline

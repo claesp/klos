@@ -382,7 +382,14 @@ func cmdTest(args []string) {
 	m := flavorManifest(flavor)
 	for _, c := range m.Test.Commands {
 		logf("test 2: %s", c)
+		if len(m.SELinux.Policy) > 0 {
+			// Show the SELinux denials if the command fails.
+			c = "( " + c + " ) || { rc=$?; dmesg | grep -E 'avc: +denied|audit: (backlog|audit_lost)' | tail -40; (exit $rc); }"
+		}
 		vm2.sh(c, 5*time.Minute)
+	}
+	if len(m.SELinux.Policy) > 0 {
+		checkSELinux(vm2, m, filepath.Join(tw, "selinux-denials.log"), "test 2")
 	}
 
 	logf("test 3: update to %s", v2)
@@ -398,6 +405,9 @@ func cmdTest(args []string) {
 	vm2.sh("grep -q '^klostest:x:899:899:' /etc/passwd && grep -q '^klostest:x:899:klostest$' /etc/group && "+
 		"grep -q '^klostest:!:' /etc/shadow && grep -q '^klos:' /etc/passwd", 30*time.Second)
 	logf("test 3: the update, the trial boot and the bless are good; /etc changes are kept; the new system user is merged")
+	if len(m.SELinux.Policy) > 0 {
+		checkSELinux(vm2, m, filepath.Join(tw, "selinux-denials-3.log"), "test 3")
+	}
 
 	logf("test 4: roll back to %s", v1)
 	vm2.sh("klos rollback", time.Minute)
@@ -461,4 +471,34 @@ func cmdQemu(args []string) {
 	cmd := exec.Command(a[0], a[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	check(cmd.Run())
+}
+
+// checkSELinux checks the SELinux state of the test system and collects
+// the denials (AVC messages) in the kernel log. In enforcing mode, a
+// denial is an error. In permissive mode, the denials go to a file for
+// the policy work.
+func checkSELinux(v *vm, m *Manifest, log, step string) {
+	mode := seMode(m)
+	v.sh("klos selinux status | grep -q '^SELinux: "+mode+"$'", time.Minute)
+	v.sh("grep -q system_r:init_t /proc/1/attr/current", time.Minute)
+	if out := v.sh("dmesg | grep -E 'audit: (backlog|audit_lost)' || true", time.Minute); strings.Contains(out, "audit") {
+		die("%s: the kernel lost audit messages:\n%s", step, out)
+	}
+	out := v.sh("dmesg | grep -E 'avc: +denied' || true", time.Minute)
+	var denials []string
+	for _, l := range strings.Split(out, "\n") {
+		if strings.Contains(l, "denied") {
+			denials = append(denials, strings.TrimSpace(l))
+		}
+	}
+	writeFile(log, strings.Join(denials, "\n")+"\n", 0o644)
+	if len(denials) > 0 && mode == "enforcing" {
+		die("%s: %d SELinux denials (in %s):\n%s", step, len(denials), rel(log), strings.Join(denials, "\n"))
+	}
+	if mode == "enforcing" {
+		// No process can change the mode. This makes a denial, so it
+		// comes after the collection of the denials.
+		v.sh("! echo 0 > /sys/fs/selinux/enforce 2>/dev/null && grep -qx 1 /sys/fs/selinux/enforce", time.Minute)
+	}
+	logf("%s: SELinux %s, %d denials (in %s)", step, mode, len(denials), rel(log))
 }

@@ -1,0 +1,22 @@
+# The SELinux CIL compiler. A build tool: kbuild compiles the KLOS SELinux
+# policy with it (docs/selinux.md). The images do not contain it.
+[package]
+name = "secilc"
+version = "3.11"
+summary = "SELinux CIL policy compiler"
+license = "BSD-2-Clause"
+homepage = "https://github.com/SELinuxProject/selinux"
+build-depends = ["libsepol"]
+
+[[source]]
+url = "https://github.com/SELinuxProject/selinux/releases/download/3.11/secilc-3.11.tar.gz"
+sha256 = "1fb7de005d35ae0ac6ff8f8fc955d08a15b5c1a67e961b97ef987576af0db11a"
+signature = "https://github.com/SELinuxProject/selinux/releases/download/3.11/secilc-3.11.tar.gz.asc"
+key = ["selinux-lautrbach"]
+
+[build]
+script = '''
+kmake secilc secilcheck
+install -D -m 0755 secilc "$DESTDIR/usr/bin/secilc"
+install -D -m 0755 secilcheck "$DESTDIR/usr/bin/secilcheck"
+'''

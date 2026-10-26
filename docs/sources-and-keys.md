@@ -50,6 +50,7 @@ in the recipes (`key = ["musl"]` is `keys/musl.asc`).
 | expat-sping.asc | Sebastian Pipping | 3176 EF7D B236 7F1F CA4F 306B 1F9B 0E90 9AF3 7285 | keyserver.ubuntu.com |
 | freetype-wl.asc | Werner Lemberg | E306 7470 7856 409F F194 8010 BE6C 3AAC 63AD 8E3F | keyserver.ubuntu.com |
 | dnkl.asc | Daniel Eklöf (Git signing) | B199 64FB BA09 664C C810 27ED 5BBD 4992 C116 573F | keyserver.ubuntu.com |
+| selinux-lautrbach.asc | Petr Lautrbach (SELinux userspace) | 68D2 1823 342A 1368 3AEB 3E4E FB4C 685B 5DC1 C13E | keyserver.ubuntu.com, compared with keys.openpgp.org and github.com/bachradsusi |
 
 Before you add a key, compare its fingerprint with a second source. For
 example, use the web site of the project, the release announcement, or the

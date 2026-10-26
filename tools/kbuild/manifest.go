@@ -68,6 +68,13 @@ type Manifest struct {
 		// enroll (the default) or enroll-microsoft.
 		SecureBoot string `toml:"secureboot"`
 	} `toml:"test"`
+	// SELinux has the policy files and the file contexts (in selinux/),
+	// and the mode. Read docs/selinux.md.
+	SELinux struct {
+		Policy       []string `toml:"policy"`
+		FileContexts []string `toml:"file-contexts"`
+		Mode         string   `toml:"mode"`
+	} `toml:"selinux"`
 	Users  []User  `toml:"users"`
 	Groups []Group `toml:"groups"`
 }
@@ -108,6 +115,11 @@ func (m *Manifest) merge(o *Manifest) {
 	m.Test.QemuArgs = append(m.Test.QemuArgs, o.Test.QemuArgs...)
 	if o.Test.SecureBoot != "" {
 		m.Test.SecureBoot = o.Test.SecureBoot
+	}
+	m.SELinux.Policy = appendUniq(m.SELinux.Policy, o.SELinux.Policy)
+	m.SELinux.FileContexts = appendUniq(m.SELinux.FileContexts, o.SELinux.FileContexts)
+	if o.SELinux.Mode != "" {
+		m.SELinux.Mode = o.SELinux.Mode
 	}
 	m.Users = append(m.Users, o.Users...)
 	m.Groups = append(m.Groups, o.Groups...)

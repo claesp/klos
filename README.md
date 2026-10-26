@@ -22,6 +22,9 @@ KLOS has these flavors:
   kernel, the initramfs and the dm-verity root hash of the OS image.
 - A TPM 2.0 can unlock the disk (sealed to the Secure Boot state, once in
   each boot). The passphrase stays as a second key.
+- SELinux is in enforcing mode, with a small KLOS policy. No process can
+  turn it off, and no process can have writable and executable memory
+  (except where a flavor needs a JIT compiler).
 - An update installs a new OS image next to the current one. The previous
   version stays available. If the new version does not start, the computer
   starts the previous version.

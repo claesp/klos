@@ -33,6 +33,7 @@ Build commands (run in the builder):
   qemu <flavor>        Boot an installed test disk in QEMU (interactive).
   list                 Show all recipes.
   revoke <klos.efi>... Make a signed dbx update that revokes EFI binaries.
+  selinux <flavor>     Compile the SELinux policy of a flavor (for development).
 
 Read docs/building.md for more information.
 USAGE
@@ -93,6 +94,7 @@ KBUILD_SH='cd /klos/tools/kbuild && GOCACHE=/klos/work/gocache GOFLAGS=-mod=vend
 # The Go checks of "./klos check": gofmt, go vet and the unit tests.
 CHECK_SH='set -e
 export GOCACHE=/klos/work/gocache GOFLAGS=-mod=vendor GOTOOLCHAIN=local CGO_ENABLED=0
+cmp -s tools/kbuild/selabel.go src/klos/selabel.go || { echo "klos check: tools/kbuild/selabel.go and src/klos/selabel.go are not the same"; exit 1; }
 for m in tools/kbuild src/klos; do
 	cd /klos/$m
 	bad=$(gofmt -l $(ls *.go))
@@ -126,7 +128,7 @@ case $cmd in
 		# Download first with the network, then build without it.
 		(kbuild yes no fetch "$@")
 		kbuild no no "$cmd" "$@" ;;
-	lock|list|revoke) kbuild no no "$cmd" "$@" ;;
+	lock|list|revoke|selinux) kbuild no no "$cmd" "$@" ;;
 	test)
 		(kbuild yes no fetch "$@")
 		kbuild no yes test "$@" ;;

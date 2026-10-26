@@ -35,6 +35,7 @@ var commands = map[string]command{
 	"qemu":      {"qemu <flavor>", cmdQemu},
 	"hash":      {"hash <url>", cmdHash},
 	"revoke":    {"revoke <klos.efi>...", cmdRevoke},
+	"selinux":   {"selinux <flavor>", cmdSELinux},
 }
 
 func usage() {
@@ -93,6 +94,9 @@ func cmdFetch(args []string) {
 		if isFlavor(t) {
 			m := flavorManifest(t)
 			names = append(names, m.Packages.Install...)
+			if len(m.SELinux.Policy) > 0 {
+				names = append(names, "secilc")
+			}
 			sources = append(sources, kernelDef().Source...)
 		} else if t == "kernel" {
 			sources = append(sources, kernelDef().Source...)

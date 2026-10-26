@@ -1,0 +1,348 @@
+; SPDX-License-Identifier: BSD-2-Clause
+;
+; The KLOS SELinux policy: the part for all flavors. Read docs/selinux.md.
+;
+; kbuild adds kernel.cil: the classes, permissions and initial SIDs of the
+; kernel, the policy capabilities, the MLS levels, and the rules of the
+; attribute unconfined_domain.
+;
+; The model:
+;   - kernel_t and init_t are unconfined: they can do all, but they cannot
+;     load a policy, change the SELinux mode or use executable memory.
+;     dinit is init_t, and the processes that dinit starts are init_t,
+;     except when a rule below gives a different domain.
+;   - The network daemons that read data from the network (dhcpcd and
+;     chronyd) are confined: they get only the permissions in this file.
+
+; --- Users, roles and levels ---
+
+(user system_u)
+(role object_r)
+(role system_r)
+(userrole system_u system_r)
+(userrole system_u object_r)
+(userlevel system_u systemlow)
+(userrange system_u low_high)
+
+(level systemlow (s0))
+(level systemhigh (s0 (range c0 c1023)))
+(levelrange low_low (systemlow systemlow))
+(levelrange low_high (systemlow systemhigh))
+
+; --- Attributes ---
+
+(typeattribute any_type)
+(typeattributeset any_type (all))
+(typeattribute domain)
+(typeattribute unconfined_domain)
+(typeattribute execmem_domain)
+(typeattribute file_type)
+(typeattribute exec_type)
+(typeattribute fs_type)
+(typeattribute dev_type)
+(typeattribute port_type)
+
+(roletype system_r domain)
+(roletype object_r any_type)
+
+; Groups of types for the rules of confined daemons.
+(typeattribute os_dir_type)
+(typeattributeset os_dir_type (root_t usr_t bin_t lib_t etc_t))
+(typeattribute os_read_type)
+(typeattributeset os_read_type (usr_t etc_t))
+(typeattribute var_dir_type)
+(typeattributeset var_dir_type (var_t var_lib_t var_run_t tmpfs_t))
+(typeattribute daemon_exec_type)
+(typeattributeset daemon_exec_type (bin_t shell_exec_t))
+(typeattribute dhcpcd_state_type)
+(typeattributeset dhcpcd_state_type (dhcpcd_var_lib_t dhcpcd_runtime_t))
+(typeattribute chronyd_state_type)
+(typeattributeset chronyd_state_type (chronyd_var_lib_t chronyd_runtime_t))
+
+; A flavor that needs executable memory (a JIT compiler) puts the domain
+; in execmem_domain.
+(allow execmem_domain self (process (execmem)))
+
+; --- Domains ---
+
+(type kernel_t)
+(type init_t)
+(type dhcpcd_t)
+(type chronyd_t)
+(typeattributeset domain (kernel_t init_t dhcpcd_t chronyd_t))
+(typeattributeset unconfined_domain (kernel_t init_t))
+
+; --- Files ---
+
+(type unlabeled_t)
+(type file_t)
+(type root_t)
+(type usr_t)
+(type bin_t)
+(type lib_t)
+(type etc_t)
+(type shadow_t)
+(type net_conf_t)
+(type var_t)
+(type var_lib_t)
+(type var_log_t)
+(type var_run_t)
+(type tmp_t)
+(type home_t)
+(type root_home_t)
+(type boot_t)
+(type init_exec_t)
+(type shell_exec_t)
+(type dhcpcd_exec_t)
+(type dhcpcd_var_lib_t)
+(type dhcpcd_runtime_t)
+(type chronyd_exec_t)
+(type chronyd_var_lib_t)
+(type chronyd_runtime_t)
+(typeattributeset exec_type (init_exec_t shell_exec_t dhcpcd_exec_t chronyd_exec_t))
+(typeattributeset file_type (unlabeled_t file_t root_t usr_t bin_t lib_t etc_t
+	shadow_t net_conf_t var_t var_lib_t var_log_t var_run_t tmp_t home_t
+	root_home_t boot_t dhcpcd_var_lib_t dhcpcd_runtime_t chronyd_var_lib_t
+	chronyd_runtime_t exec_type))
+
+; --- File systems ---
+
+(type fs_t)
+(type initrd_t)
+(type proc_t)
+(type sysctl_t)
+(type sysctl_net_t)
+(type sysfs_t)
+(type security_t)
+(type securityfs_t)
+(type cgroup_t)
+(type efivarfs_t)
+(type bpf_t)
+(type tracefs_t)
+(type debugfs_t)
+(type pstore_t)
+(type configfs_t)
+(type nsfs_t)
+(type pipefs_t)
+(type sockfs_t)
+(type anon_inode_t)
+(type tmpfs_t)
+(type devpts_t)
+(type mqueue_t)
+(type hugetlbfs_t)
+(type dosfs_t)
+(typeattributeset fs_type (fs_t initrd_t proc_t sysctl_t sysctl_net_t sysfs_t
+	security_t securityfs_t cgroup_t efivarfs_t bpf_t tracefs_t debugfs_t
+	pstore_t configfs_t nsfs_t pipefs_t sockfs_t anon_inode_t tmpfs_t
+	devpts_t mqueue_t hugetlbfs_t dosfs_t))
+
+; --- Devices ---
+
+(type device_t)
+(type null_device_t)
+(type random_device_t)
+(typeattributeset dev_type (device_t null_device_t random_device_t))
+(typeattributeset fs_type (device_t))
+
+; --- Network ---
+
+(type port_t)
+(type dhcpc_port_t)
+(type ntp_port_t)
+(type dns_port_t)
+(type node_t)
+(type netif_t)
+(typeattributeset port_type (port_t dhcpc_port_t ntp_port_t dns_port_t))
+
+; Files and device nodes can be on the file systems.
+(allow file_type fs_type (filesystem (associate)))
+; A new file in the root directory of a file system without labels (for
+; example a tmpfs that /init mounted before the policy load) gets the type
+; of the file system.
+(allow fs_type fs_type (filesystem (associate)))
+(allow dev_type fs_type (filesystem (associate)))
+(allow dev_type device_t (filesystem (associate)))
+
+(portcon udp 68 (system_u object_r dhcpc_port_t low_low))
+(portcon udp 546 (system_u object_r dhcpc_port_t low_low))
+(portcon udp 123 (system_u object_r ntp_port_t low_low))
+(portcon udp 53 (system_u object_r dns_port_t low_low))
+(portcon tcp 53 (system_u object_r dns_port_t low_low))
+
+; --- Initial SIDs (kbuild gives the other SIDs unlabeled_t) ---
+
+(sidcontext kernel (system_u system_r kernel_t low_high))
+(sidcontext security (system_u object_r security_t low_high))
+(sidcontext unlabeled (system_u object_r unlabeled_t low_high))
+(sidcontext file (system_u object_r file_t low_low))
+(sidcontext init (system_u system_r init_t low_high))
+(sidcontext any_socket (system_u object_r unlabeled_t low_low))
+(sidcontext port (system_u object_r port_t low_low))
+(sidcontext netif (system_u object_r netif_t low_low))
+(sidcontext netmsg (system_u object_r unlabeled_t low_low))
+(sidcontext node (system_u object_r node_t low_low))
+(sidcontext devnull (system_u object_r null_device_t low_low))
+
+; --- Labels of file systems ---
+
+(fsuse xattr ext4 (system_u object_r fs_t low_low))
+(fsuse xattr erofs (system_u object_r fs_t low_low))
+(fsuse xattr overlay (system_u object_r fs_t low_low))
+(fsuse trans tmpfs (system_u object_r tmpfs_t low_low))
+(fsuse trans devtmpfs (system_u object_r device_t low_low))
+(fsuse trans devpts (system_u object_r devpts_t low_low))
+(fsuse trans mqueue (system_u object_r mqueue_t low_low))
+(fsuse trans hugetlbfs (system_u object_r hugetlbfs_t low_low))
+(fsuse task pipefs (system_u object_r pipefs_t low_low))
+(fsuse task sockfs (system_u object_r sockfs_t low_low))
+
+(genfscon rootfs / (system_u object_r initrd_t low_low))
+(genfscon proc / (system_u object_r proc_t low_low))
+(genfscon proc /sys (system_u object_r sysctl_t low_low))
+(genfscon proc /sys/net (system_u object_r sysctl_net_t low_low))
+(genfscon sysfs / (system_u object_r sysfs_t low_low))
+(genfscon selinuxfs / (system_u object_r security_t low_low))
+(genfscon securityfs / (system_u object_r securityfs_t low_low))
+(genfscon cgroup2 / (system_u object_r cgroup_t low_low))
+(genfscon efivarfs / (system_u object_r efivarfs_t low_low))
+(genfscon bpf / (system_u object_r bpf_t low_low))
+(genfscon tracefs / (system_u object_r tracefs_t low_low))
+(genfscon debugfs / (system_u object_r debugfs_t low_low))
+(genfscon pstore / (system_u object_r pstore_t low_low))
+(genfscon configfs / (system_u object_r configfs_t low_low))
+(genfscon nsfs / (system_u object_r nsfs_t low_low))
+(genfscon anon_inodefs / (system_u object_r anon_inode_t low_low))
+(genfscon vfat / (system_u object_r dosfs_t low_low))
+
+; --- Domain transitions ---
+
+(typetransition kernel_t init_exec_t process init_t)
+(typetransition init_t dhcpcd_exec_t process dhcpcd_t)
+(typetransition init_t chronyd_exec_t process chronyd_t)
+
+; Labels of new files.
+(typetransition dhcpcd_t var_run_t dir "dhcpcd" dhcpcd_runtime_t)
+(typetransition dhcpcd_t etc_t file "resolv.conf" net_conf_t)
+(typetransition chronyd_t var_run_t dir "chrony" chronyd_runtime_t)
+
+; --- The base permissions of a confined daemon ---
+
+(macro daemon ((type d) (type exec))
+	(allow d exec (file (entrypoint execute read open getattr map)))
+	(allow init_t d (process (transition)))
+	(allow d init_t (process (sigchld)))
+	(allow d init_t (fd (use)))
+	; The standard input, output and error of dinit services.
+	(allow d null_device_t (chr_file (read write open getattr ioctl append)))
+	(allow d var_log_t (file (write append getattr ioctl)))
+	(allow d init_t (fifo_file (write append getattr ioctl)))
+	(allow d init_t (unix_stream_socket (read write getattr)))
+	(allow d self (process (fork sigchld signal signull sigkill sigstop
+		getsched setsched getpgid setpgid getcap setcap getattr setrlimit
+		getsession)))
+	(allow d self (fd (use)))
+	(allow d self (fifo_file (read write open getattr ioctl)))
+	(allow d self (unix_stream_socket (create read write getattr setattr
+		connect getopt setopt shutdown)))
+	(allow d self (unix_dgram_socket (create read write getattr setattr
+		connect getopt setopt shutdown sendto)))
+	; Programs and libraries.
+	(allow d os_dir_type (dir (search getattr read open)))
+	(allow d os_dir_type (lnk_file (read getattr)))
+	(allow d lib_t (file (read open getattr map execute)))
+	(allow d os_read_type (file (read open getattr map)))
+	(allow d net_conf_t (file (read open getattr)))
+	(allow d random_device_t (chr_file (read open getattr)))
+	(allow d device_t (dir (search getattr)))
+	(allow d var_dir_type (dir (search getattr)))
+	; /var/run and /var/lock are symbolic links to /run.
+	(allow d var_dir_type (lnk_file (read getattr)))
+	(allow d proc_t (dir (search getattr)))
+	(allow d proc_t (file (read open getattr)))
+	(allow d proc_t (lnk_file (read)))
+	(allow d sysctl_t (dir (search getattr)))
+	(allow d sysctl_t (file (read open getattr)))
+	(allow d self (dir (search getattr read open)))
+	(allow d self (file (read open getattr)))
+	(allow d self (lnk_file (read getattr)))
+	(allow d sysfs_t (dir (search getattr read open)))
+	(allow d sysfs_t (file (read open getattr)))
+	(allow d sysfs_t (lnk_file (read getattr)))
+	(allow d fs_t (filesystem (getattr)))
+	; A daemon that an administrator starts from a shell inherits the
+	; terminal. SELinux closes this file at the domain transition.
+	(dontaudit d device_t (chr_file (read write)))
+	; Name resolution.
+	(allow d self (udp_socket (create read write getattr setattr connect
+		getopt setopt shutdown bind)))
+	(allow d node_t (udp_socket (node_bind)))
+)
+
+; --- dhcpcd ---
+
+(call daemon (dhcpcd_t dhcpcd_exec_t))
+(allow dhcpcd_t self (capability (net_admin net_raw net_bind_service setuid
+	setgid sys_chroot chown fowner fsetid dac_override dac_read_search kill)))
+(allow dhcpcd_t self (capability2 (block_suspend)))
+(allow dhcpcd_t self (udp_socket (name_bind sendto recvfrom listen accept
+	ioctl)))
+(allow dhcpcd_t self (rawip_socket (create read write getattr setattr bind
+	getopt setopt ioctl shutdown)))
+(allow dhcpcd_t self (icmp_socket (create read write getattr setattr bind
+	getopt setopt ioctl shutdown)))
+(allow dhcpcd_t self (packet_socket (create read write getattr setattr bind
+	getopt setopt ioctl shutdown)))
+(allow dhcpcd_t self (netlink_route_socket (create read write getattr setattr
+	bind getopt setopt shutdown nlmsg_read nlmsg_write)))
+(allow dhcpcd_t self (netlink_generic_socket (create read write getattr setattr
+	bind getopt setopt shutdown)))
+(allow dhcpcd_t self (netlink_kobject_uevent_socket (create read write getattr
+	setattr bind getopt setopt shutdown)))
+(allow dhcpcd_t self (unix_stream_socket (bind listen accept)))
+(allow dhcpcd_t self (unix_dgram_socket (bind ioctl)))
+; dhcpcd reads the network namespace of the process (/proc/self/ns/net).
+(allow dhcpcd_t nsfs_t (file (getattr)))
+(allow dhcpcd_t dhcpc_port_t (udp_socket (name_bind)))
+(allow dhcpcd_t port_t (udp_socket (name_bind)))
+(allow dhcpcd_t node_t (rawip_socket (node_bind)))
+(allow dhcpcd_t node_t (icmp_socket (node_bind)))
+(allow dhcpcd_t self (process (setcap)))
+(allow dhcpcd_t dhcpcd_state_type (dir (search getattr read
+	open write add_name remove_name create setattr)))
+(allow dhcpcd_t dhcpcd_state_type (file (read write open
+	getattr setattr create unlink rename lock append)))
+(allow dhcpcd_t dhcpcd_runtime_t (sock_file (create unlink getattr setattr write)))
+(allow dhcpcd_t var_run_t (dir (write add_name)))
+(allow dhcpcd_t var_lib_t (dir (read)))
+(allow dhcpcd_t sysctl_net_t (dir (search getattr read open)))
+(allow dhcpcd_t sysctl_net_t (file (read write open getattr)))
+; The hostname hook reads /proc/sys/kernel/hostname (isatty() is an ioctl).
+(allow dhcpcd_t sysctl_t (file (ioctl)))
+; The hook scripts (/usr/lib/dhcpcd/dhcpcd-run-hooks) write /etc/resolv.conf.
+(allow dhcpcd_t daemon_exec_type (file (read open getattr map execute
+	execute_no_trans)))
+(allow dhcpcd_t lib_t (file (execute_no_trans)))
+(allow dhcpcd_t etc_t (dir (write add_name remove_name)))
+(allow dhcpcd_t net_conf_t (file (write create unlink rename setattr append)))
+
+; --- chronyd ---
+
+(call daemon (chronyd_t chronyd_exec_t))
+(allow chronyd_t self (capability (sys_time setuid setgid chown fowner
+	dac_override dac_read_search net_bind_service sys_resource kill)))
+(allow chronyd_t self (capability2 (wake_alarm)))
+(allow chronyd_t self (udp_socket (name_bind sendto recvfrom ioctl)))
+(allow chronyd_t ntp_port_t (udp_socket (name_bind)))
+(allow chronyd_t port_t (udp_socket (name_bind)))
+(allow chronyd_t self (netlink_route_socket (create read write getattr bind
+	getopt setopt nlmsg_read)))
+(allow chronyd_t chronyd_state_type (dir (search getattr
+	read open write add_name remove_name create setattr)))
+(allow chronyd_t chronyd_state_type (file (read write open
+	getattr setattr create unlink rename lock append)))
+(allow chronyd_t var_run_t (dir (write add_name)))
+; The command socket for chronyc (/run/chrony/chronyd.sock).
+(allow chronyd_t chronyd_runtime_t (sock_file (create unlink getattr setattr write)))
+(allow chronyd_t self (unix_dgram_socket (bind)))
+; stdio does isatty() (an ioctl) on the drift file.
+(allow chronyd_t chronyd_state_type (file (ioctl)))

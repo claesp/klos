@@ -11,6 +11,7 @@ All documentation uses Simplified Technical English (see [style.md](style.md)).
 - [security.md](security.md): The security properties and the threat model.
 - [secure-boot.md](secure-boot.md): UEFI Secure Boot keys, signatures and enrollment.
 - [tpm.md](tpm.md): TPM2 unlock of the disk.
+- [selinux.md](selinux.md): The SELinux policy, the labels and the enforcing mode.
 - [glossary.md](glossary.md): The terms that this documentation uses.
 
 ## Build

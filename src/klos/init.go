@@ -9,7 +9,9 @@ package main
 //     all consoles) and activate the LVM volume group "klos".
 //  3. Open the OS volume os-<version> with dm-verity. The root hash is in
 //     the kernel command line, which is part of the signed EFI binary.
-//  4. Mount the erofs root read-only, the /var volume and the /etc overlay.
+//  4. Mount the erofs root read-only and the /var volume. Load the SELinux
+//     policy of the root image, and label /run, /dev and /var. Mount the
+//     /etc overlay.
 //  5. Arm the watchdog if this is a trial boot of a new version.
 //  6. Switch to the new root and start dinit.
 //
@@ -97,6 +99,9 @@ func initMain() {
 		err = setupLive(c)
 	} else {
 		err = setupInstalled(c)
+	}
+	if err == nil {
+		err = loadSELinux(sysroot)
 	}
 	if err == nil {
 		err = prepareRoot(c["klos.mode"] == "live")
@@ -262,6 +267,9 @@ func prepareRoot(live bool) error {
 	// so add the system accounts of this version to the local copy.
 	if err := mergeAccounts(sysroot+"/etc", v+"/lib/klos/etc/upper"); err != nil {
 		ilog("warning: merge of the system accounts: %v", err)
+	}
+	if err := labelVar(sysroot); err != nil {
+		return fmt.Errorf("SELinux labels of /var: %w", err)
 	}
 	opts := "lowerdir=" + sysroot + "/etc,upperdir=" + v + "/lib/klos/etc/upper,workdir=" + v + "/lib/klos/etc/work"
 	if err := mount("overlay", sysroot+"/etc", "overlay", syscall.MS_NOSUID|syscall.MS_NODEV, opts); err != nil {
