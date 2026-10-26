@@ -12,6 +12,8 @@ package main
 //  5. Roll back to the first version, and check it.
 
 import (
+	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -263,12 +265,28 @@ func (v *vm) waitBlessed(version string) {
 	logf("test: version %s is blessed", version)
 }
 
-func cmdTest(args []string) {
-	if len(args) != 1 {
-		die("usage: test <flavor>")
-	}
-	flavor := args[0]
-	tw := filepath.Join(WORK, "test", flavor)
+// testPlan lists the files of a test. "test-images" makes them in the
+// builder, and "test -prebuilt" runs the virtual machines in the test
+// image (which has QEMU and swtpm).
+type testPlan struct {
+	Flavor     string `json:"flavor"`
+	V1         string `json:"v1"` // the installed version
+	V2         string `json:"v2"` // the update (with a new system user)
+	V3         string `json:"v3"` // the update without a Secure Boot signature
+	SecureBoot bool   `json:"secure_boot"`
+	Enroll     string `json:"enroll"`    // the secureboot value of install.conf
+	Update     string `json:"update"`    // the bundle of V2
+	Unsigned   string `json:"unsigned"`  // the bundle of V3, or ""
+	Installer  string `json:"installer"` // the unattended installer image
+	SBUpdate   string `json:"sbupdate"`  // a tar file with a dbx update that revokes V2, or ""
+}
+
+func testDir(flavor string) string { return filepath.Join(WORK, "test", flavor) }
+
+// prepareTest builds the images, the installer and the dbx update of the
+// test, and writes the plan to work/test/<flavor>/plan.json.
+func prepareTest(flavor string) *testPlan {
+	tw := testDir(flavor)
 	removeAll(tw)
 	mkdirAll(tw)
 
@@ -280,23 +298,30 @@ func cmdTest(args []string) {
 	// /etc/passwd (the installer added a user), so /init must merge it.
 	opt2.Users = []User{{Name: "klostest", UID: 899, GID: 899, Home: "/var/empty", Shell: "/bin/false", Groups: []string{"klostest"}}}
 	opt2.Groups = []Group{{Name: "klostest", GID: 899}}
-	v1, v2 := opt1.Version, opt2.Version
+	p := &testPlan{Flavor: flavor, V1: opt1.Version, V2: opt2.Version, V3: opt1.Version + ".2",
+		SecureBoot: opt1.SecureBoot}
 	buildImage(flavor, opt1)
 	buildImage(flavor, opt2)
-	update := filepath.Join(outDir(flavor, v2), fmt.Sprintf("klos-%s-%s.tar", flavor, v2))
-	// v3 has a valid bundle signature, but its EFI binary has no Secure
-	// Boot signature. The firmware must refuse to start it.
-	opt3 := imageOptions{Version: v1 + ".2", SecureBoot: false}
-	var unsigned string
-	if opt1.SecureBoot {
-		buildImage(flavor, opt3)
-		unsigned = filepath.Join(outDir(flavor, opt3.Version), fmt.Sprintf("klos-%s-%s.tar", flavor, opt3.Version))
+	p.Update = filepath.Join(outDir(flavor, p.V2), fmt.Sprintf("klos-%s-%s.tar", flavor, p.V2))
+	if p.SecureBoot {
+		// V3 has a valid bundle signature, but its EFI binary has no
+		// Secure Boot signature. The firmware must refuse to start it.
+		buildImage(flavor, imageOptions{Version: p.V3, SecureBoot: false})
+		p.Unsigned = filepath.Join(outDir(flavor, p.V3), fmt.Sprintf("klos-%s-%s.tar", flavor, p.V3))
+		// A dbx update (signed by KEK) that revokes the EFI binary of V2.
+		// It changes PCR 7, so the TPM key must stop working (test 6).
+		sbdir := filepath.Join(tw, "sbupdate")
+		mkdirAll(sbdir)
+		writeFile(filepath.Join(sbdir, "dbx-update.auth"),
+			string(dbxUpdate(ensureSecureBootKeys(), []string{filepath.Join(outDir(flavor, p.V2), "klos.efi")})), 0o644)
+		p.SBUpdate = filepath.Join(tw, "sbupdate.tar")
+		run(Cmd{Args: []string{"tar", "-C", sbdir, "-cf", p.SBUpdate, "dbx-update.auth"}})
 	}
 
 	hash := strings.TrimSpace(output("openssl", "passwd", "-6", "-salt", "klostest", testPassword))
-	enroll := flavorManifest(flavor).Test.SecureBoot
-	if enroll == "" {
-		enroll = "enroll"
+	p.Enroll = flavorManifest(flavor).Test.SecureBoot
+	if p.Enroll == "" {
+		p.Enroll = "enroll"
 	}
 	conf := filepath.Join(tw, "install.conf")
 	writeFile(conf, strings.Join([]string{
@@ -308,9 +333,52 @@ func cmdTest(args []string) {
 		"user=klos",
 		"user_password_hash=" + hash,
 		"poweroff=yes",
-		"secureboot=" + enroll,
+		"secureboot=" + p.Enroll,
 	}, "\n")+"\n", 0o600)
-	installer := buildInstaller(flavor, opt1, conf)
+	p.Installer = buildInstaller(flavor, opt1, conf)
+	b, err := json.MarshalIndent(p, "", " ")
+	check(err)
+	writeFile(filepath.Join(tw, "plan.json"), string(b)+"\n", 0o644)
+	logf("test images of %s are ready", flavor)
+	return p
+}
+
+func cmdTestImages(args []string) {
+	if len(args) != 1 {
+		die("usage: test-images <flavor>")
+	}
+	prepareTest(args[0])
+}
+
+func cmdTest(args []string) {
+	fs := flag.NewFlagSet("test", flag.ContinueOnError)
+	prebuilt := fs.Bool("prebuilt", false, "use the files of \"test-images\" (do not build)")
+	if err := fs.Parse(args); err != nil {
+		die("test: %v", err)
+	}
+	if fs.NArg() != 1 {
+		die("usage: test [-prebuilt] <flavor>")
+	}
+	flavor := fs.Arg(0)
+	var p *testPlan
+	if *prebuilt {
+		b, err := os.ReadFile(filepath.Join(testDir(flavor), "plan.json"))
+		if err != nil {
+			die("no test plan (run test-images %s first): %v", flavor, err)
+		}
+		p = &testPlan{}
+		check(json.Unmarshal(b, p))
+	} else {
+		p = prepareTest(flavor)
+	}
+	runTest(p)
+}
+
+// runTest runs the test virtual machines. Read docs/testing.md.
+func runTest(p *testPlan) {
+	flavor, tw := p.Flavor, testDir(p.Flavor)
+	v1, v2 := p.V1, p.V2
+	update, unsigned, installer, enroll := p.Update, p.Unsigned, p.Installer, p.Enroll
 
 	vars := filepath.Join(tw, "OVMF_VARS.fd")
 	copyFile(ovmfVars, vars)
@@ -337,15 +405,7 @@ func cmdTest(args []string) {
 	}
 	if unsigned != "" {
 		drives = append(drives, "file="+unsigned+",format=raw,if=virtio,readonly=on")
-		// A dbx update (signed by KEK) that revokes the EFI binary of v2.
-		// It changes PCR 7, so the TPM key must stop working (test 6).
-		sbdir := filepath.Join(tw, "sbupdate")
-		mkdirAll(sbdir)
-		writeFile(filepath.Join(sbdir, "dbx-update.auth"),
-			string(dbxUpdate(ensureSecureBootKeys(), []string{filepath.Join(outDir(flavor, v2), "klos.efi")})), 0o644)
-		sbtar := filepath.Join(tw, "sbupdate.tar")
-		run(Cmd{Args: []string{"tar", "-C", sbdir, "-cf", sbtar, "dbx-update.auth"}})
-		drives = append(drives, "file="+sbtar+",format=raw,if=virtio,readonly=on")
+		drives = append(drives, "file="+p.SBUpdate+",format=raw,if=virtio,readonly=on")
 	}
 	vm2 := startVM(qemuArgs(vars, drives, append(startTPM(tw), flavorManifest(flavor).Test.QemuArgs...)...),
 		filepath.Join(tw, "2-boot.log"))
@@ -359,7 +419,7 @@ func cmdTest(args []string) {
 	vm2.sh("dmsetup table klos-root | grep -q verity", 30*time.Second)
 	vm2.sh("echo test > /etc/klos-test-file && test -f /var/lib/klos/etc/upper/klos-test-file", 30*time.Second)
 	logf("test 2: read-only root, dm-verity, firewall and /etc overlay are good")
-	if opt1.SecureBoot {
+	if p.SecureBoot {
 		vm2.sh("klos secureboot status | grep -q 'Secure Boot: enabled'", 30*time.Second)
 		logf("test 2: Secure Boot is enabled (the installer enrolled the KLOS keys)")
 		if enroll == "enroll-microsoft" {
@@ -370,7 +430,7 @@ func cmdTest(args []string) {
 		}
 	}
 	tpm := false
-	if tpmArgs != nil && opt1.SecureBoot {
+	if tpmArgs != nil && p.SecureBoot {
 		vm2.sh("printf %s '"+testPassphrase+"' | klos tpm enroll -key-file -", 2*time.Minute)
 		vm2.sh("klos tpm status | grep -q 'unseal in this boot: refused'", time.Minute)
 		logf("test 2: the TPM key is enrolled; it cannot be unsealed again in this boot")
@@ -418,9 +478,9 @@ func cmdTest(args []string) {
 	logf("test 4: the rollback is good")
 
 	if unsigned != "" {
-		logf("test 5: install %s, which has no Secure Boot signature", opt3.Version)
+		logf("test 5: install %s, which has no Secure Boot signature", p.V3)
 		vm2.send("klos update -reboot /dev/vdc\n")
-		vm2.expect(`the next boot is a trial boot of `+regexp.QuoteMeta(opt3.Version), 5*time.Minute)
+		vm2.expect(`the next boot is a trial boot of `+regexp.QuoteMeta(p.V3), 5*time.Minute)
 		vm2.expect(`Access Denied`, 3*time.Minute)
 		logf("test 5: the firmware refused the unsigned EFI binary")
 		tpmUnlocks(tpm, vm2.unlockAndLogin(v1), "test 5")

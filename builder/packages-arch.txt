@@ -1,0 +1,28 @@
+# Arch Linux packages for the second bootstrap builder (host tools only).
+# GCC compiles the KLOS LLVM toolchain here (Alpine uses Clang).
+base-devel
+bc
+bzip2
+cmake
+cpio
+cryptsetup
+diffutils
+dosfstools
+e2fsprogs
+erofs-utils
+go
+gperf
+libelf
+linux-api-headers
+lld
+lz4
+meson
+mtools
+ninja
+openssl
+perl
+python
+util-linux
+xz
+zlib
+zstd

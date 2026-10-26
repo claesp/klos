@@ -121,6 +121,27 @@ func verifySignature(s Source, path string) {
 	case "minisign":
 		verr = runCapture(&stderr, "minisign", "-V", "-q", "-p",
 			filepath.Join(KEYS, s.Key[0]+".pub"), "-x", sig, "-m", data)
+	case "pgp-checksum-file":
+		// The signature is a detached signature of a checksum list
+		// (for example cmake-<version>-SHA-256.txt).
+		if s.Checksums == "" {
+			die("%s: signature-type pgp-checksum-file needs checksums", s.URL)
+		}
+		sums := path + ".sums"
+		if !exists(sums) {
+			download(s.Checksums, sums)
+		}
+		ring := gpgKeyring(s.Key, tmp)
+		verr = runCapture(&stderr, "gpgv", "--keyring", ring, sig, sums)
+		if verr == nil {
+			var b []byte
+			if b, verr = os.ReadFile(sums); verr == nil {
+				verr = checkChecksumList(string(b), filepath.Base(s.URL), data)
+			}
+		}
+		if verr != nil {
+			_ = os.Remove(sums) // download it again next time; the build stops
+		}
 	case "pgp-checksums":
 		// The signature file is a signed OpenPGP message with a
 		// checksum list. gpgv writes the signed text only if the

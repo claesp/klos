@@ -1,0 +1,21 @@
+# GNU grep. A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "grep"
+version = "3.12"
+summary = "GNU grep"
+license = "GPL-3.0-or-later"
+homepage = "https://www.gnu.org/software/grep/"
+
+[[source]]
+url = "https://ftpmirror.gnu.org/gnu/grep/grep-3.12.tar.xz"
+sha256 = "2649b27c0e90e632eadcd757be06c6e9a4f48d941de51e7c0f83ff76408a07b9"
+signature = "https://ftpmirror.gnu.org/gnu/grep/grep-3.12.tar.xz.sig"
+key = ["gnu-meyering"]
+
+[build]
+script = '''
+kconfigure --disable-nls --disable-perl-regexp
+kmake
+make DESTDIR="$DESTDIR" install
+'''

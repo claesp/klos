@@ -1,0 +1,21 @@
+# pkg-config implementation. A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "pkgconf"
+version = "3.0.10"
+summary = "pkg-config implementation"
+license = "ISC"
+homepage = "https://github.com/pkgconf/pkgconf"
+
+# Upstream does not sign this release. The SHA-256 is pinned.
+[[source]]
+url = "https://github.com/pkgconf/pkgconf/releases/download/pkgconf-3.0.10/pkgconf-3.0.10.tar.xz"
+sha256 = "9371b2f6372da574d4c6dc96fe9b1463037bcf6afcb6671c1555afde7b17e2de"
+
+[build]
+script = '''
+kmeson
+kninja
+kninja_install
+ln -s pkgconf "$DESTDIR/usr/bin/pkg-config"
+'''

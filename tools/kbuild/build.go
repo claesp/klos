@@ -117,6 +117,9 @@ exec "%[2]s/%[3]s" %[4]s "$@"
 
 // buildEnv makes the compiler wrappers and the environment for a build.
 func buildEnv(r *Recipe, bdir, sysroot string) []string {
+	if BCONF.BuildTriple == "" {
+		die("the builder has no %s (run './klos bootstrap' again)", builderConfPath)
+	}
 	bindir := filepath.Join(bdir, "bin")
 	mkdirAll(bindir)
 	mkdirAll(filepath.Join(bdir, "home"))
@@ -138,25 +141,29 @@ func buildEnv(r *Recipe, bdir, sysroot string) []string {
 		"RECIPE_DIR":        r.Dir,
 		"FILESDIR":          r.Dir,
 		"TARGET":            target,
-		"BUILD_TRIPLE":      buildTriple,
+		"BUILD_TRIPLE":      BCONF.BuildTriple,
 		"DESTDIR":           filepath.Join(bdir, "dest"),
 		"SYSROOT":           sysroot,
-		"HOST_CC":           "/usr/bin/gcc",
-		"HOST_CXX":          "/usr/bin/g++",
-		"CC_FOR_BUILD":      "/usr/bin/gcc",
-		"CXX_FOR_BUILD":     "/usr/bin/g++",
-		"BUILD_CC":          "/usr/bin/gcc",
+		"HOST_CC":           BCONF.BuildCC,
+		"CC_FOR_BUILD":      BCONF.BuildCC,
+		"BUILD_CC":          BCONF.BuildCC,
 		"GOCACHE":           filepath.Join(bdir, "gocache"),
 		"GOPATH":            filepath.Join(bdir, "gopath"),
 		"GOFLAGS":           "-mod=vendor -trimpath -buildvcs=false",
 		"GOTOOLCHAIN":       "local",
-		"GOPROXY":           "off",
+		// The directory of the host tools in a host package (without /).
+		"TOOLCHAIN_PREFIX": toolchainPrefix,
+		"GOPROXY":          "off",
+		// The sources are in the KLOS Git repository (TOP/work). A build
+		// must not see it: some build systems put "git describe" in the
+		// output (for example the LLVM version string).
+		"GIT_CEILING_DIRECTORIES": WORK,
 	}
 	for _, h := range r.HostDepends {
 		env["HOST_"+strings.ToUpper(strings.ReplaceAll(h, "-", "_"))] = hostRoot(h)
 	}
 	if r.Kind == "host" {
-		env["CC"], env["CXX"] = "clang", "clang++"
+		env["CC"], env["CXX"] = BCONF.HostCC, BCONF.HostCXX
 		env["PREFIX"] = "/" + toolchainPrefix
 		return envList(env)
 	}
@@ -247,6 +254,9 @@ endian = 'little'
 
 [properties]
 sys_root = '%[3]s'
+# Run target programs only with the exe_wrapper: a builder that is not
+# musl (for example arch-1) has no /lib/ld-musl-x86_64.so.1.
+needs_exe_wrapper = true
 
 [built-in options]
 c_args = %[4]s

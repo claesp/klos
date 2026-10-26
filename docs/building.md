@@ -19,26 +19,35 @@ The build uses approximately 40 GB of disk space and 16 GB of memory.
    ```
 
    The command downloads the Alpine minirootfs. It checks the SHA-256 value
-   and the OpenPGP signature. Then it builds the container image
-   `localhost/klos-builder`.
+   and the OpenPGP signature. Then it builds the container images
+   `localhost/klos-builder` (`alpine-1`) and `localhost/klos-tester`.
 
-2. Build a flavor:
+2. Make the KLOS builder (`alpine-2`):
+
+   ```sh
+   ./klos stage2
+   ```
+
+   The bootstrap builder compiles the LLVM toolchain and all build tools.
+   This takes some hours with 8 processor cores. Read
+   [build-system.md](build-system.md) for the stages.
+
+3. Build a flavor with the KLOS builder:
 
    ```sh
    ./klos image server
    ```
 
-   The first build compiles the LLVM toolchain. This takes approximately
-   one hour with 8 processor cores. Later builds use the packages that are
-   already built.
+   The first build compiles the LLVM toolchain again. Later builds use the
+   packages that are already built.
 
-3. Make an installer image:
+4. Make an installer image:
 
    ```sh
    ./klos installer server
    ```
 
-4. Test the flavor in QEMU:
+5. Test the flavor in QEMU:
 
    ```sh
    ./klos test server
@@ -48,7 +57,9 @@ The build uses approximately 40 GB of disk space and 16 GB of memory.
 
 | Command | Function |
 |---------|----------|
-| `./klos bootstrap` | Verify Alpine and make the builder image. |
+| `./klos bootstrap [alpine\|arch]` | Verify the bootstrap tarball and make the bootstrap builder image (`alpine-1` or `arch-1`). |
+| `./klos stage2 [alpine\|arch]` | Build the KLOS builder (`alpine-2` or `arch-2`) with the bootstrap builder. |
+| `./klos compare <flavor>` | Compare the builds of `alpine-2` and `arch-2`. |
 | `./klos selinux <flavor>` | Compile the SELinux policy of a flavor (read [selinux.md](selinux.md)). |
 | `./klos shell` | Open a shell in the builder (no network). |
 | `./klos check` | Run gofmt, go vet and the Go unit tests of kbuild and the klos tool. |
@@ -75,15 +86,17 @@ in a container without a network (`podman run --network=none`). The `build`,
 | Path | Contents |
 |------|----------|
 | `cache/sources/` | Downloaded source files. |
-| `out/pkgs/` | Packages (`<name>.tar.zst`) and their metadata (`<name>.json`). |
-| `out/images/<flavor>/<version>/` | The OS image, the EFI binaries, the update bundle and the installer. |
-| `work/` | Temporary build directories and the build logs (`work/logs/`). |
+| `out/<builder>/pkgs/` | Packages (`<name>.tar.zst`) and their metadata (`<name>.json`). |
+| `out/<builder>/images/<flavor>/<version>/` | The OS image, the EFI binaries, the update bundle and the installer. |
+| `out/<bootstrap>-1/builder/` | The root file system of the KLOS builder. |
+| `work/<builder>/` | Temporary build directories and the build logs (`work/<builder>/logs/`). |
 | `secrets/` | The private keys: update bundles (`bundle.key`), Secure Boot (`secureboot/`) and kernel modules (`module-signing.pem`). Do not put this in Git. |
 
 ## Environment variables
 
 | Variable | Function |
 |----------|----------|
+| `KLOS_BUILDER` | The builder of the build commands: `alpine-1`, `alpine-2` (default), `arch-1` or `arch-2`. |
 | `KLOS_JOBS` | The number of parallel compile jobs (default: all processors). |
 | `KLOS_VERSION` | Use a different OS version than `config/klos.toml`. |
 | `SOURCE_DATE_EPOCH` | Use a different time stamp than `config/klos.toml`. |

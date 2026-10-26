@@ -1,0 +1,39 @@
+# The KLOS builder (stage 2). Read docs/build-system.md.
+#
+# A bootstrap builder (alpine-1 or arch-1) builds these packages, and
+# "./klos stage2" makes a container image from them. The KLOS builder then
+# builds all packages and images again with only this software. The
+# packages here are build tools; the OS images do not contain them unless
+# a flavor manifest also lists them.
+
+[builder]
+packages = [
+  # The base system and the native compiler.
+  "filesystem", "musl", "linux-headers", "llvm-runtimes", "clang", "dash",
+  # Shell and file tools.
+  "bash", "coreutils", "sed", "gawk", "grep", "findutils", "diffutils",
+  "patch", "tar", "gzip", "bzip2", "xz", "lz4", "zstd", "zstd-tools",
+  "util-linux",
+  # Build systems and generators.
+  "make", "cmake", "samurai", "meson", "pkgconf", "m4", "bison", "flex",
+  "gperf", "autoconf", "automake", "libtool", "texinfo", "bc",
+  # Interpreters for build scripts.
+  "perl", "python3",
+  # Image tools.
+  "erofs-utils", "dosfstools", "mtools", "cryptsetup", "kmod",
+  # Libraries for the kernel build (objtool, module signing).
+  "elfutils", "openssl",
+]
+# The Go toolchain compiles kbuild and the Go packages.
+host-packages = ["go"]
+
+# The compilers of the KLOS builder. The build triple is not the target
+# triple, so configure scripts do cross builds (as in stage 1): they do not
+# run test programs.
+conf = """
+# The compilers of the KLOS builder (docs/build-system.md).
+build-triple = x86_64-klosbuild-linux-musl
+host-cc = clang
+host-cxx = clang++
+build-cc = clang
+"""

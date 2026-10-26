@@ -1,0 +1,29 @@
+# GNU Bourne-Again shell. A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "bash"
+version = "5.3"
+summary = "GNU Bourne-Again shell"
+license = "GPL-3.0-or-later"
+homepage = "https://www.gnu.org/software/bash/"
+
+[[source]]
+url = "https://ftpmirror.gnu.org/gnu/bash/bash-5.3.tar.gz"
+sha256 = "0d5cd86965f869a26cf64f4b71be7b96f90a3ba8b3d74e27e8e9d9d5550f31ba"
+signature = "https://ftpmirror.gnu.org/gnu/bash/bash-5.3.tar.gz.sig"
+key = ["gnu-chet"]
+
+[build]
+script = '''
+# The values that configure cannot test in a cross build.
+export bash_cv_getcwd_malloc=yes bash_cv_func_sigsetjmp=present \
+	bash_cv_job_control_missing=present bash_cv_sys_named_pipes=present \
+	bash_cv_unusable_rtsigs=no bash_cv_must_reinstall_sighandlers=no \
+	bash_cv_func_strcoll_broken=no bash_cv_printf_a_format=yes
+# The build helpers (mkbuiltins) define "bool", which is a keyword in C23.
+export CC_FOR_BUILD="$CC_FOR_BUILD -std=gnu17"
+kconfigure --disable-nls --without-bash-malloc --without-curses --enable-readline
+kmake
+make DESTDIR="$DESTDIR" install
+rm -rf "$DESTDIR/usr/lib/bash" "$DESTDIR/usr/include" "$DESTDIR/usr/lib/pkgconfig" "$DESTDIR/usr/bin/bashbug"
+'''

@@ -1,0 +1,21 @@
+# GNU m4 macro processor. A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "m4"
+version = "1.4.21"
+summary = "GNU m4 macro processor"
+license = "GPL-3.0-or-later"
+homepage = "https://www.gnu.org/software/m4/"
+
+[[source]]
+url = "https://ftpmirror.gnu.org/gnu/m4/m4-1.4.21.tar.xz"
+sha256 = "f25c6ab51548a73a75558742fb031e0625d6485fe5f9155949d6486a2408ab66"
+signature = "https://ftpmirror.gnu.org/gnu/m4/m4-1.4.21.tar.xz.sig"
+key = ["gnu-eblake"]
+
+[build]
+script = '''
+kconfigure --disable-nls 
+kmake
+make DESTDIR="$DESTDIR" install
+'''

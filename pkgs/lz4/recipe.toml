@@ -1,0 +1,20 @@
+# LZ4 compression. A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "lz4"
+version = "1.10.0"
+summary = "LZ4 compression"
+license = "BSD-2-Clause AND GPL-2.0-or-later"
+homepage = "https://lz4.org/"
+
+# Upstream publishes only a SHA-256 file. The pinned value agrees with it.
+[[source]]
+url = "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz"
+sha256 = "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b"
+
+[build]
+script = '''
+kmake CC=cc AR=llvm-ar PREFIX=/usr
+make DESTDIR="$DESTDIR" PREFIX=/usr install
+rm -f "$DESTDIR"/usr/lib/liblz4.a
+'''

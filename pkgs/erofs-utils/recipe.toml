@@ -1,0 +1,24 @@
+# Tools for the EROFS file system (mkfs.erofs). A build tool of the KLOS
+# builder (manifests/builder.toml): kbuild makes the OS images with it.
+[package]
+name = "erofs-utils"
+version = "1.9.4"
+summary = "EROFS file system tools"
+license = "GPL-2.0-or-later AND Apache-2.0"
+homepage = "https://git.kernel.org/pub/scm/linux/kernel/git/xiang/erofs-utils.git"
+build-depends = ["lz4", "zlib", "util-linux"]
+
+# Upstream signs the Git tags, not the snapshot tarball of git.kernel.org.
+# The SHA-256 is pinned.
+[[source]]
+url = "https://git.kernel.org/pub/scm/linux/kernel/git/xiang/erofs-utils.git/snapshot/erofs-utils-1.9.4.tar.gz"
+sha256 = "7d135aa2550326a5acf20f53c518aea5a8900015ce50700044e40f818c31dd80"
+
+[build]
+script = '''
+./autogen.sh
+kconfigure --enable-lz4 --with-zlib --disable-fuse --without-selinux \
+	--without-libzstd --without-libdeflate --without-xxhash --without-qpl
+kmake
+make DESTDIR="$DESTDIR" install
+'''

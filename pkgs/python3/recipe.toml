@@ -1,0 +1,29 @@
+# Python. A build tool of the KLOS builder (manifests/builder.toml): Meson
+# and the build scripts of Mesa, glib and others need it. The images do
+# not contain it (KLOS has no interpreters except a shell).
+[package]
+name = "python3"
+version = "3.13.18"
+summary = "Python interpreter"
+license = "Python-2.0"
+homepage = "https://www.python.org/"
+build-depends = ["zlib", "libffi", "expat", "bzip2", "xz"]
+host-depends = ["python3-host"]
+
+[[source]]
+url = "https://www.python.org/ftp/python/3.13.18/Python-3.13.18.tar.xz"
+sha256 = "abb0102e6d4ae027509bcb82327d9dd85515b44a3ba8ad538cfc5e9847029f68"
+signature = "https://www.python.org/ftp/python/3.13.18/Python-3.13.18.tar.xz.asc"
+key = ["python-wouters"]
+
+[build]
+script = '''
+# The values that configure cannot test in a cross build (musl).
+export ac_cv_file__dev_ptmx=yes ac_cv_file__dev_ptc=no ac_cv_buggy_getaddrinfo=no
+kconfigure --with-build-python="$HOST_PYTHON3_HOST/$TOOLCHAIN_PREFIX/bin/python3.13" \
+	--without-ensurepip --disable-test-modules --with-system-expat \
+	--enable-shared --without-static-libpython
+kmake
+make DESTDIR="$DESTDIR" install
+ln -s python3 "$DESTDIR/usr/bin/python"
+'''

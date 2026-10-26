@@ -5,6 +5,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/BurntSushi/toml"
 )
@@ -22,13 +24,69 @@ var (
 	SDE                                                    int64
 	VERSION                                                string
 	JOBS                                                   string
+	// BUILDER is the name of the builder: <bootstrap>-<stage>, for
+	// example alpine-1 (the bootstrap builder) or alpine-2 (the KLOS
+	// builder that alpine-1 made). Read docs/build-system.md.
+	BUILDER string
+	// BCONF is /etc/klos-builder.conf of the builder.
+	BCONF BuilderConf
 )
 
 const (
 	toolchainPrefix = "opt/klos/toolchain"
-	buildTriple     = "x86_64-alpine-linux-musl"
 	kbuildVersion   = "kbuild-v1"
+	builderConfPath = "/etc/klos-builder.conf"
 )
+
+// BuilderConf tells kbuild about the compilers of the builder. Each line of
+// /etc/klos-builder.conf is "key = value".
+type BuilderConf struct {
+	BuildTriple string // the --build triple of configure scripts
+	HostCC      string // the C compiler of host packages
+	HostCXX     string // the C++ compiler of host packages
+	BuildCC     string // CC_FOR_BUILD of target packages
+}
+
+func readBuilderConf(path string) (BuilderConf, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return BuilderConf{}, err
+	}
+	return parseBuilderConf(string(b), path)
+}
+
+// parseBuilderConf reads the text of a builder configuration (name is the
+// name of the file in messages).
+func parseBuilderConf(text, path string) (BuilderConf, error) {
+	c := BuilderConf{}
+	for n, l := range strings.Split(text, "\n") {
+		l = strings.TrimSpace(l)
+		if l == "" || strings.HasPrefix(l, "#") {
+			continue
+		}
+		k, v, ok := strings.Cut(l, "=")
+		if !ok {
+			return c, fmt.Errorf("%s:%d: want key = value", path, n+1)
+		}
+		k, v = strings.TrimSpace(k), strings.TrimSpace(v)
+		switch k {
+		case "build-triple":
+			c.BuildTriple = v
+		case "host-cc":
+			c.HostCC = v
+		case "host-cxx":
+			c.HostCXX = v
+		case "build-cc":
+			c.BuildCC = v
+		default:
+			return c, fmt.Errorf("%s:%d: unknown key %q", path, n+1, k)
+		}
+	}
+	if c.BuildTriple == "" || c.HostCC == "" || c.HostCXX == "" || c.BuildCC == "" {
+		return c, fmt.Errorf("%s: build-triple, host-cc, host-cxx and build-cc are necessary", path)
+	}
+	return c, nil
+}
 
 type Config struct {
 	Distribution struct {
@@ -57,9 +115,18 @@ func initPaths() {
 	}
 	CACHE = filepath.Join(TOP, "cache")
 	SRCCACHE = filepath.Join(CACHE, "sources")
-	OUT = filepath.Join(TOP, "out")
+	BUILDER = os.Getenv("KLOS_BUILDER")
+	if BUILDER == "" {
+		BUILDER = "alpine-2"
+	}
+	OUT = filepath.Join(TOP, "out", BUILDER)
 	PKGOUT = filepath.Join(OUT, "pkgs")
-	WORK = filepath.Join(TOP, "work")
+	// "./klos" mounts the work directory of the builder at /build
+	// (KLOS_WORK), so that all builders have the same build paths.
+	WORK = filepath.Join(TOP, "work", BUILDER)
+	if v := os.Getenv("KLOS_WORK"); v != "" {
+		WORK = v
+	}
 	KEYS = filepath.Join(TOP, "keys")
 	SECRETS = filepath.Join(TOP, "secrets")
 	loadTOML(filepath.Join(TOP, "config", "klos.toml"), &CONFIG)
@@ -70,6 +137,20 @@ func initPaths() {
 	VERSION = CONFIG.Distribution.Version
 	if v := os.Getenv("KLOS_VERSION"); v != "" {
 		VERSION = v
+	}
+	if exists(builderConfPath) {
+		c, err := readBuilderConf(builderConfPath)
+		check(err)
+		// Use absolute paths: in a target build, "gcc" and "clang" on the
+		// PATH are the wrappers of the KLOS cross compiler.
+		for _, p := range []*string{&c.HostCC, &c.HostCXX, &c.BuildCC} {
+			if !filepath.IsAbs(*p) {
+				if abs, err := exec.LookPath(*p); err == nil {
+					*p = abs
+				}
+			}
+		}
+		BCONF = c
 	}
 	JOBS = os.Getenv("KLOS_JOBS")
 	if JOBS == "" {
@@ -226,4 +307,19 @@ func contains(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// moveFile moves a file. The work directory (/build) and the output
+// directory are different mounts, so a rename can fail with EXDEV; then
+// moveFile copies the file.
+func moveFile(src, dst string) {
+	err := os.Rename(src, dst)
+	if err == nil {
+		return
+	}
+	if !errors.Is(err, syscall.EXDEV) {
+		check(err)
+	}
+	copyFile(src, dst)
+	check(os.Remove(src))
 }

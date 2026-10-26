@@ -1,0 +1,30 @@
+# bzip2 compression. A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "bzip2"
+version = "1.0.8"
+summary = "bzip2 compression"
+license = "bzip2-1.0.6"
+homepage = "https://sourceware.org/bzip2/"
+
+[[source]]
+url = "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"
+sha256 = "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
+signature = "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz.sig"
+key = ["bzip2-wielaard"]
+
+[build]
+script = '''
+# The Makefile has no install target without the tests; install by hand.
+make -f Makefile-libbz2_so -j"$JOBS" CC=cc CFLAGS="$CFLAGS -fPIC -D_FILE_OFFSET_BITS=64"
+make -j"$JOBS" CC=cc AR=llvm-ar RANLIB=llvm-ranlib CFLAGS="$CFLAGS -D_FILE_OFFSET_BITS=64" LDFLAGS="$LDFLAGS" bzip2 bzip2recover
+kinstall 0755 bzip2-shared /usr/bin/bzip2
+kinstall 0755 bzip2recover /usr/bin/bzip2recover
+ln -s bzip2 "$DESTDIR/usr/bin/bunzip2"
+ln -s bzip2 "$DESTDIR/usr/bin/bzcat"
+kinstall 0644 bzlib.h /usr/include/bzlib.h
+kinstall 0755 libbz2.so.1.0.8 /usr/lib/libbz2.so.1.0.8
+ln -s libbz2.so.1.0.8 "$DESTDIR/usr/lib/libbz2.so.1.0"
+ln -s libbz2.so.1.0.8 "$DESTDIR/usr/lib/libbz2.so.1"
+ln -s libbz2.so.1.0.8 "$DESTDIR/usr/lib/libbz2.so"
+'''

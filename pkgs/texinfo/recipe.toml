@@ -1,0 +1,21 @@
+# GNU Texinfo (makeinfo). A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "texinfo"
+version = "7.3"
+summary = "GNU Texinfo (makeinfo)"
+license = "GPL-3.0-or-later"
+homepage = "https://www.gnu.org/software/texinfo/"
+
+[[source]]
+url = "https://ftpmirror.gnu.org/gnu/texinfo/texinfo-7.3.tar.xz"
+sha256 = "51f74eb0f51cfa9873b85264dfdd5d46e8957ec95b88f0fb762f63d9e164c72e"
+signature = "https://ftpmirror.gnu.org/gnu/texinfo/texinfo-7.3.tar.xz.sig"
+key = ["gnu-gavin"]
+
+[build]
+script = '''
+PERL=/usr/bin/perl kconfigure --disable-nls --disable-perl-xs
+kmake
+make DESTDIR="$DESTDIR" install
+'''

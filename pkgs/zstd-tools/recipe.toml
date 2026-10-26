@@ -1,0 +1,26 @@
+# Zstandard command line programs (zstd, zstdcat). A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "zstd-tools"
+version = "1.5.7"
+summary = "Zstandard command line programs (zstd, zstdcat)"
+license = "BSD-3-Clause"
+homepage = "https://facebook.github.io/zstd/"
+
+[[source]]
+url = "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz"
+sha256 = "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
+signature = "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz.sig"
+key = ["zstd"]
+
+[build]
+script = '''
+# Only the programs: the package zstd has the library.
+meson setup _build build/meson --cross-file="$MESON_CROSS_FILE" \
+	--prefix=/usr --libdir=lib --buildtype=plain --wrap-mode=nodownload \
+	-Db_pie=true -Db_ndebug=true -Ddefault_library=static -Dbin_programs=true \
+	-Dbin_contrib=false -Dbin_tests=false -Dzlib=disabled -Dlzma=disabled -Dlz4=disabled
+ninja -C _build -j"$JOBS" programs/zstd
+kinstall 0755 _build/programs/zstd /usr/bin/zstd
+for l in unzstd zstdcat zstdmt; do ln -s zstd "$DESTDIR/usr/bin/$l"; done
+'''

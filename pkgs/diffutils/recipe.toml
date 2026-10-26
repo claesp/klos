@@ -1,0 +1,23 @@
+# GNU diff, cmp and patch helpers. A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "diffutils"
+version = "3.12"
+summary = "GNU diff, cmp and patch helpers"
+license = "GPL-3.0-or-later"
+homepage = "https://www.gnu.org/software/diffutils/"
+
+[[source]]
+url = "https://ftpmirror.gnu.org/gnu/diffutils/diffutils-3.12.tar.xz"
+sha256 = "7c8b7f9fc8609141fdea9cece85249d308624391ff61dedaf528fcb337727dfd"
+signature = "https://ftpmirror.gnu.org/gnu/diffutils/diffutils-3.12.tar.xz.sig"
+key = ["gnu-meyering"]
+
+[build]
+script = '''
+# gnulib cannot run this test in a cross build; musl is correct.
+export gl_cv_func_strcasecmp_works=yes
+kconfigure --disable-nls 
+kmake
+make DESTDIR="$DESTDIR" install
+'''

@@ -1,0 +1,21 @@
+# GNU stream editor. A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "sed"
+version = "4.10"
+summary = "GNU stream editor"
+license = "GPL-3.0-or-later"
+homepage = "https://www.gnu.org/software/sed/"
+
+[[source]]
+url = "https://ftpmirror.gnu.org/gnu/sed/sed-4.10.tar.xz"
+sha256 = "b8e72182b2ec96a3574e2998c47b7aaa64cc20ce000d8e9ac313cc07cecf28c7"
+signature = "https://ftpmirror.gnu.org/gnu/sed/sed-4.10.tar.xz.sig"
+key = ["gnu-meyering"]
+
+[build]
+script = '''
+kconfigure --disable-nls --disable-acl
+kmake
+make DESTDIR="$DESTDIR" install
+'''

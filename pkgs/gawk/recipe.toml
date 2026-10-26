@@ -1,0 +1,22 @@
+# GNU awk. A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "gawk"
+version = "5.4.1"
+summary = "GNU awk"
+license = "GPL-3.0-or-later"
+homepage = "https://www.gnu.org/software/gawk/"
+
+[[source]]
+url = "https://ftpmirror.gnu.org/gnu/gawk/gawk-5.4.1.tar.xz"
+sha256 = "07f6f7342b7febe4313fc2c2542ad93d64fe20ad8717200109f105a826f5fd37"
+signature = "https://ftpmirror.gnu.org/gnu/gawk/gawk-5.4.1.tar.xz.sig"
+key = ["gnu-arnold"]
+
+[build]
+script = '''
+kconfigure --disable-nls --disable-extensions --without-readline --disable-pma --disable-mpfr
+kmake
+make DESTDIR="$DESTDIR" install
+rm -rf "$DESTDIR/usr/include" "$DESTDIR/etc/profile.d"
+'''

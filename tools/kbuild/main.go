@@ -23,19 +23,22 @@ type command struct {
 }
 
 var commands = map[string]command{
-	"fetch":     {"fetch <target>...", cmdFetch},
-	"build":     {"build [-force] <package>...", cmdBuild},
-	"list":      {"list", cmdList},
-	"keygen":    {"keygen [-force]", cmdKeygen},
-	"image":     {"image <flavor>", cmdImage},
-	"installer": {"installer <flavor>", cmdInstaller},
-	"lock":      {"lock <flavor>", cmdLock},
-	"verify":    {"verify <flavor>", cmdVerify},
-	"test":      {"test <flavor>", cmdTest},
-	"qemu":      {"qemu <flavor>", cmdQemu},
-	"hash":      {"hash <url>", cmdHash},
-	"revoke":    {"revoke <klos.efi>...", cmdRevoke},
-	"selinux":   {"selinux <flavor>", cmdSELinux},
+	"fetch":         {"fetch <target>...", cmdFetch},
+	"build":         {"build [-force] <package>...", cmdBuild},
+	"list":          {"list", cmdList},
+	"keygen":        {"keygen [-force]", cmdKeygen},
+	"image":         {"image <flavor>", cmdImage},
+	"installer":     {"installer <flavor>", cmdInstaller},
+	"lock":          {"lock <flavor>", cmdLock},
+	"verify":        {"verify <flavor>", cmdVerify},
+	"test":          {"test [-prebuilt] <flavor>", cmdTest},
+	"test-images":   {"test-images <flavor>", cmdTestImages},
+	"qemu":          {"qemu <flavor>", cmdQemu},
+	"hash":          {"hash <url>", cmdHash},
+	"revoke":        {"revoke <klos.efi>...", cmdRevoke},
+	"selinux":       {"selinux <flavor>", cmdSELinux},
+	"builder-image": {"builder-image", cmdBuilderImage},
+	"compare":       {"compare [-a builder] [-b builder] <flavor>", cmdCompare},
 }
 
 func usage() {
@@ -76,6 +79,7 @@ func cmdFlags(name string, args []string, force *bool) []string {
 		// "fetch" gets the arguments of the other commands; it ignores their flags.
 		fs.Bool("force", false, "ignored")
 		fs.String("config", "", "ignored")
+		fs.Bool("prebuilt", false, "ignored")
 	}
 	if err := fs.Parse(args); err != nil {
 		die("%s: %v", name, err)
@@ -91,7 +95,10 @@ func cmdFetch(args []string) {
 	var names []string
 	var sources []Source
 	for _, t := range targets {
-		if isFlavor(t) {
+		if t == "builder" {
+			bm := loadBuilderManifest()
+			names = append(append(names, bm.Builder.Packages...), bm.Builder.HostPackages...)
+		} else if isFlavor(t) {
 			m := flavorManifest(t)
 			names = append(names, m.Packages.Install...)
 			if len(m.SELinux.Policy) > 0 {

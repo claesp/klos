@@ -10,5 +10,6 @@ RUN printf 'https://dl-cdn.alpinelinux.org/alpine/%s/main\nhttps://dl-cdn.alpine
  && apk add --no-cache $(grep -v '^#' /tmp/packages.txt) \
  && apk info -v | sort > /etc/klos-builder.lock \
  && rm /tmp/packages.txt
+COPY klos-builder-alpine.conf /etc/klos-builder.conf
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC
 WORKDIR /klos

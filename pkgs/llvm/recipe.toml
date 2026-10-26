@@ -1,6 +1,7 @@
 # The KLOS cross toolchain, part 1: Clang, lld and the LLVM tools. It runs in
 # the builder and makes code for the KLOS target (x86_64-unknown-linux-musl).
-# The bootstrap compiler (Alpine clang) compiles it. Part 2 is the package
+# The C and C++ compilers of the builder (host-cc and host-cxx in
+# /etc/klos-builder.conf) compile it. Part 2 is the package
 # compiler-rt. kbuild puts the two packages together in one directory.
 [package]
 name = "llvm"
@@ -22,7 +23,7 @@ script = '''
 cmake -S llvm -B build -G Ninja \
 	-DCMAKE_BUILD_TYPE=Release \
 	-DCMAKE_INSTALL_PREFIX="$PREFIX" \
-	-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+	-DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
 	-DLLVM_USE_LINKER=lld \
 	-DLLVM_ENABLE_PROJECTS="clang;lld" \
 	-DLLVM_TARGETS_TO_BUILD="X86;BPF" \
@@ -34,7 +35,7 @@ cmake -S llvm -B build -G Ninja \
 	-DCLANG_DEFAULT_PIE_ON_LINUX=ON \
 	-DCLANG_ENABLE_STATIC_ANALYZER=OFF \
 	-DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
-	-DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF \
+	-DLLVM_INCLUDE_TESTS=OFF -DLLVM_APPEND_VC_REV=OFF -DLLVM_INCLUDE_EXAMPLES=OFF \
 	-DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_DOCS=OFF \
 	-DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_LIBEDIT=OFF \
 	-DLLVM_ENABLE_ZLIB=ON -DLLVM_ENABLE_ZSTD=ON \

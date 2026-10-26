@@ -1,0 +1,25 @@
+# OpenSSL. A build tool of the KLOS builder (manifests/builder.toml): the
+# kernel build uses libcrypto (sign-file, extract-cert), and the test uses
+# "openssl passwd". The images do not contain it.
+[package]
+name = "openssl"
+version = "3.6.5"
+summary = "TLS and cryptography library and tool"
+license = "Apache-2.0"
+homepage = "https://openssl-library.org/"
+build-depends = ["zlib"]
+
+[[source]]
+url = "https://github.com/openssl/openssl/releases/download/openssl-3.6.5/openssl-3.6.5.tar.gz"
+sha256 = "a2157c2830efdec3788939b00c9b0638306d3f0bbb76dc4832ee503bb397df98"
+signature = "https://github.com/openssl/openssl/releases/download/openssl-3.6.5/openssl-3.6.5.tar.gz.asc"
+key = ["openssl"]
+
+[build]
+script = '''
+./Configure linux-x86_64 --prefix=/usr --libdir=lib --openssldir=/etc/ssl \
+	no-docs no-tests shared CC=cc AR=llvm-ar RANLIB=llvm-ranlib
+kmake
+make DESTDIR="$DESTDIR" install_sw install_ssldirs
+rm -rf "$DESTDIR/etc/ssl/misc" "$DESTDIR/usr/bin/c_rehash"
+'''

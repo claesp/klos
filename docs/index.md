@@ -17,7 +17,7 @@ All documentation uses Simplified Technical English (see [style.md](style.md)).
 ## Build
 
 - [building.md](building.md): How to build KLOS.
-- [build-system.md](build-system.md): How kbuild builds packages and images.
+- [build-system.md](build-system.md): How kbuild builds packages and images, and the builders and stages.
 - [recipes.md](recipes.md): How to write a package recipe.
 - [manifests.md](manifests.md): The flavor manifests and the lock files.
 - [sources-and-keys.md](sources-and-keys.md): How KLOS verifies the source code.

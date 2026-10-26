@@ -1,0 +1,21 @@
+# GNU libtool. A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "libtool"
+version = "2.6.2"
+summary = "GNU libtool"
+license = "GPL-2.0-or-later"
+homepage = "https://www.gnu.org/software/libtool/"
+
+[[source]]
+url = "https://ftpmirror.gnu.org/gnu/libtool/libtool-2.6.2.tar.xz"
+sha256 = "2ef1067c16c97db930fd740cc9bc3d3ba9a583804ae5ac42cc3e8719e49e191e"
+signature = "https://ftpmirror.gnu.org/gnu/libtool/libtool-2.6.2.tar.xz.sig"
+key = ["gnu-ileana"]
+
+[build]
+script = '''
+M4=/usr/bin/m4 kconfigure --disable-static
+kmake
+make DESTDIR="$DESTDIR" install
+'''

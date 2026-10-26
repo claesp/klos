@@ -1,0 +1,26 @@
+# CMake build system. A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "cmake"
+version = "4.4.4"
+summary = "CMake build system"
+license = "BSD-3-Clause"
+homepage = "https://cmake.org/"
+
+[[source]]
+url = "https://github.com/Kitware/CMake/releases/download/v4.4.4/cmake-4.4.4.tar.gz"
+sha256 = "bd24c30d80a7744ae84b845ff080cc8453b06c622ef01066564108e9cefc44cf"
+signature = "https://github.com/Kitware/CMake/releases/download/v4.4.4/cmake-4.4.4-SHA-256.txt.asc"
+signature-type = "pgp-checksum-file"
+checksums = "https://github.com/Kitware/CMake/releases/download/v4.4.4/cmake-4.4.4-SHA-256.txt"
+key = ["cmake-bking"]
+
+[build]
+script = '''
+kcmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DCMAKE_USE_OPENSSL=OFF \
+	-DBUILD_CursesDialog=OFF -DBUILD_QtDialog=OFF -DCMake_BUILD_LTO=OFF \
+	-DCMAKE_DOC_DIR=share/doc/cmake -DCMake_INSTALL_DEPENDENCIES=OFF
+kninja
+kninja_install
+rm -rf "$DESTDIR/usr/share/bash-completion" "$DESTDIR/usr/share/emacs" "$DESTDIR/usr/share/vim" "$DESTDIR/usr/share/aclocal"
+'''

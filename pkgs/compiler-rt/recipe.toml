@@ -42,6 +42,8 @@ cmake -S runtimes -B build-rt -G Ninja \
 	-DCMAKE_AR="$TC/bin/llvm-ar" -DCMAKE_NM="$TC/bin/llvm-nm" \
 	-DCMAKE_RANLIB="$TC/bin/llvm-ranlib" \
 	-DCMAKE_C_COMPILER_TARGET="$TARGET" \
+	-DCMAKE_C_FLAGS="-ffile-prefix-map=$S=/usr/src/compiler-rt" \
+	-DCMAKE_ASM_FLAGS="-ffile-prefix-map=$S=/usr/src/compiler-rt" \
 	-DCMAKE_CXX_COMPILER_TARGET="$TARGET" \
 	-DCMAKE_ASM_COMPILER_TARGET="$TARGET" \
 	-DCMAKE_SYSROOT="$S/hdr" \

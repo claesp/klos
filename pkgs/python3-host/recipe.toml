@@ -1,0 +1,22 @@
+# Python for the builder, as a host tool. The cross build of the package
+# python3 needs a Python of the same version (--with-build-python).
+[package]
+name = "python3-host"
+version = "3.13.18"
+summary = "Python interpreter for cross builds of Python"
+license = "Python-2.0"
+homepage = "https://www.python.org/"
+kind = "host"
+
+[[source]]
+url = "https://www.python.org/ftp/python/3.13.18/Python-3.13.18.tar.xz"
+sha256 = "abb0102e6d4ae027509bcb82327d9dd85515b44a3ba8ad538cfc5e9847029f68"
+signature = "https://www.python.org/ftp/python/3.13.18/Python-3.13.18.tar.xz.asc"
+key = ["python-wouters"]
+
+[build]
+script = '''
+./configure --prefix="$PREFIX" --without-ensurepip --disable-test-modules
+make -j"$JOBS"
+make DESTDIR="$DESTDIR" install
+'''

@@ -128,3 +128,29 @@ func TestCheckChecksumList(t *testing.T) {
 		}
 	}
 }
+
+func TestReproducible(t *testing.T) {
+	a := "# comment a\n[image]\nroothash = \"1\"\n\n[[tool]]\nname = \"llvm\"\nsha256 = \"aa\"\n\n[[package]]\nname = \"musl\"\nsha256 = \"cc\"\n"
+	b := "# comment b\n[image]\nroothash = \"1\"\n\n[[tool]]\nname = \"llvm\"\nsha256 = \"bb\"\n\n[[package]]\nname = \"musl\"\nsha256 = \"cc\"\n"
+	if reproducible(a) != reproducible(b) {
+		t.Fatalf("a different tool changed the result:\n%s\n---\n%s", reproducible(a), reproducible(b))
+	}
+	if c := strings.Replace(b, "\"cc\"", "\"dd\"", 1); reproducible(a) == reproducible(c) {
+		t.Fatal("a different package did not change the result")
+	}
+}
+
+func TestParseBuilderConf(t *testing.T) {
+	c, err := parseBuilderConf("# comment\nbuild-triple = x86_64-pc-linux-gnu\nhost-cc = gcc\nhost-cxx = g++\nbuild-cc=gcc\n", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.BuildTriple != "x86_64-pc-linux-gnu" || c.HostCC != "gcc" || c.HostCXX != "g++" || c.BuildCC != "gcc" {
+		t.Fatalf("got %+v", c)
+	}
+	for _, bad := range []string{"host-cc = gcc\n", "build-triple x\n", "colour = red\nbuild-triple=a\nhost-cc=b\nhost-cxx=c\nbuild-cc=d\n"} {
+		if _, err := parseBuilderConf(bad, "test"); err == nil {
+			t.Errorf("%q: no error", bad)
+		}
+	}
+}

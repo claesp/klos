@@ -1,0 +1,22 @@
+# GNU core utilities. A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "coreutils"
+version = "9.12"
+summary = "GNU core utilities"
+license = "GPL-3.0-or-later"
+homepage = "https://www.gnu.org/software/coreutils/"
+
+[[source]]
+url = "https://ftpmirror.gnu.org/gnu/coreutils/coreutils-9.12.tar.xz"
+sha256 = "a480198559733e9b3da999e90543ac6f888a2caa544d8d664c5a1f17e528e210"
+signature = "https://ftpmirror.gnu.org/gnu/coreutils/coreutils-9.12.tar.xz.sig"
+key = ["gnu-pbrady"]
+
+[build]
+script = '''
+kconfigure --disable-nls --without-openssl --without-gmp --disable-libsmack --disable-libcap \
+	--enable-install-program=hostname --enable-no-install-program=kill,uptime
+kmake
+make DESTDIR="$DESTDIR" install
+'''

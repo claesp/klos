@@ -1,0 +1,34 @@
+# Perl. A build tool of the KLOS builder (manifests/builder.toml): Autoconf,
+# Automake, Texinfo, OpenSSL and the kernel need it at build time. The
+# images do not contain it.
+#
+# Perl is a static program: Configure runs its test programs (also the
+# compiler test "gcctest") in the builder, and a static program runs in any
+# builder. The hints of Perl find musl with "ldd --version" of the builder,
+# so the recipe gives -D_GNU_SOURCE for the musl target itself.
+[package]
+name = "perl"
+version = "5.42.3"
+summary = "Perl interpreter"
+license = "Artistic-1.0-Perl OR GPL-1.0-or-later"
+homepage = "https://www.perl.org/"
+options = { no-strip = true }
+
+# Upstream does not sign releases. The pinned SHA-256 agrees with the value
+# that www.cpan.org publishes.
+[[source]]
+url = "https://www.cpan.org/src/5.0/perl-5.42.3.tar.xz"
+sha256 = "c9387e1473a1866935cb047ece7c2e0a80767a3acdecb79d4a375f8a95970ddc"
+
+[build]
+script = '''
+./Configure -des -Dprefix=/usr -Dvendorprefix=/usr -Dsiteprefix=/usr/local \
+	-Dcc="cc -static" -Doptimize="$CFLAGS" -Dldflags="$LDFLAGS -static" -Uusedl \
+	-Dlibpth="$SYSROOT/usr/lib" -Dglibpth="$SYSROOT/usr/lib" \
+	-Ulocincpth -Uloclibpth -Dlibswanted="pthread m c" -Dusenm=false \
+	-Accflags=-D_GNU_SOURCE \
+	-Dman1dir=none -Dman3dir=none -Dsiteman1dir=none -Dsiteman3dir=none \
+	-Dcf_by=klos -Dcf_email=klos -Dperladmin=root -Dmyhostname=klos -Dmydomain=.klos
+kmake
+make DESTDIR="$DESTDIR" install
+'''

@@ -19,7 +19,8 @@ type Source struct {
 	SHA256        string   `toml:"sha256"`
 	Filename      string   `toml:"filename"`
 	Signature     string   `toml:"signature"`
-	SignatureType string   `toml:"signature-type"` // pgp (default) or minisign
+	SignatureType string   `toml:"signature-type"` // pgp (default), minisign, pgp-checksums or pgp-checksum-file
+	Checksums     string   `toml:"checksums"`      // pgp-checksum-file: the checksum list that the signature covers
 	SignedContent string   `toml:"signed-content"` // "uncompressed": signature is over the .tar
 	Key           []string `toml:"key"`            // names of files in keys/
 	Extract       *bool    `toml:"extract"`
@@ -180,9 +181,12 @@ func topoClosure(names []string) []*Recipe {
 
 var hashCache = map[string]string{}
 
+// builderLock identifies the builder: its package list and its
+// configuration. A change of the builder changes all input hashes.
 func builderLock() string {
 	b, _ := os.ReadFile("/etc/klos-builder.lock")
-	return string(b)
+	c, _ := os.ReadFile(builderConfPath)
+	return string(b) + "\x00" + string(c)
 }
 
 // inputHash is a Merkle hash of all inputs of a package build: the recipe

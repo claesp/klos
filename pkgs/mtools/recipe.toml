@@ -1,0 +1,21 @@
+# Tools for FAT file systems (mcopy, mmd). A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "mtools"
+version = "4.0.49"
+summary = "Tools for FAT file systems (mcopy, mmd)"
+license = "GPL-3.0-or-later"
+homepage = "https://www.gnu.org/software/mtools/"
+
+[[source]]
+url = "https://ftpmirror.gnu.org/gnu/mtools/mtools-4.0.49.tar.gz"
+sha256 = "10cd1111da87bf2400a380c1639a6cba8bfb937a24f9c51f5f88d393ae5f6f76"
+signature = "https://ftpmirror.gnu.org/gnu/mtools/mtools-4.0.49.tar.gz.sig"
+key = ["gnu-knaff"]
+
+[build]
+script = '''
+kconfigure --disable-floppyd --without-x
+kmake
+make DESTDIR="$DESTDIR" install
+'''

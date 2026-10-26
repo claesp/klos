@@ -1,0 +1,23 @@
+# Fast lexical analyzer generator. A build tool of the KLOS builder (manifests/builder.toml).
+# The images do not contain it.
+[package]
+name = "flex"
+version = "2.6.4"
+summary = "Fast lexical analyzer generator"
+license = "BSD-3-Clause"
+homepage = "https://github.com/westes/flex"
+
+[[source]]
+url = "https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz"
+sha256 = "e87aae032bf07c26f85ac0ed3250998c37621d95f8bd748b31f15b33c45ee995"
+signature = "https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz.sig"
+key = ["flex-estes"]
+
+[build]
+script = '''
+export ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes
+M4=/usr/bin/m4 kconfigure --disable-nls --disable-bootstrap
+kmake
+make DESTDIR="$DESTDIR" install
+ln -s flex "$DESTDIR/usr/bin/lex"
+'''

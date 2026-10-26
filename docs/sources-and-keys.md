@@ -50,11 +50,41 @@ in the recipes (`key = ["musl"]` is `keys/musl.asc`).
 | expat-sping.asc | Sebastian Pipping | 3176 EF7D B236 7F1F CA4F 306B 1F9B 0E90 9AF3 7285 | keyserver.ubuntu.com |
 | freetype-wl.asc | Werner Lemberg | E306 7470 7856 409F F194 8010 BE6C 3AAC 63AD 8E3F | keyserver.ubuntu.com |
 | dnkl.asc | Daniel Eklöf (Git signing) | B199 64FB BA09 664C C810 27ED 5BBD 4992 C116 573F | keyserver.ubuntu.com |
+| archlinux-pierre.asc | Pierre Schmitz (Arch Linux releases) | 3E80 CA1A 8B89 F69C BA57 D98A 76A5 EF90 5444 9A5C | keyserver.ubuntu.com, compared with archlinux.org/download and pierre-schmitz.com |
 | selinux-lautrbach.asc | Petr Lautrbach (SELinux userspace) | 68D2 1823 342A 1368 3AEB 3E4E FB4C 685B 5DC1 C13E | keyserver.ubuntu.com, compared with keys.openpgp.org and github.com/bachradsusi |
+| openssl.asc | OpenSSL | B146 647E 45A7 B339 47AB 226B 2A2C 87D1 6169 2D40 | keyserver.ubuntu.com, compared with openssl-library.org |
+| python-wouters.asc | Thomas Wouters (Python 3.12 and 3.13) | 7169 605F 62C7 5135 6D05 4A26 A821 E680 E5FA 6305 | keyserver.ubuntu.com, compared with keys.openpgp.org and python.org |
+| cmake-bking.asc | Brad King (CMake) | CBA2 3971 357C 2E65 90D9 EFD3 EC8F EF3A 7BFB 4EDA | keyserver.ubuntu.com, compared with keys.openpgp.org |
+| meson-jpakkane.asc | Jussi Pakkanen (Meson) | 19E2 D6D9 B46D 8DAA 6288 F877 C24E 631B ABB1 FE70 | keyserver.ubuntu.com, compared with keys.openpgp.org |
+| xz-lasse.asc | Lasse Collin (XZ Utils) | 3690 C240 CE51 B467 0D30 AD1C 38EE 757D 6918 4620 | keyserver.ubuntu.com, compared with keys.openpgp.org |
+| bzip2-wielaard.asc | Mark Wielaard (bzip2) | EC3C FE88 F6CA 0788 774F 5C1D 1AA4 4BE6 49DE 760A | keyserver.ubuntu.com, compared with keys.openpgp.org |
+| file-christos.asc | Christos Zoulas (file) | BE04 995B A8F9 0ED0 C0C1 76C4 7111 2AB1 6CB3 3B3A | keyserver.ubuntu.com, compared with keys.openpgp.org |
+| flex-estes.asc | Will Estes (flex) | 56C6 7868 E933 90AA 1039 AD1C E4B2 9C8D 6488 5307 | keyserver.ubuntu.com (no second source; the release signature agrees) |
+| gnu-chet.asc | Chet Ramey (bash) | 7C01 35FB 088A AF6C 66C6 50B9 BB58 69F0 64EA 74AB | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-pbrady.asc | Pádraig Brady (coreutils) | 6C37 DC12 121A 5006 BC1D B804 DF6F D971 3060 37D9 | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-meyering.asc | Jim Meyering (sed, grep, diffutils, gzip) | 155D 3FC5 00C8 3448 6D1E EA67 7FD9 FCCB 000B EEEE | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-arnold.asc | Arnold Robbins (gawk) | D196 7C63 7887 1317 7D86 1ED7 DF59 7815 937E C0D2 | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-youngman.asc | James Youngman (findutils) | 0CF4 E8D8 7159 3224 8428 32B8 88DD 9E08 C5DD ACB9 | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-agruen.asc | Andreas Gruenbacher (patch) | 259B 3792 B3D6 D319 212C C4DC D5BF 9FEB 0313 653A | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-gray.asc | Sergey Poznyakoff (tar) | 325F 650C 4C2B 6AD5 8807 327A 3602 B07F 55D0 C732 | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-psmith.asc | Paul D. Smith (make) | 6D4E EB02 AD83 4703 510B 1176 80CB 727A 20C7 9BB2 | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-eblake.asc | Eric Blake (m4) | 71C2 CC22 B1C4 6029 27D2 F3AA A7A1 6B4A 2527 436A | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-demaille.asc | Akim Demaille (bison) | 7DF8 4374 B1EE 1F97 64BB E25D 0DDC AA32 78D5 264E | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-zackw.asc | Zack Weinberg (autoconf) | 82F8 54F3 CE73 174B 8B63 1740 91FC C32B 6769 AA64 | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-iczelia.asc | Kamila Szewczyk (automake) | 6C22 2EA6 B2BD 216A A406 516A C868 F0B6 DE38 409D | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-ileana.asc | Ileana Dumitrescu (libtool) | FA26 CA78 4BE1 8892 7F22 B99F 6570 EA01 146F 7354 | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-gavin.asc | Gavin Smith (texinfo) | EAF6 69B3 1E31 E1DE CBD1 1513 DDBC 579D AB37 FBA9 | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-pizzini.asc | Ken Pizzini (bc) | 325B 54E4 653F 935A 25CF 32BD A186 278D 426A 38E9 | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-haible.asc | Bruno Haible (gperf) | E0FF BD97 5397 F77A 32AB 76EC B630 1D9E 1BBE AC08 | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| gnu-knaff.asc | Alain Knaff (mtools) | 51A2 3D9D 7C4D F41A A48F A893 E99C F553 7790 B839 | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
 
 Before you add a key, compare its fingerprint with a second source. For
 example, use the web site of the project, the release announcement, or the
 kernel.org key ring.
+
+The GNU packages come from `ftpmirror.gnu.org`, which sends the request to
+a GNU mirror. The signature and the SHA-256 value make sure that the file
+is the official release.
 
 ## Sources without signatures
 
@@ -72,6 +102,11 @@ only a pinned SHA-256 value:
 - the Python build modules (PyPI publishes the SHA-256 values)
 - the Mozilla CA bundle from curl.se (served with HTTPS only)
 - Go (go.dev publishes the SHA-256 values with HTTPS)
+- Perl and lz4 (upstream publishes SHA-256 values; the pinned values agree
+  with them)
+- samurai, pkgconf (upstream does not sign the release tarballs)
+- erofs-utils (upstream signs the Git tags; the snapshot tarball of
+  git.kernel.org has no signature)
 
 ## The trust chain
 

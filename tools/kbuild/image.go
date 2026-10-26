@@ -15,6 +15,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -515,7 +516,7 @@ func buildImage(flavor string, opt imageOptions) *BuildRecord {
 	removeAll(od)
 	mkdirAll(od)
 	for _, f := range []string{"root.img", "klos.efi", "klos-live.efi"} {
-		check(os.Rename(filepath.Join(iw, f), filepath.Join(od, f)))
+		moveFile(filepath.Join(iw, f), filepath.Join(od, f))
 	}
 	copyFile(filepath.Join(kb.obj, ".config"), filepath.Join(od, "kernel.config"))
 	writeFile(filepath.Join(od, "packages.txt"), list.String(), 0o644)
@@ -586,10 +587,27 @@ func lockText(rec *BuildRecord) string {
 		fmt.Fprintf(&s, "[[tool]]\nname = %q\nversion = %q\nsha256 = %q\n\n", h, f[0], f[1])
 	}
 	for _, p := range rec.Packages {
-		fmt.Fprintf(&s, "[[package]]\nname = %q\nversion = %q\nsha256 = %q\ninput = %q\n\n",
-			p.Name, p.Version, p.SHA256, p.Input)
+		fmt.Fprintf(&s, "[[package]]\nname = %q\nversion = %q\nsha256 = %q\n\n",
+			p.Name, p.Version, p.SHA256)
 	}
 	return s.String()
+}
+
+// reproducible returns the part of a lock text that must be the same for
+// all builders: the image, the kernel and the packages. The [[tool]]
+// entries (the toolchain of the builder) can be different.
+func reproducible(lock string) string {
+	var out []string
+	skip := false
+	for _, l := range strings.Split(lock, "\n") {
+		if strings.HasPrefix(l, "[") {
+			skip = l == "[[tool]]"
+		}
+		if !skip && !strings.HasPrefix(l, "#") {
+			out = append(out, l)
+		}
+	}
+	return strings.Join(out, "\n")
 }
 
 func cmdLock(args []string) {
@@ -627,12 +645,55 @@ func cmdVerify(args []string) {
 	removeAll(filepath.Join(WORK, "kernel", flavor))
 	rec := buildImage(flavor, defaultImageOptions())
 	got := lockText(rec)
-	if got != string(want) {
+	if reproducible(got) != reproducible(string(want)) {
 		diffPath := filepath.Join(OUT, flavor+".lock")
 		writeFile(diffPath, got, 0o644)
 		// diff exits with 1 when the files are different; show the output only.
 		_ = tryRun(Cmd{Args: []string{"diff", "-u", lockPath, diffPath}})
 		die("the build is not the same as %s", rel(lockPath))
 	}
+	if got != string(want) {
+		logf("verify %s: the toolchain of this builder is not the same as in %s (this is not an error)", flavor, rel(lockPath))
+	}
 	logf("verify %s: the build is the same as %s", flavor, rel(lockPath))
+}
+
+// cmdCompare compares the images of a flavor from two builders.
+func cmdCompare(args []string) {
+	fs := flag.NewFlagSet("compare", flag.ContinueOnError)
+	a := fs.String("a", "alpine-2", "the first builder")
+	b := fs.String("b", "arch-2", "the second builder")
+	if err := fs.Parse(args); err != nil {
+		die("compare: %v", err)
+	}
+	if fs.NArg() != 1 {
+		die("usage: compare [-a builder] [-b builder] <flavor>")
+	}
+	flavor := fs.Arg(0)
+	read := func(builder string) string {
+		p := filepath.Join(TOP, "out", builder, "images", flavor, VERSION, "build.json")
+		data, err := os.ReadFile(p)
+		if err != nil {
+			die("no image of %s from %s (run 'KLOS_BUILDER=%s ./klos image %s')", flavor, builder, builder, flavor)
+		}
+		rec := &BuildRecord{}
+		check(json.Unmarshal(data, rec))
+		return lockText(rec)
+	}
+	ta, tb := read(*a), read(*b)
+	dir := filepath.Join(TOP, "out", "compare")
+	mkdirAll(dir)
+	pa, pb := filepath.Join(dir, flavor+"."+*a+".lock"), filepath.Join(dir, flavor+"."+*b+".lock")
+	writeFile(pa, ta, 0o644)
+	writeFile(pb, tb, 0o644)
+	if reproducible(ta) != reproducible(tb) {
+		// diff exits with 1 when the files are different; show the output only.
+		_ = tryRun(Cmd{Args: []string{"diff", "-u", pa, pb}})
+		die("compare %s: the builds of %s and %s are not the same", flavor, *a, *b)
+	}
+	if ta != tb {
+		_ = tryRun(Cmd{Args: []string{"diff", "-u", pa, pb}})
+		logf("compare %s: the toolchains are not the same (this is not an error)", flavor)
+	}
+	logf("compare %s: %s and %s give the same image and packages", flavor, *a, *b)
 }

@@ -134,14 +134,15 @@ func newKernelBuild(flavor string) *kernelBuild {
 			"KBUILD_BUILD_HOST=klos",
 			"KBUILD_BUILD_VERSION=1",
 			"PATH="+llvm+":/usr/bin:/bin",
-			"LC_ALL=C"),
+			"LC_ALL=C",
+			"GIT_CEILING_DIRECTORIES="+WORK),
 	}
 	return kb
 }
 
 func (kb *kernelBuild) make(args ...string) {
 	a := []string{"make", "-C", kb.src, "O=" + kb.obj, "LLVM=" + kb.llvm + "/",
-		"HOSTCC=gcc", "HOSTCXX=g++", "-j" + JOBS}
+		"HOSTCC=" + BCONF.BuildCC, "HOSTCXX=" + BCONF.HostCXX, "-j" + JOBS}
 	run(Cmd{Args: append(a, args...), Env: kb.env, Stdout: os.Stderr})
 }
 

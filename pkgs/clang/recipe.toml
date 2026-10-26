@@ -1,0 +1,58 @@
+# Clang and lld for the KLOS builder (manifests/builder.toml): the native
+# compiler of the KLOS builder. It compiles the KLOS cross toolchain
+# (package llvm) again in stage 2. The images do not contain it.
+#
+# Pass 1 builds the TableGen tools as static programs, which run in the
+# builder. Pass 2 is the cross build; it uses the pass 1 tools. The
+# compiler-rt builtins come from the package compiler-rt.
+[package]
+name = "clang"
+version = "23.1.4"
+summary = "Clang and lld (native compiler of the KLOS builder)"
+license = "Apache-2.0 WITH LLVM-exception"
+homepage = "https://llvm.org/"
+build-depends = ["zlib", "zstd"]
+
+[[source]]
+url = "https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.4/llvm-project-23.1.4.src.tar.xz"
+sha256 = "819ecf7351f1a66f76b2d701d8942faaf5faeb324cb90c9d5b090de142434bb2"
+signature = "https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.4/llvm-project-23.1.4.src.tar.xz.sig"
+key = ["llvm"]
+
+[build]
+script = '''
+BIN=$(dirname "$(command -v cc)")
+common="-DLLVM_ENABLE_PROJECTS=clang;lld -DLLVM_TARGETS_TO_BUILD=X86;BPF \
+	-DLLVM_INCLUDE_TESTS=OFF -DLLVM_APPEND_VC_REV=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF \
+	-DLLVM_INCLUDE_DOCS=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_LIBEDIT=OFF \
+	-DLLVM_ENABLE_FFI=OFF -DCLANG_ENABLE_STATIC_ANALYZER=OFF"
+# Pass 1: static TableGen tools for the builder.
+env -u CMAKE_TOOLCHAIN_FILE cmake -S llvm -B build-tblgen -G Ninja -DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_C_COMPILER="$BIN/cc" -DCMAKE_CXX_COMPILER="$BIN/c++" \
+	-DCMAKE_EXE_LINKER_FLAGS=-static -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF \
+	$common
+ninja -C build-tblgen -j"$JOBS" llvm-tblgen llvm-min-tblgen clang-tblgen \
+	llvm-config llvm-nm llvm-readobj
+# Pass 2: the cross build. The defaults are the same as in the package llvm.
+CMAKE_SOURCE=llvm kcmake -DCMAKE_BUILD_TYPE=Release \
+	-DLLVM_NATIVE_TOOL_DIR="$S/build-tblgen/bin" \
+	-DLLVM_HOST_TRIPLE="$TARGET" -DLLVM_DEFAULT_TARGET_TRIPLE="$TARGET" \
+	-DCLANG_DEFAULT_RTLIB=compiler-rt -DCLANG_DEFAULT_UNWINDLIB=libunwind \
+	-DCLANG_DEFAULT_CXX_STDLIB=libc++ -DCLANG_DEFAULT_LINKER=lld \
+	-DCLANG_DEFAULT_PIE_ON_LINUX=ON -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
+	-DLLVM_ENABLE_ZLIB=ON -DLLVM_ENABLE_ZSTD=ON -DLLVM_PARALLEL_LINK_JOBS=4 $common
+kninja
+kninja_install
+# The builtins and the CRT files in the resource directory of Clang.
+MAJOR=${PKGVER%%.*}
+mkdir -p "$DESTDIR/usr/lib/clang/$MAJOR"
+cp -a "$HOST_COMPILER_RT/$TOOLCHAIN_PREFIX/lib/clang/$MAJOR/lib" "$DESTDIR/usr/lib/clang/$MAJOR/"
+# The usual names of the tools.
+cd "$DESTDIR/usr/bin"
+for l in cc:clang c++:clang++ cpp:clang-cpp ld:ld.lld ar:llvm-ar ranlib:llvm-ranlib \
+	nm:llvm-nm strip:llvm-strip objcopy:llvm-objcopy objdump:llvm-objdump \
+	readelf:llvm-readobj llvm-readelf:llvm-readobj size:llvm-size strings:llvm-strings; do
+	[ -e "${l#*:}" ] || continue
+	[ -e "${l%%:*}" ] || ln -s "${l#*:}" "${l%%:*}"
+done
+'''
