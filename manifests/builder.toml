@@ -10,6 +10,8 @@
 packages = [
   # The base system and the native compiler.
   "filesystem", "musl", "linux-headers", "llvm-runtimes", "clang", "dash",
+  # The CA certificates for the downloads (HTTPS).
+  "ca-certificates",
   # Shell and file tools.
   "bash", "coreutils", "sed", "gawk", "grep", "findutils", "diffutils",
   "patch", "tar", "gzip", "bzip2", "xz", "lz4", "zstd", "zstd-tools",

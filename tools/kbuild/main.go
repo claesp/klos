@@ -38,6 +38,7 @@ var commands = map[string]command{
 	"revoke":        {"revoke <klos.efi>...", cmdRevoke},
 	"selinux":       {"selinux <flavor>", cmdSELinux},
 	"builder-image": {"builder-image", cmdBuilderImage},
+	"check-sources": {"check-sources", cmdCheckSources},
 	"compare":       {"compare [-a builder] [-b builder] <flavor>", cmdCompare},
 }
 
@@ -160,4 +161,29 @@ func rel(p string) string {
 		return p
 	}
 	return r
+}
+
+// cmdCheckSources checks the SHA-256 and the signature of all sources of all
+// recipes and of the kernel again (it downloads the signature files that
+// are not in the cache).
+func cmdCheckSources(args []string) {
+	if len(args) != 0 {
+		die("usage: check-sources")
+	}
+	sources := append([]Source{}, kernelDef().Source...)
+	var names []string
+	for n := range recipes() {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		sources = append(sources, recipes()[n].Source...)
+	}
+	for _, s := range sources {
+		p := fetchSource(s)
+		if s.Signature != "" {
+			verifySignature(s, p)
+		}
+	}
+	logf("all %d sources have a correct SHA-256 value and signature", len(sources))
 }

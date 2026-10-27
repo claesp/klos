@@ -215,6 +215,7 @@ case $cmd in
 		(kbuild alpine-1 yes no fetch "$@")
 		kbuild "$BUILDER" no no "$cmd" "$@" ;;
 	lock|list|revoke|compare) kbuild "$BUILDER" no no "$cmd" "$@" ;;
+	check-sources) kbuild "$BUILDER" yes no check-sources ;;
 	test)
 		# Build the images in the builder, then run QEMU in the test image.
 		(kbuild alpine-1 yes no fetch "$@")

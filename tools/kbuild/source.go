@@ -73,23 +73,6 @@ func fetchURL(ctx context.Context, url, dest string) error {
 	return os.Rename(tmp, dest)
 }
 
-// gpgKeyring makes a binary keyring from the armored key files in keys/.
-func gpgKeyring(keys []string, dir string) string {
-	ring := filepath.Join(dir, "ring.gpg")
-	var buf bytes.Buffer
-	for _, k := range keys {
-		asc := filepath.Join(KEYS, k+".asc")
-		in, err := os.Open(asc)
-		if err != nil {
-			die("missing key file %s", asc)
-		}
-		run(Cmd{Args: []string{"gpg", "--dearmor"}, Stdin: in, Stdout: &buf})
-		closeQuietly(in)
-	}
-	check(os.WriteFile(ring, buf.Bytes(), 0o644))
-	return ring
-}
-
 func verifySignature(s Source, path string) {
 	if s.Signature == "" {
 		return
@@ -113,14 +96,13 @@ func verifySignature(s Source, path string) {
 		check(f.Close())
 	}
 	var verr error
-	var stderr bytes.Buffer
 	switch s.SignatureType {
 	case "", "pgp":
-		ring := gpgKeyring(s.Key, tmp)
-		verr = runCapture(&stderr, "gpgv", "--keyring", ring, sig, data)
+		ring, err := readKeyring(s.Key)
+		check(err)
+		verr = verifyDetached(ring, sig, data, s.AllowExpiredKey)
 	case "minisign":
-		verr = runCapture(&stderr, "minisign", "-V", "-q", "-p",
-			filepath.Join(KEYS, s.Key[0]+".pub"), "-x", sig, "-m", data)
+		verr = verifyMinisign(filepath.Join(KEYS, s.Key[0]+".pub"), sig, data)
 	case "pgp-checksum-file":
 		// The signature is a detached signature of a checksum list
 		// (for example cmake-<version>-SHA-256.txt).
@@ -131,8 +113,9 @@ func verifySignature(s Source, path string) {
 		if !exists(sums) {
 			download(s.Checksums, sums)
 		}
-		ring := gpgKeyring(s.Key, tmp)
-		verr = runCapture(&stderr, "gpgv", "--keyring", ring, sig, sums)
+		ring, err := readKeyring(s.Key)
+		check(err)
+		verr = verifyDetached(ring, sig, sums, s.AllowExpiredKey)
 		if verr == nil {
 			var b []byte
 			if b, verr = os.ReadFile(sums); verr == nil {
@@ -144,22 +127,19 @@ func verifySignature(s Source, path string) {
 		}
 	case "pgp-checksums":
 		// The signature file is a signed OpenPGP message with a
-		// checksum list. gpgv writes the signed text only if the
-		// signature is good.
-		ring := gpgKeyring(s.Key, tmp)
-		var text bytes.Buffer
-		cmd := exec.Command("gpgv", "--keyring", ring, "--output", "-", sig)
-		cmd.Stdout, cmd.Stderr = &text, &stderr
-		verr = cmd.Run()
-		if verr == nil {
-			verr = checkChecksumList(text.String(), filepath.Base(s.URL), data)
+		// checksum list.
+		ring, err := readKeyring(s.Key)
+		check(err)
+		var text string
+		if text, verr = verifyMessage(ring, sig); verr == nil {
+			verr = checkChecksumList(text, filepath.Base(s.URL), data)
 		}
 	default:
 		die("unknown signature type %q", s.SignatureType)
 	}
 	if verr != nil {
 		_ = os.Remove(sig) // download it again next time; the build stops
-		die("signature check failed for %s:\n%s", filepath.Base(path), stderr.String())
+		die("signature check failed for %s: %v", filepath.Base(path), verr)
 	}
 	logf("signature good: %s", s.filename())
 }

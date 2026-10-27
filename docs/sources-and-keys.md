@@ -44,7 +44,6 @@ in the recipes (`key = ["musl"]` is `keys/musl.asc`).
 | pixman-cairo.asc | Matt Turner | 3BB6 39E5 6F86 1FA2 E865 0569 0FDD 682D 974C A72A | keyserver.ubuntu.com |
 | cairo-ebassi.asc | Emmanuele Bassi | 53EF 3DC3 B63E 2899 271B D263 22E8 091E EA11 BBB7 | keyserver.ubuntu.com, compared with keys.openpgp.org and gitlab.gnome.org |
 | mesa-release.asc | Eric Engestrom | 5755 1DE1 5B96 8F63 41C2 48F6 8D8E 31AF C324 28A6 | keyserver.ubuntu.com |
-| libevdev-whot.asc | Peter Hutterer (Who-T) | 3C2C 43D9 447D 5938 EF45 51EB E23B 7E70 B467 F0BF | keyserver.ubuntu.com |
 | xkeyboard-config.asc | Sergey Udaltsov | FFB4 CCD2 75AA A422 F5F9 808E 0661 D98F C933 A145 | keyserver.ubuntu.com |
 | pcre2.asc | Nicholas Wilson | A955 3620 4A3B B489 7152 3128 2A98 E77E B6F2 4CA8 | keyserver.ubuntu.com |
 | expat-sping.asc | Sebastian Pipping | 3176 EF7D B236 7F1F CA4F 306B 1F9B 0E90 9AF3 7285 | keyserver.ubuntu.com |
@@ -102,6 +101,8 @@ only a pinned SHA-256 value:
 - the Python build modules (PyPI publishes the SHA-256 values)
 - the Mozilla CA bundle from curl.se (served with HTTPS only)
 - Go (go.dev publishes the SHA-256 values with HTTPS)
+- libevdev (upstream signs with a DSA-1024 key; kbuild does not accept
+  keys that weak)
 - Perl and lz4 (upstream publishes SHA-256 values; the pinned values agree
   with them)
 - samurai, pkgconf (upstream does not sign the release tarballs)

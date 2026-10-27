@@ -23,8 +23,11 @@ type Source struct {
 	Checksums     string   `toml:"checksums"`      // pgp-checksum-file: the checksum list that the signature covers
 	SignedContent string   `toml:"signed-content"` // "uncompressed": signature is over the .tar
 	Key           []string `toml:"key"`            // names of files in keys/
-	Extract       *bool    `toml:"extract"`
-	Dest          string   `toml:"dest"`
+	// AllowExpiredKey accepts a signature by a key that expired before the
+	// release (the recipe must say why).
+	AllowExpiredKey bool   `toml:"allow-expired-key"`
+	Extract         *bool  `toml:"extract"`
+	Dest            string `toml:"dest"`
 }
 
 type Options struct {
