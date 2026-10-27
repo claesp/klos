@@ -22,7 +22,7 @@ This document shows what works now and what is planned. "Tested" means that
 | TPM PIN (PolicyAuthValue, TPM lockout protection, wrong PIN refused) | Tested (swtpm) |
 | No setuid programs, no scripts except the shell and the dhcpcd hook | Tested (build check and test) |
 | KLOS builder (stage 2): all build tools built by KLOS; Alpine supplies only the first compiler | Tested (`alpine-2` builds all three flavors; all tests pass) |
-| Two independent bootstrap builders (Alpine with Clang and musl, Arch Linux with GCC and glibc) | Checked: `./klos compare` gives the same image, kernel, packages and toolchain from `alpine-2` and `arch-2` for the server and kubernetes flavors |
+| Two independent bootstrap builders (Alpine with Clang and musl, Arch Linux with GCC and glibc) | Checked: `./klos compare` gives the same image, kernel, packages and toolchain from `alpine-2` and `arch-2` for all three flavors |
 | SELinux in enforcing mode (KLOS policy, labeled erofs image, no mode or policy change after boot, W^X, confined dhcpcd and chronyd) | Tested (no denials in the test) |
 | Kubernetes flavor: containerd, crun, CNI plugins, kubelet, kubeadm | Tested (preflight, not a full cluster) |
 | Desktop flavor: sway, foot, seatd, devd | Tested (headless sway) |
