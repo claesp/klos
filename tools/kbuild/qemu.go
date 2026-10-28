@@ -80,7 +80,10 @@ func qemuArgs(vars string, drives []string, extra ...string) []string {
 		"-drive", "if=pflash,format=raw,unit=0,readonly=on,file=" + ovmfCode,
 		"-drive", "if=pflash,format=raw,unit=1,file=" + vars,
 		"-device", "virtio-rng-pci",
-		"-netdev", "user,id=n0", "-device", "virtio-net-pci,netdev=n0"}
+		// The QEMU of KLOS has no prebuilt firmware blobs: no option ROM
+		// for virtio-net (OVMF has a driver) and no kvmvapic.bin.
+		"-netdev", "user,id=n0", "-device", "virtio-net-pci,netdev=n0,romfile=",
+		"-global", "kvm-apic.vapic=off", "-global", "apic.vapic=off"}
 	if exists("/dev/kvm") {
 		args = append(args, "-accel", "kvm", "-cpu", "host")
 	} else {
