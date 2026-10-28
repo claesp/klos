@@ -29,10 +29,11 @@ script = '''
 	-Accflags=-D_GNU_SOURCE \
 	-Dman1dir=none -Dman3dir=none -Dsiteman1dir=none -Dsiteman3dir=none \
 	-Dcf_by=klos -Dcf_email=klos -Dperladmin=root -Dmyhostname=klos -Dmydomain=.klos
-# Configure always writes the current time (cf_time). Use
+# Configure always writes the current time (cf_time, and a comment in
+# config.sh). Use
 # SOURCE_DATE_EPOCH, and write the generated files again (-S).
 t=$(date -u -d "@$SOURCE_DATE_EPOCH" "+%a %b %e %H:%M:%S UTC %Y")
-sed -i "s/^cf_time=.*/cf_time='$t'/" config.sh
+sed -i -e "s/^cf_time=.*/cf_time='$t'/" -e "s/^# Configuration time: .*/# Configuration time: $t/" config.sh
 ./Configure -S
 grep -q "Configuration time: $t" config.h
 kmake
