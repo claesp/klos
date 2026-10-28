@@ -20,7 +20,7 @@ This document shows what works now and what is planned. "Tested" means that
 | TPM2 unlock (PCR 7 and 15, salted sessions, passphrase fallback, new enrollment) | Tested (swtpm) |
 | TPM PIN (PolicyAuthValue, TPM lockout protection, wrong PIN refused) | Tested (swtpm) |
 | No setuid programs, no scripts except the shell and the dhcpcd hook | Tested (build check and test) |
-| KLOS builds itself: the KLOS builder (only KLOS packages, with QEMU, swtpm and OVMF for the tests) builds the next KLOS builder | Checked: `./klos builder` gives a builder that is byte-identical to the seed (a fixed point) |
+| KLOS builds itself: the KLOS builder (only KLOS packages, with QEMU, swtpm and OVMF for the tests) builds the next KLOS builder | Checked: `./klos builder` gives a builder that is byte-identical to the seed (a fixed point). With only this builder, all three flavors pass `./klos test` and `./klos verify` |
 | The first builder was checked with two independent bootstrap distributions (Alpine with Clang and musl, Arch Linux with GCC and glibc): the same images, packages and toolchain for all three flavors | Checked (diverse double compiling); the bootstrap distributions are no longer in the repository |
 | SELinux in enforcing mode (KLOS policy, labeled erofs image, no mode or policy change after boot, W^X, confined dhcpcd and chronyd) | Tested (no denials in the test) |
 | Kubernetes flavor: containerd, crun, CNI plugins, kubelet, kubeadm | Tested (preflight, not a full cluster) |
