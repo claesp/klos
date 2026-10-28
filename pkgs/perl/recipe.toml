@@ -28,8 +28,13 @@ script = '''
 	-Ulocincpth -Uloclibpth -Dlibswanted="pthread m c" -Dusenm=false \
 	-Accflags=-D_GNU_SOURCE \
 	-Dman1dir=none -Dman3dir=none -Dsiteman1dir=none -Dsiteman3dir=none \
-	-Dcf_time="$(date -u -d "@$SOURCE_DATE_EPOCH" "+%a %b %e %H:%M:%S UTC %Y")" \
 	-Dcf_by=klos -Dcf_email=klos -Dperladmin=root -Dmyhostname=klos -Dmydomain=.klos
+# Configure always writes the current time (cf_time). Use
+# SOURCE_DATE_EPOCH, and write the generated files again (-S).
+t=$(date -u -d "@$SOURCE_DATE_EPOCH" "+%a %b %e %H:%M:%S UTC %Y")
+sed -i "s/^cf_time=.*/cf_time='$t'/" config.sh
+./Configure -S
+grep -q "Configuration time: $t" config.h
 kmake
 make DESTDIR="$DESTDIR" install
 '''
