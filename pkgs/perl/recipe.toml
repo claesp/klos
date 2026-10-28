@@ -4,7 +4,7 @@
 #
 # Perl is a static program: Configure runs its test programs (also the
 # compiler test "gcctest") in the builder, and a static program runs in any
-# builder. The hints of Perl find musl with "ldd --version" of the builder,
+# builder. The configuration time is SOURCE_DATE_EPOCH (cf_time). The hints of Perl find musl with "ldd --version" of the builder,
 # so the recipe gives -D_GNU_SOURCE for the musl target itself.
 [package]
 name = "perl"
@@ -28,6 +28,7 @@ script = '''
 	-Ulocincpth -Uloclibpth -Dlibswanted="pthread m c" -Dusenm=false \
 	-Accflags=-D_GNU_SOURCE \
 	-Dman1dir=none -Dman3dir=none -Dsiteman1dir=none -Dsiteman3dir=none \
+	-Dcf_time="$(date -u -d "@$SOURCE_DATE_EPOCH" "+%a %b %e %H:%M:%S UTC %Y")" \
 	-Dcf_by=klos -Dcf_email=klos -Dperladmin=root -Dmyhostname=klos -Dmydomain=.klos
 kmake
 make DESTDIR="$DESTDIR" install
