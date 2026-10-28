@@ -15,7 +15,7 @@
 | Hardened code | Clang hardening flags, libc++ hardening, kernel CFI and KSPP options. |
 | Firewall | nftables drops all incoming traffic except SSH and ICMP. |
 | SELinux | Enforcing mode with a small KLOS policy. No process can load a policy or change the mode. No process can use writable and executable memory (except for JIT compilers on the kubernetes and desktop flavors). dhcpcd and chronyd are confined. Read [selinux.md](selinux.md). |
-| Diverse builders | A builder with only KLOS software builds the images. Two bootstrap builders with different compilers and C libraries (Alpine with Clang and musl, Arch Linux with GCC and glibc) must give the same images. Read [build-system.md](build-system.md). |
+| Self-built builder | Only KLOS software builds KLOS. The builder builds itself again with the same result (a fixed point). The first seed was checked with two independent bootstrap distributions (diverse double compiling). Read [build-system.md](build-system.md). |
 | System call filter | chronyd runs with its seccomp filter (`chronyd -F 1`). The kernel stops chronyd if it uses a system call that is not on its list. |
 | SSH | Keys only; modern key exchange (ML-KEM hybrid), ciphers and MACs. OpenSSH has no OpenSSL dependency. |
 
@@ -60,8 +60,9 @@ KLOS does not yet protect against:
 - A person with physical access who reads the passphrase (for example
   with a keyboard logger).
 - A compromised upstream project that signs a bad release.
-- A compromised bootstrap builder. The planned fix is a second, independent
-  build that compares the results (see [status.md](status.md)).
+- A compromised builder. KLOS builds its builder itself, and the first
+  seed was checked with two independent bootstrap distributions (read
+  [build-system.md](build-system.md)).
 
 ## Report a security problem
 

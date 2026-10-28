@@ -29,12 +29,15 @@ func extractTarball(tarball, dest string, excludes []string) {
 }
 
 // hostRoot extracts a host package one time and returns its root directory.
+// The directory name comes from the content of the package (not from the
+// input hash, which includes the builder), because some builds keep the
+// path in their output (for example libtool and the Python configuration).
 func hostRoot(name string) string {
 	m := pkgMeta(name)
 	if m == nil {
 		die("host package %q is not built", name)
 	}
-	root := filepath.Join(WORK, "host", name, m.Input[:16])
+	root := filepath.Join(WORK, "host", name, m.SHA256[:16])
 	if !exists(filepath.Join(root, ".done")) {
 		removeAll(filepath.Dir(root))
 		extractTarball(pkgTarball(name), root, nil)
@@ -50,7 +53,7 @@ func toolchainRoot() string {
 	if a == nil || b == nil {
 		die("the toolchain (llvm, compiler-rt) is not built")
 	}
-	root := filepath.Join(WORK, "host", "toolchain", a.Input[:12]+"-"+b.Input[:12])
+	root := filepath.Join(WORK, "host", "toolchain", a.SHA256[:12]+"-"+b.SHA256[:12])
 	if !exists(filepath.Join(root, ".done")) {
 		removeAll(filepath.Dir(root))
 		extractTarball(pkgTarball("llvm"), root, nil)
@@ -255,7 +258,7 @@ endian = 'little'
 [properties]
 sys_root = '%[3]s'
 # Run target programs only with the exe_wrapper: a builder that is not
-# musl (for example arch-1) has no /lib/ld-musl-x86_64.so.1.
+# musl has no /lib/ld-musl-x86_64.so.1.
 needs_exe_wrapper = true
 
 [built-in options]

@@ -2,64 +2,66 @@
 
 ## Host requirements
 
-The host needs these programs:
+The host needs these programs and files:
 
 - Podman (rootless Podman is sufficient)
-- curl, gpg (with gpgv) and sha256sum, to verify the bootstrap builder
+- sha256sum, to check the seed
 - `/dev/kvm`, for the QEMU tests (without it, the tests are very slow)
+- the seed: the image of the KLOS builder,
+  `cache/builder/klos-builder-<hash>.tar`. The hash is the start of the
+  SHA-256 value in `builder/seed.conf`. Copy the file from a KLOS release
+  or from a computer that has it.
 
 The build uses approximately 40 GB of disk space and 16 GB of memory.
 
 ## Procedure
 
-1. Make the bootstrap builder image:
+1. Import the KLOS builder:
 
    ```sh
    ./klos bootstrap
    ```
 
-   The command downloads the Alpine minirootfs. It checks the SHA-256 value
-   and the OpenPGP signature. Then it builds the container images
-   `localhost/klos-builder` (`alpine-1`) and `localhost/klos-tester`.
+   The command checks the SHA-256 value of the seed and imports it as the
+   container image `localhost/klos-builder:<hash>`.
 
-2. Make the KLOS builder (`alpine-2`):
-
-   ```sh
-   ./klos stage2
-   ```
-
-   The bootstrap builder compiles the LLVM toolchain and all build tools.
-   This takes some hours with 8 processor cores. Read
-   [build-system.md](build-system.md) for the stages.
-
-3. Build a flavor with the KLOS builder:
+2. Build a flavor:
 
    ```sh
    ./klos image server
    ```
 
-   The first build compiles the LLVM toolchain again. Later builds use the
-   packages that are already built.
+   The first build compiles the LLVM toolchain. This takes approximately
+   one hour with 8 processor cores. Later builds use the packages that are
+   already built.
 
-4. Make an installer image:
+3. Make an installer image:
 
    ```sh
    ./klos installer server
    ```
 
-5. Test the flavor in QEMU:
+4. Test the flavor in QEMU:
 
    ```sh
    ./klos test server
+   ```
+
+5. (Optional) Build the KLOS builder again and check that it is the same
+   as the seed:
+
+   ```sh
+   ./klos builder
    ```
 
 ## Commands
 
 | Command | Function |
 |---------|----------|
-| `./klos bootstrap [alpine\|arch]` | Verify the bootstrap tarball and make the bootstrap builder image (`alpine-1` or `arch-1`). |
-| `./klos stage2 [alpine\|arch]` | Build the KLOS builder (`alpine-2` or `arch-2`) with the bootstrap builder. |
-| `./klos compare <flavor>` | Compare the builds of `alpine-2` and `arch-2`. |
+| `./klos bootstrap` | Check the seed and import it as the builder image. |
+| `./klos builder [-update]` | Build the KLOS builder in the KLOS builder and compare it with the seed. `-update` makes the new builder the seed. |
+| `./klos compare -a A -b B <flavor>` | Compare the builds of two builders (`out/A` and `out/B`). |
+| `./klos check-sources` | Check the SHA-256 value and the signature of all sources again. |
 | `./klos selinux <flavor>` | Compile the SELinux policy of a flavor (read [selinux.md](selinux.md)). |
 | `./klos shell` | Open a shell in the builder (no network). |
 | `./klos check` | Run gofmt, go vet and the Go unit tests of kbuild and the klos tool. |
@@ -77,7 +79,7 @@ The build uses approximately 40 GB of disk space and 16 GB of memory.
 
 ## The network
 
-Only the `bootstrap` and `fetch` steps use the network. All build steps run
+Only the `fetch` and `check-sources` steps use the network. All build steps run
 in a container without a network (`podman run --network=none`). The `build`,
 `image`, `installer`, `verify` and `test` commands run `fetch` first.
 
@@ -88,7 +90,8 @@ in a container without a network (`podman run --network=none`). The `build`,
 | `cache/sources/` | Downloaded source files. |
 | `out/<builder>/pkgs/` | Packages (`<name>.tar.zst`) and their metadata (`<name>.json`). |
 | `out/<builder>/images/<flavor>/<version>/` | The OS image, the EFI binaries, the update bundle and the installer. |
-| `out/<bootstrap>-1/builder/` | The root file system of the KLOS builder. |
+| `out/klos/builder/` | The root file system of a new KLOS builder (`./klos builder`). |
+| `cache/builder/` | The seed (`klos-builder-<hash>.tar`). |
 | `work/<builder>/` | Temporary build directories and the build logs (`work/<builder>/logs/`). |
 | `secrets/` | The private keys: update bundles (`bundle.key`), Secure Boot (`secureboot/`) and kernel modules (`module-signing.pem`). Do not put this in Git. |
 
@@ -96,7 +99,8 @@ in a container without a network (`podman run --network=none`). The `build`,
 
 | Variable | Function |
 |----------|----------|
-| `KLOS_BUILDER` | The builder of the build commands: `alpine-1`, `alpine-2` (default), `arch-1` or `arch-2`. |
+| `KLOS_BUILDER` | The name of the output directories (`out/<name>`, `work/<name>`; default `klos`). |
+| `KLOS_IMAGE` | A different builder image (for example an older builder). |
 | `KLOS_JOBS` | The number of parallel compile jobs (default: all processors). |
 | `KLOS_VERSION` | Use a different OS version than `config/klos.toml`. |
 | `SOURCE_DATE_EPOCH` | Use a different time stamp than `config/klos.toml`. |

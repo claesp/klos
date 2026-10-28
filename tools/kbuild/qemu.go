@@ -29,8 +29,9 @@ const (
 	testPassphrase = "klos-test-passphrase"
 	testPassword   = "klos-test"
 	testPIN        = "246813"
-	ovmfCode       = "/usr/share/OVMF/OVMF_CODE.fd"
-	ovmfVars       = "/usr/share/OVMF/OVMF_VARS.fd"
+	// OVMF of the KLOS builder (host package ovmf).
+	ovmfCode = "/" + toolchainPrefix + "/share/ovmf/OVMF_CODE.fd"
+	ovmfVars = "/" + toolchainPrefix + "/share/ovmf/OVMF_VARS.fd"
 )
 
 type vm struct {
@@ -265,9 +266,8 @@ func (v *vm) waitBlessed(version string) {
 	logf("test: version %s is blessed", version)
 }
 
-// testPlan lists the files of a test. "test-images" makes them in the
-// builder, and "test -prebuilt" runs the virtual machines in the test
-// image (which has QEMU and swtpm).
+// testPlan lists the files of a test. "test-images" makes them, and "test
+// -prebuilt" runs the virtual machines with them ("test" does both).
 type testPlan struct {
 	Flavor     string `json:"flavor"`
 	V1         string `json:"v1"` // the installed version

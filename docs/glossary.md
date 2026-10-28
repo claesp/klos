@@ -3,7 +3,8 @@
 | Term | Meaning |
 |------|---------|
 | bless | Mark an OS version as good after a trial boot (`klos bless`). |
-| bootstrap builder | The Alpine container that builds KLOS. It is not part of KLOS. |
+| KLOS builder | The container image that builds and tests KLOS. It contains only KLOS packages, and KLOS builds it itself. |
+| seed | The image (a tarball) of the KLOS builder that `builder/seed.conf` identifies with its SHA-256 value. |
 | bundle | A signed tar file with a new OS version (read [updates.md](updates.md)). |
 | dm-verity | A Linux device-mapper target that verifies each block with a hash tree. |
 | EFI stub | A Linux kernel that the UEFI firmware can start directly. |

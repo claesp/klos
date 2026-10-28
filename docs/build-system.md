@@ -3,65 +3,68 @@
 `kbuild` (in `tools/kbuild/`) is the KLOS build tool. It is a Go program.
 The `./klos` script compiles it in the builder container and starts it.
 
-## Builders and stages
+## The KLOS builder
 
-A builder is a container image that kbuild runs in. Its name is
-`<bootstrap>-<stage>`:
+All build and test commands run in the KLOS builder: a container image
+that contains only KLOS packages. The packages are in
+`manifests/builder.toml`:
 
-| Builder | Contents |
-|---------|----------|
-| `alpine-1` | The Alpine bootstrap builder. Alpine supplies the build tools and the first compiler (Clang). |
-| `arch-1` | The Arch Linux bootstrap builder. Arch supplies the build tools and the first compiler (GCC, with glibc). |
-| `alpine-2` | The KLOS builder that `alpine-1` made. It contains only KLOS packages. This is the default builder. |
-| `arch-2` | The KLOS builder that `arch-1` made. |
+- the native compiler (package `clang`: Clang, lld and the LLVM tools)
+- the shell and file tools, Make, CMake, Meson, Perl and Python
+- the image tools (erofs-utils, dosfstools, mtools, cryptsetup, kmod)
+- the test tools (QEMU, swtpm and the OVMF firmware)
+- the Go toolchain (the official binary release of go.dev)
 
-The stages:
-
-1. **Stage 1.** A bootstrap builder compiles the KLOS cross toolchain (the
-   package `llvm`) with its own compiler. Then it builds the packages of
-   `manifests/builder.toml` with the KLOS toolchain: a native Clang, the
-   shell and file tools, Make, CMake, Meson, Perl, Python, the image tools
-   and the Go toolchain.
-2. `./klos stage2 <bootstrap>` puts these packages together in a root file
-   system (`out/<bootstrap>-1/builder/klos-builder.tar`) and imports it as
-   the container image of `<bootstrap>-2`.
-3. **Stage 2.** The KLOS builder builds the KLOS toolchain again with the
-   native Clang of stage 1. Then it builds all packages and images. No
-   software of the bootstrap distribution is in this stage.
-
-The lock files (`manifests/<flavor>.lock`) come from `alpine-2`.
-
-Two bootstrap builders that have no common software (Alpine with musl and
-Clang, Arch Linux with glibc and GCC) must give the same stage 2 results.
-If they do not, one of the bootstrap builders (or its compiler) changed
-the KLOS toolchain. This is "diverse double compiling":
+KLOS builds its builder itself:
 
 ```sh
-./klos bootstrap arch
-./klos stage2 arch
-KLOS_BUILDER=arch-2 ./klos image server
-./klos compare server
+./klos builder
 ```
 
-`./klos compare <flavor>` compares the image hashes, the kernel and the
-package hashes of `alpine-2` and `arch-2`. The toolchain packages
-(`[[tool]]` in the lock file) can be different; the command shows these
-differences, but they are not an error.
+The command builds the packages of `manifests/builder.toml` in the KLOS
+builder and writes the root file system of a new builder
+(`out/klos/builder/klos-builder.tar`, a reproducible tar archive). Then it
+compares the new builder with the seed. If they are the same, the builder
+is a fixed point: it builds itself without a change.
 
-The file `/etc/klos-builder.conf` of each builder tells kbuild the
-compilers of the builder:
+```sh
+./klos builder -update
+```
+
+This command also makes the new builder the seed: it copies the tarball
+to `cache/builder/klos-builder-<hash>.tar`, writes its SHA-256 value to
+`builder/seed.conf` and imports the image. Use it after a change of a
+builder package, and run `./klos builder` again to check the fixed point.
+
+`./klos bootstrap` checks the SHA-256 value of the seed and imports it as
+the container image `localhost/klos-builder:<hash>`. A new computer needs
+the seed tarball from a KLOS release or from a computer that has it.
+
+### How the first seed was made
+
+The first KLOS builder came from a bootstrap distribution: Alpine Linux
+compiled the KLOS toolchain, and the toolchain compiled the builder
+packages. Then the KLOS builder built all packages again with only KLOS
+software. A second, independent bootstrap with Arch Linux (GCC and glibc
+instead of Clang and musl) gave the same images, packages and toolchain
+for all three flavors (diverse double compiling). After that, KLOS built
+its builder with the KLOS builder, and the bootstrap distributions were
+removed from the repository.
+
+### The builder configuration
+
+The file `/etc/klos-builder.conf` of the builder tells kbuild the
+compilers of the builder (`conf` in `manifests/builder.toml`):
 
 | Key | Meaning |
 |-----|---------|
-| `build-triple` | The `--build` triple of configure scripts. It is never the target triple, so configure scripts do cross builds in all stages: they do not run test programs. |
+| `build-triple` | The `--build` triple of configure scripts. It is never the target triple, so configure scripts do cross builds: they do not run test programs. |
 | `host-cc`, `host-cxx` | The compilers of host packages (for example the KLOS toolchain). |
 | `build-cc` | The compiler of programs that a target build runs at build time (`CC_FOR_BUILD`). |
 
-The tests run QEMU in the test image (`alpine-1` with QEMU, OVMF and
-swtpm). The builder makes the test images first (`kbuild test-images`),
-then the test image runs the virtual machines (`kbuild test -prebuilt`).
-Only the downloads (`fetch`) always use `alpine-1`, because they need
-`gpgv` and `minisign`.
+`./klos compare -a A -b B <flavor>` compares the image hashes, the kernel
+and the package hashes of the builds in `out/A` and `out/B` (for example
+of two builder generations, with `KLOS_BUILDER` set to different names).
 
 ## Package builds
 
@@ -123,9 +126,8 @@ kbuild removes the usual causes of differences between builds:
 - The initramfs is a cpio archive that kbuild writes itself, with a sorted
   order and fixed values.
 - The kernel build has a fixed time stamp, user name and host name.
-- All builders have the same build paths: `./klos` mounts the work
-  directory of the builder at `/build`. All builder containers have the
-  host name `klos`.
+- All builds have the same build paths: `./klos` mounts the work
+  directory at `/build`. The builder container has the host name `klos`.
 - A build cannot see the KLOS Git repository (`GIT_CEILING_DIRECTORIES`),
   and the LLVM packages do not put a Git revision in the version string
   (`LLVM_APPEND_VC_REV=OFF`). Otherwise the compiler would put the KLOS
@@ -138,8 +140,8 @@ kbuild removes the usual causes of differences between builds:
 `./klos verify <flavor>` builds all target packages, the kernel and the
 image again, with the same build paths, into `out/<builder>/verify/`.
 Then it compares the result with the lock file. The host tools (llvm, go)
-are not built again. The `[[tool]]` entries can be different (for example
-on `arch-2`); only the image, the kernel and the packages must be the same.
+are not built again. Only the image, the kernel and the packages must be
+the same; the `[[tool]]` entries are for information.
 
 ## Images
 

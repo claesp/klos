@@ -7,10 +7,9 @@ This document shows what works now and what is planned. "Tested" means that
 
 | Function | State |
 |----------|-------|
-| Verified bootstrap builder (Alpine minirootfs, SHA-256 and OpenPGP) | Works |
 | LLVM 23 cross toolchain, musl 1.2.6, libc++ (hardened) | Works |
 | Verified sources (SHA-256 for all, OpenPGP or published values for most) | Works |
-| Reproducible packages and images (input hashes, fixed time stamps, sorted archives) | Checked: `./klos verify` on `alpine-2` gave the same images as the lock files for all three flavors |
+| Reproducible packages and images (input hashes, fixed time stamps, sorted archives) | Checked: `./klos verify` gave the same images as the lock files for all three flavors |
 | Server flavor: install, LUKS2, LVM, erofs + dm-verity, `/etc` overlay | Tested |
 | Signed update bundles, trial boot with watchdog, bless, rollback | Tested |
 | Merge of new system users and groups into the local `/etc/passwd`, `/etc/group` and `/etc/shadow` after an update | Tested |
@@ -21,8 +20,8 @@ This document shows what works now and what is planned. "Tested" means that
 | TPM2 unlock (PCR 7 and 15, salted sessions, passphrase fallback, new enrollment) | Tested (swtpm) |
 | TPM PIN (PolicyAuthValue, TPM lockout protection, wrong PIN refused) | Tested (swtpm) |
 | No setuid programs, no scripts except the shell and the dhcpcd hook | Tested (build check and test) |
-| KLOS builder (stage 2): all build tools built by KLOS; Alpine supplies only the first compiler | Tested (`alpine-2` builds all three flavors; all tests pass) |
-| Two independent bootstrap builders (Alpine with Clang and musl, Arch Linux with GCC and glibc) | Checked: `./klos compare` gives the same image, kernel, packages and toolchain from `alpine-2` and `arch-2` for all three flavors |
+| KLOS builds itself: the KLOS builder (only KLOS packages, with QEMU, swtpm and OVMF for the tests) builds the next KLOS builder | See below |
+| The first builder was checked with two independent bootstrap distributions (Alpine with Clang and musl, Arch Linux with GCC and glibc): the same images, packages and toolchain for all three flavors | Checked (diverse double compiling); the bootstrap distributions are no longer in the repository |
 | SELinux in enforcing mode (KLOS policy, labeled erofs image, no mode or policy change after boot, W^X, confined dhcpcd and chronyd) | Tested (no denials in the test) |
 | Kubernetes flavor: containerd, crun, CNI plugins, kubelet, kubeadm | Tested (preflight, not a full cluster) |
 | Desktop flavor: sway, foot, seatd, devd | Tested (headless sway) |

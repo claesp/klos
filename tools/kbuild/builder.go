@@ -2,15 +2,13 @@
 
 package main
 
-// The KLOS builder (stage 2). Read docs/build-system.md.
+// The KLOS builder. Read docs/build-system.md.
 //
-// The bootstrap builder (stage 1, for example Alpine) builds the packages
-// of manifests/builder.toml: the toolchain and all build tools, as KLOS
-// packages. "builder-image" puts them together in a root file system, and
-// "./klos stage2" makes a container image from it. Then the KLOS builder
-// builds all packages and images again, with only KLOS software. Two
-// bootstrap builders that are not the same must give the same stage 2
-// results ("./klos compare").
+// The KLOS builder builds the packages of manifests/builder.toml: the
+// toolchain, the build tools and the test tools. "builder-image" puts them
+// together in a root file system, and "./klos builder" makes a container
+// image from it. KLOS thus builds its own builder. If the new builder is
+// the same as the builder that built it, the builder is a fixed point.
 
 import (
 	"bufio"

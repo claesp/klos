@@ -18,7 +18,6 @@ in the recipes (`key = ["musl"]` is `keys/musl.asc`).
 
 | Key file | Owner | Fingerprint | Origin |
 |----------|-------|-------------|--------|
-| alpine-ncopa.asc | Natanael Copa (Alpine) | 0482 D840 22F5 2DF1 C4E7 CD43 293A CD09 07D9 495A | alpinelinux.org/keys |
 | llvm.asc | LLVM release managers | D574 BD5D 1D0E 9889 5E3B F900 44F2 485E 45D5 9042 (and others) | releases.llvm.org/release-keys.asc |
 | musl.asc | musl libc | 8364 8929 0BB6 B70F 99FF DA05 56BC DB59 3020 450F | musl.libc.org/musl.pub |
 | kernel-gregkh.asc | Greg Kroah-Hartman | 647F 2865 4894 E3BD 4571 99BE 38DB BDC8 6092 693E | kernel.org pgpkeys |
@@ -49,7 +48,6 @@ in the recipes (`key = ["musl"]` is `keys/musl.asc`).
 | expat-sping.asc | Sebastian Pipping | 3176 EF7D B236 7F1F CA4F 306B 1F9B 0E90 9AF3 7285 | keyserver.ubuntu.com |
 | freetype-wl.asc | Werner Lemberg | E306 7470 7856 409F F194 8010 BE6C 3AAC 63AD 8E3F | keyserver.ubuntu.com |
 | dnkl.asc | Daniel Eklöf (Git signing) | B199 64FB BA09 664C C810 27ED 5BBD 4992 C116 573F | keyserver.ubuntu.com |
-| archlinux-pierre.asc | Pierre Schmitz (Arch Linux releases) | 3E80 CA1A 8B89 F69C BA57 D98A 76A5 EF90 5444 9A5C | keyserver.ubuntu.com, compared with archlinux.org/download and pierre-schmitz.com |
 | selinux-lautrbach.asc | Petr Lautrbach (SELinux userspace) | 68D2 1823 342A 1368 3AEB 3E4E FB4C 685B 5DC1 C13E | keyserver.ubuntu.com, compared with keys.openpgp.org and github.com/bachradsusi |
 | openssl.asc | OpenSSL | B146 647E 45A7 B339 47AB 226B 2A2C 87D1 6169 2D40 | keyserver.ubuntu.com, compared with openssl-library.org |
 | python-wouters.asc | Thomas Wouters (Python 3.12 and 3.13) | 7169 605F 62C7 5135 6D05 4A26 A821 E680 E5FA 6305 | keyserver.ubuntu.com, compared with keys.openpgp.org and python.org |
@@ -111,10 +109,16 @@ only a pinned SHA-256 value:
 
 ## The trust chain
 
-1. The host verifies the Alpine minirootfs (SHA-256 and OpenPGP signature).
-2. apk in the builder verifies each Alpine package with the Alpine keys in
-   the minirootfs.
-3. kbuild verifies each source (SHA-256 and the signature, if available).
-4. kbuild signs each update bundle with the KLOS key (Ed25519).
-5. The installed system verifies the update bundles with its public key,
+1. The host verifies the seed (the image of the KLOS builder) with the
+   SHA-256 value in `builder/seed.conf`.
+2. kbuild verifies each source (SHA-256 and the signature, if available).
+   kbuild checks OpenPGP and minisign signatures itself (Go); it needs no
+   gpgv or minisign program.
+3. kbuild signs each update bundle with the KLOS key (Ed25519).
+4. The installed system verifies the update bundles with its public key,
    and dm-verity verifies each block of the OS image when it reads it.
+
+The first seed came from a build that started with Alpine Linux. A second
+build that started with Arch Linux (GCC and glibc) gave the same images,
+packages and toolchain (diverse double compiling). Since then, only KLOS
+builds KLOS.

@@ -1,10 +1,9 @@
-# The KLOS builder (stage 2). Read docs/build-system.md.
+# The KLOS builder. Read docs/build-system.md.
 #
-# A bootstrap builder (alpine-1 or arch-1) builds these packages, and
-# "./klos stage2" makes a container image from them. The KLOS builder then
-# builds all packages and images again with only this software. The
-# packages here are build tools; the OS images do not contain them unless
-# a flavor manifest also lists them.
+# "./klos builder" builds these packages in the KLOS builder and makes a
+# new builder image from them: KLOS builds itself. The packages here are
+# build and test tools; the OS images do not contain them unless a flavor
+# manifest also lists them.
 
 [builder]
 packages = [
@@ -25,13 +24,16 @@ packages = [
   "erofs-utils", "dosfstools", "mtools", "cryptsetup", "kmod",
   # Libraries for the kernel build (objtool, module signing).
   "elfutils", "openssl",
+  # The test tools: QEMU and a software TPM.
+  "qemu", "swtpm",
 ]
-# The Go toolchain compiles kbuild and the Go packages.
-host-packages = ["go"]
+# The Go toolchain compiles kbuild and the Go packages. OVMF is the UEFI
+# firmware of the test virtual machines.
+host-packages = ["go", "ovmf"]
 
 # The compilers of the KLOS builder. The build triple is not the target
-# triple, so configure scripts do cross builds (as in stage 1): they do not
-# run test programs.
+# triple, so configure scripts do cross builds: they do not run test
+# programs.
 conf = """
 # The compilers of the KLOS builder (docs/build-system.md).
 build-triple = x86_64-klosbuild-linux-musl

@@ -39,10 +39,11 @@ The installer of the test enrolls the KLOS Secure Boot keys, so steps 4 to
 (`klos tpm enroll`), and it checks that the TPM unlocks each later boot,
 also the trial boot of the update.
 
-The test virtual machine has a software TPM (swtpm). The test image
-`localhost/klos-tester` has swtpm; `./klos bootstrap` makes it.
+The test virtual machine has a software TPM (swtpm) and the OVMF firmware
+with Secure Boot. QEMU, swtpm and OVMF are KLOS packages in the KLOS
+builder (`qemu`, `swtpm`, `ovmf`).
 
-The console logs are in `work/test/<flavor>/`. To see the console during the
+The console logs are in `work/klos/test/<flavor>/`. To see the console during the
 test, set `KLOS_TEST_VERBOSE=1`.
 
 ## Flavor checks

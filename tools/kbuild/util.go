@@ -24,9 +24,8 @@ var (
 	SDE                                                    int64
 	VERSION                                                string
 	JOBS                                                   string
-	// BUILDER is the name of the builder: <bootstrap>-<stage>, for
-	// example alpine-1 (the bootstrap builder) or alpine-2 (the KLOS
-	// builder that alpine-1 made). Read docs/build-system.md.
+	// BUILDER is the name of the output directories of the builder
+	// (out/<name>, work/<name>; default klos). Read docs/build-system.md.
 	BUILDER string
 	// BCONF is /etc/klos-builder.conf of the builder.
 	BCONF BuilderConf
@@ -34,7 +33,7 @@ var (
 
 const (
 	toolchainPrefix = "opt/klos/toolchain"
-	kbuildVersion   = "kbuild-v1"
+	kbuildVersion   = "kbuild-v2"
 	builderConfPath = "/etc/klos-builder.conf"
 )
 
@@ -117,7 +116,7 @@ func initPaths() {
 	SRCCACHE = filepath.Join(CACHE, "sources")
 	BUILDER = os.Getenv("KLOS_BUILDER")
 	if BUILDER == "" {
-		BUILDER = "alpine-2"
+		BUILDER = "klos"
 	}
 	OUT = filepath.Join(TOP, "out", BUILDER)
 	PKGOUT = filepath.Join(OUT, "pkgs")

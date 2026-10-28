@@ -4,7 +4,8 @@
 
 The KLOS toolchain is the host package `llvm` (`pkgs/llvm/recipe.toml`).
 
-1. The bootstrap compiler (Clang from Alpine) compiles LLVM, Clang and lld.
+1. The native Clang of the KLOS builder (package `clang`) compiles LLVM,
+   Clang and lld.
    The new compiler has these defaults:
    - target `x86_64-unknown-linux-musl`
    - run-time library `compiler-rt` (not libgcc)
@@ -18,8 +19,9 @@ The KLOS toolchain is the host package `llvm` (`pkgs/llvm/recipe.toml`).
    (`pkgs/llvm-runtimes`). libc++ uses the "fast" hardening mode.
 5. The new compiler compiles all other target packages.
 
-No compiler from Alpine compiles target code. The Alpine GCC compiles only
+The native Clang of the builder compiles only the toolchain and the
 build-time helper programs (for example the kconfig tools of the kernel).
+The KLOS toolchain compiles all target code.
 
 ## The C library
 

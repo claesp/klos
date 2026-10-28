@@ -1,0 +1,107 @@
+# OVMF, the UEFI firmware of QEMU (EDK II), with Secure Boot and TPM 2.0. A
+# host tool: "./klos test" starts the test virtual machines with it. The
+# images do not contain it.
+#
+# EDK II publishes the Git tag only. The sources are the archives of the
+# tag and of the Git submodules (the commits of the tag). Upstream does
+# not sign them. The SHA-256 values are pinned.
+[package]
+name = "ovmf"
+version = "202608"
+summary = "UEFI firmware for QEMU (OVMF)"
+license = "BSD-2-Clause-Patent"
+homepage = "https://github.com/tianocore/edk2"
+kind = "host"
+host-depends = ["nasm", "acpica"]
+
+[[source]]
+url = "https://github.com/tianocore/edk2/archive/refs/tags/edk2-stable202608.tar.gz"
+sha256 = "bac40812213576c3025cf780c33d882f9e087a44201b1cd28a07f6d1eb54b76a"
+filename = "edk2-stable202608.tar.gz"
+
+[[source]]
+url = "https://github.com/openssl/openssl/archive/8cf17aaeb4599f8af87fefd810b5b5fee90fe69e.tar.gz"
+sha256 = "03154360ff8808ac38da7530cd69d211e105683e077e9835e48161493c3d0050"
+filename = "openssl-8cf17aaeb4599f8af87fefd810b5b5fee90fe69e.tar.gz"
+dest = "sub"
+
+[[source]]
+url = "https://github.com/google/brotli/archive/e230f474b87134e8c6c85b630084c612057f253e.tar.gz"
+sha256 = "a9ba3940267de5dd73581a47c2e81b3eb1e1df6a704138c599020d66f3677a92"
+filename = "brotli-e230f474b87134e8c6c85b630084c612057f253e.tar.gz"
+dest = "sub"
+
+[[source]]
+url = "https://github.com/kkos/oniguruma/archive/4ef89209a239c1aea328cf13c05a2807e5c146d1.tar.gz"
+sha256 = "70bfed97ee8390f5ac08fea28e3e930a3b33df871c6fc1888c8d436c6c6b755d"
+filename = "oniguruma-4ef89209a239c1aea328cf13c05a2807e5c146d1.tar.gz"
+dest = "sub"
+
+[[source]]
+url = "https://github.com/MIPI-Alliance/public-mipi-sys-t/archive/370b5944c046bab043dd8b133727b2135af7747a.tar.gz"
+sha256 = "9fda3b9a78343ab2be6f06ce6396536e7e065abac29b47c8eb2e42cbb4c4f00b"
+filename = "public-mipi-sys-t-370b5944c046bab043dd8b133727b2135af7747a.tar.gz"
+dest = "sub"
+
+[[source]]
+url = "https://github.com/devicetree-org/pylibfdt/archive/cfff805481bdea27f900c32698171286542b8d3c.tar.gz"
+sha256 = "1193910f475fde07f3cd4fe1c1a353d69b8cedb574967134838fcdc8208d224e"
+filename = "pylibfdt-cfff805481bdea27f900c32698171286542b8d3c.tar.gz"
+dest = "sub"
+
+[[source]]
+url = "https://github.com/DMTF/libspdm/archive/f55cf6d48ec69b4ac60a63903e9c6a2cb0fd155d.tar.gz"
+sha256 = "a815aa38874d2c82255f379a7ee1eb07cccbb439a7788ff14316fce52d61a516"
+filename = "libspdm-f55cf6d48ec69b4ac60a63903e9c6a2cb0fd155d.tar.gz"
+dest = "sub"
+
+[[source]]
+url = "https://github.com/ARMmbed/mbedtls/archive/0bebf8b8c7f07abe3571ded48a11aa907a1ffb20.tar.gz"
+sha256 = "61ac65f6362f898677b2a4cf2a769b41e4aee0985cb45f046d3b719388e5be59"
+filename = "mbedtls-0bebf8b8c7f07abe3571ded48a11aa907a1ffb20.tar.gz"
+dest = "sub"
+
+[[source]]
+url = "https://github.com/TrustedComputingGroup/TPM/archive/bc29a21d44b01396223c152a4834e52318591770.tar.gz"
+sha256 = "e634a4a3834d069e327da44d151d77915d3bd6e2ee8763c35f291b450a863083"
+filename = "TPM-bc29a21d44b01396223c152a4834e52318591770.tar.gz"
+dest = "sub"
+
+[build]
+script = '''
+cp -a ../sub/openssl-8cf17aaeb4599f8af87fefd810b5b5fee90fe69e/. CryptoPkg/Library/OpensslLib/openssl/
+cp -a ../sub/brotli-e230f474b87134e8c6c85b630084c612057f253e/. MdeModulePkg/Library/BrotliCustomDecompressLib/brotli/
+cp -a ../sub/oniguruma-4ef89209a239c1aea328cf13c05a2807e5c146d1/. MdeModulePkg/Universal/RegularExpressionDxe/oniguruma/
+cp -a ../sub/public-mipi-sys-t-370b5944c046bab043dd8b133727b2135af7747a/. MdePkg/Library/MipiSysTLib/mipisyst/
+cp -a ../sub/pylibfdt-cfff805481bdea27f900c32698171286542b8d3c/. MdePkg/Library/BaseFdtLib/libfdt/
+cp -a ../sub/libspdm-f55cf6d48ec69b4ac60a63903e9c6a2cb0fd155d/. SecurityPkg/DeviceSecurity/SpdmLib/libspdm/
+cp -a ../sub/mbedtls-0bebf8b8c7f07abe3571ded48a11aa907a1ffb20/. CryptoPkg/Library/MbedTlsLib/mbedtls/
+cp -a ../sub/TPM-bc29a21d44b01396223c152a4834e52318591770/. TcgTpmPkg/Library/TpmLib/TPM/
+cp -a ../sub/brotli-e230f474b87134e8c6c85b630084c612057f253e/. BaseTools/Source/C/BrotliCompress/brotli/
+export PATH="$HOST_NASM/$TOOLCHAIN_PREFIX/bin:$HOST_ACPICA/$TOOLCHAIN_PREFIX/bin:$PATH"
+# Newer Clang versions have more warnings, and BaseTools uses -Werror.
+make -C BaseTools -j"$JOBS" CC="$CC" CXX="$CXX" CLANG=1 EXTRA_OPTFLAGS=-Wno-error
+export WORKSPACE="$S" PYTHON_COMMAND=python3
+# edksetup.sh uses variables that are not set (bash -u stops it).
+set +u
+. ./edksetup.sh
+set -u
+# This Clang has warnings that EDK II does not know, and EDK II uses
+# -Werror. CLANG_BIN is the path prefix of the CLANGDWARF tools: a wrapper
+# adds -Wno-error. OVMF is a test tool only.
+W="$S/clang-bin"
+mkdir -p "$W"
+for t in /usr/bin/llvm-* /usr/bin/ld.lld /usr/bin/lld /usr/bin/clang++; do
+	[ -e "$t" ] && ln -sf "$t" "$W/"
+done
+printf '#!/bin/sh\nexec /usr/bin/clang "$@" -Wno-error\n' > "$W/clang"
+chmod +x "$W/clang"
+export CLANG_BIN="$W/"
+build -a X64 -t CLANGDWARF -b RELEASE -n "$JOBS" -p OvmfPkg/OvmfPkgX64.dsc \
+	-D SECURE_BOOT_ENABLE=TRUE -D TPM2_ENABLE=TRUE -D SMM_REQUIRE=FALSE \
+	-D NETWORK_ENABLE=FALSE
+FV=Build/OvmfX64/RELEASE_CLANGDWARF/FV
+for f in OVMF_CODE.fd OVMF_VARS.fd; do
+	install -D -m 0644 "$FV/$f" "$DESTDIR$PREFIX/share/ovmf/$f"
+done
+'''

@@ -30,21 +30,21 @@ KLOS has these flavors:
   starts the previous version.
 - Manifests in `manifests/` describe each flavor. Lock files record the
   result of each build, so that you can do the same build again.
-- A bootstrap distribution (Alpine) supplies only the first compiler. KLOS
-  then builds its own build tools, and a builder with only KLOS software
-  builds the OS images. A second bootstrap distribution (Arch Linux, with
-  GCC and glibc) must give the same images.
+- KLOS builds itself: the KLOS builder contains only KLOS packages, and it
+  builds the next KLOS builder. The first builder was checked with two
+  independent bootstrap distributions (Alpine, and Arch Linux with GCC
+  and glibc), which gave the same images.
 - The user space uses musl, libc++, toybox, dinit and static Go tools. The
   installed system has no interpreted languages, except a POSIX shell for
   administration.
 
 ## Quick start
 
-The host needs Podman, QEMU support (`/dev/kvm`), curl, gpg and sha256sum.
+The host needs Podman, `/dev/kvm` (for the QEMU tests) and sha256sum, and the
+seed: the image of the KLOS builder (read [docs/building.md](docs/building.md)).
 
 ```sh
-./klos bootstrap        # verify Alpine and make the bootstrap builder image
-./klos stage2           # build the KLOS builder with the bootstrap builder
+./klos bootstrap        # check the seed (the KLOS builder image) and import it
 ./klos image server     # build the packages, the kernel and the OS image
 ./klos test server      # install in QEMU, boot, update and roll back
 ```

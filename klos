@@ -1,53 +1,39 @@
 #!/bin/sh
 # klos - host entry point for the KLOS build system.
 #
-# The host needs only: podman, curl, gpg (gpgv), sha256sum.
-# All other work runs in builder containers. A builder has the name
-# <bootstrap>-<stage> (read docs/build-system.md):
-#
-#   alpine-1  the Alpine bootstrap builder
-#   arch-1    the Arch Linux bootstrap builder (the second, independent one)
-#   alpine-2  the KLOS builder that alpine-1 made (the default)
-#   arch-2    the KLOS builder that arch-1 made
-#
-# KLOS_BUILDER selects the builder of the build commands.
+# The host needs only Podman and sha256sum. All work runs in the KLOS
+# builder: a container image that KLOS built itself (read
+# docs/build-system.md). builder/seed.conf has the SHA-256 value of the
+# builder image (the seed).
 set -eu
 
 TOP=$(cd "$(dirname "$0")" && pwd)
-. "$TOP/builder/alpine.conf"
-. "$TOP/builder/arch.conf"
-TESTER="localhost/klos-tester:$ALPINE_VERSION"
-BUILDER=${KLOS_BUILDER:-alpine-2}
+. "$TOP/builder/seed.conf"
+SEED_TAR="$TOP/cache/builder/klos-builder-$(echo "$SEED_SHA256" | cut -c1-16).tar"
+# KLOS_BUILDER names the output directories (out/<name>, work/<name>).
+# KLOS_IMAGE selects a different builder image (for example to make a new
+# seed from an old builder).
+BUILDER=${KLOS_BUILDER:-klos}
+IMAGE=${KLOS_IMAGE:-localhost/klos-builder:$(echo "$SEED_SHA256" | cut -c1-16)}
 
 die() { echo "klos: $*" >&2; exit 1; }
-
-# builder_image <builder>: the container image of a builder.
-builder_image() {
-	case $1 in
-	alpine-1) echo "localhost/klos-builder:$ALPINE_VERSION" ;;
-	arch-1) echo "localhost/klos-builder-arch:$ARCH_VERSION" ;;
-	alpine-2|arch-2) echo "localhost/klos-builder2:${1%-2}" ;;
-	*) die "unknown builder '$1' (use alpine-1, alpine-2, arch-1 or arch-2)" ;;
-	esac
-}
 
 usage() {
 	cat <<USAGE
 Usage: ./klos <command> [arguments]
 
 Host commands:
-  bootstrap [alpine|arch]
-                       Verify the bootstrap tarball and build the bootstrap
-                       builder image (alpine-1 or arch-1).
-  stage2 [alpine|arch] Build the KLOS builder (alpine-2 or arch-2) with the
-                       bootstrap builder.
-  compare <flavor>     Compare the builds of alpine-2 and arch-2.
+  bootstrap            Check the seed (the builder image tarball) and import it.
+  builder [-update]    Build the KLOS builder again in the KLOS builder and
+                       compare it with the seed. -update makes the new
+                       builder the seed.
   shell                Open a shell in the builder (no network).
   check                Run gofmt, go vet and the Go unit tests.
   keygen               Make a development key pair for update bundles.
 
-Build commands (run in the builder KLOS_BUILDER, default alpine-2):
+Build commands (run in the builder):
   fetch <target>...    Download and verify sources (uses the network).
+  check-sources        Check the SHA-256 value and signature of all sources.
   build <pkg>...       Build packages and their dependencies.
   image <flavor>       Build the OS image, kernel and update bundle.
   installer <flavor>   Build a bootable installer disk image.
@@ -58,112 +44,63 @@ Build commands (run in the builder KLOS_BUILDER, default alpine-2):
   list                 Show all recipes.
   revoke <klos.efi>... Make a signed dbx update that revokes EFI binaries.
   selinux <flavor>     Compile the SELinux policy of a flavor (for development).
+  compare -a A -b B <flavor>
+                       Compare the builds of two builders (out/A and out/B).
 
 Read docs/building.md for more information.
 USAGE
 }
 
-verify_alpine() {
-	cache="$TOP/cache/builder"
-	mkdir -p "$cache"
-	tarball="$cache/alpine-minirootfs-$ALPINE_VERSION.tar.gz"
-	[ -f "$tarball" ] || curl -fL -o "$tarball.part" "$ALPINE_URL" && \
-		{ [ -f "$tarball" ] || mv "$tarball.part" "$tarball"; }
-	[ -f "$tarball.asc" ] || curl -fL -o "$tarball.asc" "$ALPINE_URL.asc"
-	echo "$ALPINE_SHA256  $tarball" | sha256sum -c - >/dev/null \
-		|| die "SHA-256 mismatch for $tarball"
-	gnupghome=$(mktemp -d)
-	trap 'rm -rf "$gnupghome"' EXIT
-	gpg --homedir "$gnupghome" --quiet --batch --import "$TOP/keys/$ALPINE_KEY.asc" 2>/dev/null
-	gpg --homedir "$gnupghome" --batch --export "$ALPINE_KEY_FPR" > "$gnupghome/ring.gpg"
-	gpgv --keyring "$gnupghome/ring.gpg" "$tarball.asc" "$tarball" 2>/dev/null \
-		|| die "OpenPGP signature check failed for $tarball"
-	echo "klos: verified $(basename "$tarball") (SHA-256 and signature)"
-}
-
-verify_arch() {
-	cache="$TOP/cache/builder"
-	mkdir -p "$cache"
-	tarball="$cache/archlinux-bootstrap-$ARCH_VERSION-x86_64.tar.zst"
-	[ -f "$tarball" ] || { curl -fL -o "$tarball.part" "$ARCH_URL" && mv "$tarball.part" "$tarball"; }
-	[ -f "$tarball.sig" ] || curl -fL -o "$tarball.sig" "$ARCH_URL.sig"
-	echo "$ARCH_SHA256  $tarball" | sha256sum -c - >/dev/null \
-		|| die "SHA-256 mismatch for $tarball"
-	gnupghome=$(mktemp -d)
-	trap 'rm -rf "$gnupghome"' EXIT
-	gpg --homedir "$gnupghome" --quiet --batch --import "$TOP/keys/$ARCH_KEY.asc" 2>/dev/null
-	gpg --homedir "$gnupghome" --batch --export "$ARCH_KEY_FPR" > "$gnupghome/ring.gpg"
-	gpgv --keyring "$gnupghome/ring.gpg" "$tarball.sig" "$tarball" 2>/dev/null \
-		|| die "OpenPGP signature check failed for $tarball"
-	echo "klos: verified $(basename "$tarball") (SHA-256 and signature)"
+# import_image <tar> <image>: make a container image from a builder tarball.
+import_image() {
+	podman import --change 'ENV PATH=/usr/bin:/opt/klos/go/bin' --change 'ENV LANG=C.UTF-8' \
+		--change 'ENV LC_ALL=C.UTF-8' --change 'ENV TZ=UTC' --change 'WORKDIR /klos' \
+		"$1" "$2" >/dev/null
 }
 
 cmd_bootstrap() {
-	case ${1:-alpine} in
-	alpine) bootstrap_alpine ;;
-	arch) bootstrap_arch ;;
-	*) die "usage: bootstrap [alpine|arch]" ;;
-	esac
+	[ -f "$SEED_TAR" ] || die "no seed $SEED_TAR (copy it from a KLOS release or from a computer that has it)"
+	echo "$SEED_SHA256  $SEED_TAR" | sha256sum -c - >/dev/null || die "SHA-256 mismatch for $SEED_TAR"
+	import_image "$SEED_TAR" "$IMAGE"
+	echo "klos: builder image $IMAGE is ready (the seed, SHA-256 checked)"
 }
 
-bootstrap_alpine() {
-	verify_alpine
-	image=$(builder_image alpine-1)
-	ctx=$(mktemp -d)
-	cp "$TOP/builder/Containerfile" "$TOP/builder/packages.txt" "$TOP/builder/klos-builder-alpine.conf" "$ctx/"
-	cp "$TOP/cache/builder/alpine-minirootfs-$ALPINE_VERSION.tar.gz" "$ctx/alpine-minirootfs.tar.gz"
-	podman build --build-arg ALPINE_BRANCH="$ALPINE_BRANCH" -t "$image" "$ctx"
-	rm -rf "$ctx"
-	podman run --rm "$image" cat /etc/klos-builder.lock > "$TOP/builder/builder.lock"
-	echo "klos: builder image $image is ready"
-	podman build --build-arg BUILDER="$image" -t "$TESTER" -f "$TOP/builder/Containerfile.test" "$TOP/builder"
-	echo "klos: test image $TESTER is ready"
+# cmd_builder [-update]: KLOS builds its builder.
+cmd_builder() {
+	update=no
+	case ${1:-} in -update) update=yes ;; "") ;; *) die "usage: builder [-update]" ;; esac
+	(kbuild yes no fetch builder)
+	(kbuild no no builder-image)
+	tar="$TOP/out/$BUILDER/builder/klos-builder.tar"
+	sha=$(sha256sum "$tar" | cut -c1-64)
+	if [ "$sha" = "$SEED_SHA256" ]; then
+		echo "klos: the builder builds itself: the new builder is the same as the seed ($sha)"
+	else
+		echo "klos: the new builder is not the same as the seed"
+		echo "klos:   seed $SEED_SHA256"
+		echo "klos:   new  $sha"
+	fi
+	if [ "$update" = yes ]; then
+		mkdir -p "$TOP/cache/builder"
+		new="$TOP/cache/builder/klos-builder-$(echo "$sha" | cut -c1-16).tar"
+		cp "$tar" "$new"
+		printf '# The seed: the KLOS builder image (a tarball) that KLOS built itself.\n# "./klos builder -update" writes this file. Read docs/build-system.md.\nSEED_SHA256=%s\n' \
+			"$sha" > "$TOP/builder/seed.conf"
+		import_image "$new" "localhost/klos-builder:$(echo "$sha" | cut -c1-16)"
+		echo "klos: the new builder is the seed ($new)"
+	fi
 }
 
-bootstrap_arch() {
-	verify_arch
-	podman image exists "$(builder_image alpine-1)" || die "run './klos bootstrap alpine' first"
-	image=$(builder_image arch-1)
-	# The build context is large (the unpacked root); do not use /tmp.
-	mkdir -p "$TOP/work"
-	ctx=$(mktemp -d "$TOP/work/bootstrap.XXXXXX")
-	cp "$TOP/builder/Containerfile.arch" "$TOP/builder/packages-arch.txt" "$TOP/builder/klos-builder-arch.conf" "$ctx/"
-	# The tarball has a top directory (root.x86_64), and podman cannot read
-	# zstd archives. Make a plain tar of the root. The SHA-256 check above
-	# covers the data.
-	podman run --rm --network=none -v "$TOP/cache/builder:/c:ro,Z" -v "$ctx:/o:Z" "$(builder_image alpine-1)" \
-		sh -c 'mkdir /r && tar --zstd -xpf "/c/$1" -C /r && tar -C /r/root.x86_64 -cpf /o/archlinux-bootstrap.tar .' \
-		sh "archlinux-bootstrap-$ARCH_VERSION-x86_64.tar.zst"
-	podman build --build-arg ARCH_DATE="$ARCH_DATE" -t "$image" -f "$ctx/Containerfile.arch" "$ctx"
-	rm -rf "$ctx"
-	podman run --rm "$image" cat /etc/klos-builder.lock > "$TOP/builder/builder-arch.lock"
-	echo "klos: builder image $image is ready"
-}
-
-# cmd_stage2 <alpine|arch>: build the KLOS builder <bootstrap>-2.
-cmd_stage2() {
-	b=${1:-alpine}
-	case $b in alpine|arch) ;; *) die "usage: stage2 [alpine|arch]" ;; esac
-	(BUILDER=alpine-1 kbuild alpine-1 yes no fetch builder)
-	(BUILDER=$b-1 kbuild "$b-1" no no builder-image)
-	tar="$TOP/out/$b-1/builder/klos-builder.tar"
-	image=$(builder_image "$b-2")
-	podman import --change 'ENV PATH=/usr/bin:/opt/klos/go/bin' --change 'ENV LANG=C.UTF-8' \
-		--change 'ENV LC_ALL=C.UTF-8' --change 'ENV TZ=UTC' --change 'WORKDIR /klos' \
-		"$tar" "$image" >/dev/null
-	echo "klos: builder image $image is ready ($(sha256sum "$tar" | cut -c1-16))"
-}
-
-# run_builder <network: yes|no> <kvm: yes|no> <image> <command...>
+# run_builder <network: yes|no> <kvm: yes|no> <command...>
 run_builder() {
 	net=$1; kvm=$2; shift 2
-	podman image exists "$1" || die "no image $1; run './klos bootstrap' or './klos stage2'"
-	# All builders have the same build paths (/build) and the same host
-	# name, because some programs keep them in their output.
+	podman image exists "$IMAGE" || die "no image $IMAGE; run './klos bootstrap'"
+	# The work directory is always /build in the container, because some
+	# programs keep the build paths in their output.
 	mkdir -p "$TOP/work/$BUILDER"
 	set -- --rm --init -v "$TOP:/klos:Z" -v "$TOP/work/$BUILDER:/build:Z" -w /klos \
 		--hostname klos -e KLOS_WORK=/build \
-		-e KLOS_JOBS="${KLOS_JOBS:-$(nproc)}" -e KLOS_BUILDER="$BUILDER" "$@"
+		-e KLOS_JOBS="${KLOS_JOBS:-$(nproc)}" -e KLOS_BUILDER="$BUILDER" "$IMAGE" "$@"
 	for v in KLOS_VERSION KLOS_RESUME KLOS_TEST_VERBOSE SOURCE_DATE_EPOCH; do
 		eval "val=\${$v:-}"
 		[ -n "$val" ] && set -- -e "$v=$val" "$@"
@@ -192,36 +129,31 @@ for m in tools/kbuild src/klos; do
 done
 echo "klos check: all Go checks passed"'
 
-# kbuild <builder|tester> <network: yes|no> <kvm: yes|no> <kbuild arguments...>
-# The QEMU commands use the test image (Alpine with QEMU and swtpm). The
-# downloads use alpine-1, which has gpgv and minisign.
+# kbuild <network: yes|no> <kvm: yes|no> <kbuild arguments...>
 kbuild() {
-	b=$1; net=$2; kvm=$3; shift 3
-	if [ "$b" = tester ]; then img=$TESTER; else img=$(builder_image "$b"); fi
-	run_builder "$net" "$kvm" "$img" sh -c "$KBUILD_SH" kbuild "$@"
+	net=$1; kvm=$2; shift 2
+	run_builder "$net" "$kvm" sh -c "$KBUILD_SH" kbuild "$@"
 }
 
 [ $# -ge 1 ] || { usage; exit 1; }
 cmd=$1; shift
 case $cmd in
-	bootstrap) cmd_bootstrap "$@" ;;
-	stage2) cmd_stage2 "$@" ;;
-	shell) run_builder no no "$(builder_image "$BUILDER")" bash -l ;;
-	check) run_builder no no "$(builder_image alpine-1)" sh -c "$CHECK_SH" ;;
-	keygen) kbuild "$BUILDER" no no keygen "$@" ;;
-	fetch) kbuild alpine-1 yes no fetch "$@" ;;
+	bootstrap) cmd_bootstrap ;;
+	builder) cmd_builder "$@" ;;
+	shell) run_builder no no bash -l ;;
+	check) run_builder no no sh -c "$CHECK_SH" ;;
+	keygen) kbuild no no keygen "$@" ;;
+	fetch) kbuild yes no fetch "$@" ;;
+	check-sources) kbuild yes no check-sources ;;
 	build|image|installer|verify|selinux)
 		# Download first with the network, then build without it.
-		(kbuild alpine-1 yes no fetch "$@")
-		kbuild "$BUILDER" no no "$cmd" "$@" ;;
-	lock|list|revoke|compare) kbuild "$BUILDER" no no "$cmd" "$@" ;;
-	check-sources) kbuild "$BUILDER" yes no check-sources ;;
+		(kbuild yes no fetch "$@")
+		kbuild no no "$cmd" "$@" ;;
+	lock|list|revoke|compare) kbuild no no "$cmd" "$@" ;;
 	test)
-		# Build the images in the builder, then run QEMU in the test image.
-		(kbuild alpine-1 yes no fetch "$@")
-		(kbuild "$BUILDER" no no test-images "$@")
-		kbuild tester no yes test -prebuilt "$@" ;;
-	qemu) kbuild tester no yes qemu "$@" ;;
+		(kbuild yes no fetch "$@")
+		kbuild no yes test "$@" ;;
+	qemu) kbuild no yes qemu "$@" ;;
 	-h|--help|help) usage ;;
 	*) usage; exit 1 ;;
 esac

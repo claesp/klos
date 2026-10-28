@@ -2,7 +2,7 @@
 
 // Command kbuild is the KLOS build tool.
 //
-// It runs in the bootstrap builder container (see ./klos). It reads recipes
+// It runs in the KLOS builder container (see ./klos). It reads recipes
 // (pkgs/*/recipe.toml), flavor manifests (manifests/*.toml) and the kernel
 // definition (kernel/linux.toml). It builds packages, OS images, kernels,
 // update bundles and installer disks. Read docs/build-system.md.
@@ -39,7 +39,7 @@ var commands = map[string]command{
 	"selinux":       {"selinux <flavor>", cmdSELinux},
 	"builder-image": {"builder-image", cmdBuilderImage},
 	"check-sources": {"check-sources", cmdCheckSources},
-	"compare":       {"compare [-a builder] [-b builder] <flavor>", cmdCompare},
+	"compare":       {"compare -a builder -b builder <flavor>", cmdCompare},
 }
 
 func usage() {

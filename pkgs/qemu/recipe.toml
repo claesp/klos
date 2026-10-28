@@ -1,0 +1,46 @@
+# The QEMU emulator (x86-64 only). A test tool of the KLOS builder (manifests/builder.toml):
+# "./klos test" uses it. The images do not contain it.
+[package]
+name = "qemu"
+version = "11.1.2"
+summary = "Machine emulator (x86-64 system emulation)"
+license = "GPL-2.0-only"
+homepage = "https://www.qemu.org/"
+build-depends = ["glib", "pixman", "zlib", "libslirp"]
+
+[[source]]
+url = "https://download.qemu.org/qemu-11.1.2.tar.xz"
+sha256 = "731b5681e4bb18be313231579b8efd0296c5b015fa36dc533874b639ba838016"
+signature = "https://download.qemu.org/qemu-11.1.2.tar.xz.sig"
+key = ["qemu-mroth"]
+
+# The configure script of QEMU always installs its Python "tooling" group,
+# which needs setuptools, wheel and packaging. They come from PyPI (the pinned SHA-256
+# values agree with the values that PyPI publishes); configure installs them
+# from python/wheels without the network.
+[[source]]
+url = "https://files.pythonhosted.org/packages/ef/55/6dc6d6bb953bdfc52519a0059592c52b6e3b8ad51cf8256dffceb55b0610/setuptools-84.2.1-py3-none-any.whl"
+sha256 = "ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2"
+extract = false
+
+[[source]]
+url = "https://files.pythonhosted.org/packages/2e/29/69cfbb602cd91690c55d38ba9fe53e6a7e76a6fa647bf38f19c138d25449/wheel-0.48.0-py3-none-any.whl"
+sha256 = "3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab"
+extract = false
+
+[[source]]
+url = "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl"
+sha256 = "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
+extract = false
+
+[build]
+script = '''
+cp ../setuptools-84.2.1-py3-none-any.whl ../wheel-0.48.0-py3-none-any.whl ../packaging-26.3-py3-none-any.whl python/wheels/
+./configure --prefix=/usr --cross-prefix= --cc=cc --cxx=c++ --host-cc="$BUILD_CC" \
+	--target-list=x86_64-softmmu --without-default-features \
+	--enable-kvm --enable-tcg --enable-slirp --enable-tpm --enable-pixman \
+	--disable-docs --disable-werror --disable-download --disable-tools \
+	--disable-install-blobs
+make -j"$JOBS"
+make DESTDIR="$DESTDIR" install
+'''

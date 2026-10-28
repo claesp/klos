@@ -1,0 +1,29 @@
+# A software TPM 2.0 for the test virtual machines. A test tool of the KLOS builder (manifests/builder.toml):
+# "./klos test" uses it. The images do not contain it.
+[package]
+name = "swtpm"
+version = "0.10.2"
+summary = "Software TPM emulator"
+license = "BSD-3-Clause"
+homepage = "https://github.com/stefanberger/swtpm"
+build-depends = ["libtpms", "openssl", "json-glib", "glib", "libseccomp", "libtasn1"]
+
+# Upstream signs the Git tags, not the archive. The SHA-256 is pinned.
+[[source]]
+url = "https://github.com/stefanberger/swtpm/archive/refs/tags/v0.10.2.tar.gz"
+sha256 = "f61cf6f1e9bbcb4cefb30b70cafaf1c4df54c6961e65cfa63830e8ad0e220134"
+filename = "swtpm-0.10.2.tar.gz"
+
+[build]
+script = '''
+NOCONFIGURE=1 ./autogen.sh
+kconfigure --with-openssl --without-gnutls --without-selinux --without-cuse \
+	--disable-tests --disable-static
+# Only the swtpm program: the test does not use swtpm_setup and
+# swtpm_localca (they need GnuTLS and GMP).
+make -j"$JOBS" -C src/utils
+make -j"$JOBS" -C src/swtpm
+make -C src/swtpm DESTDIR="$DESTDIR" install
+make -C src/swtpm_ioctl -j"$JOBS"
+make -C src/swtpm_ioctl DESTDIR="$DESTDIR" install
+'''

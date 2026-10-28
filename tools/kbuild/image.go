@@ -661,13 +661,13 @@ func cmdVerify(args []string) {
 // cmdCompare compares the images of a flavor from two builders.
 func cmdCompare(args []string) {
 	fs := flag.NewFlagSet("compare", flag.ContinueOnError)
-	a := fs.String("a", "alpine-2", "the first builder")
-	b := fs.String("b", "arch-2", "the second builder")
+	a := fs.String("a", "", "the first builder (out/<name>)")
+	b := fs.String("b", "", "the second builder (out/<name>)")
 	if err := fs.Parse(args); err != nil {
 		die("compare: %v", err)
 	}
-	if fs.NArg() != 1 {
-		die("usage: compare [-a builder] [-b builder] <flavor>")
+	if fs.NArg() != 1 || *a == "" || *b == "" {
+		die("usage: compare -a builder -b builder <flavor>")
 	}
 	flavor := fs.Arg(0)
 	read := func(builder string) string {

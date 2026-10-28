@@ -35,7 +35,7 @@ KLOS is a general-purpose Linux distribution. It has three goals:
 
 ```
 klos                 host script: starts the builder container
-builder/             the bootstrap builder (verified Alpine minirootfs)
+builder/             the seed of the KLOS builder (seed.conf)
 tools/kbuild/        the build tool (Go)
 src/klos/            the KLOS system tool (Go): init, update, install
 pkgs/                one recipe for each package
@@ -46,10 +46,10 @@ keys/                the upstream signing keys
 docs/                this documentation
 ```
 
-## The bootstrap builder
+## The KLOS builder
 
-The build runs in a container. The container has an Alpine Linux root file
-system, and the `klos bootstrap` command verifies it with its SHA-256 value
-and the OpenPGP signature of Alpine. Alpine supplies only build tools (for
-example cmake, make, perl and python) and the first compiler. No file from
-Alpine goes into a KLOS image. Read [toolchain.md](toolchain.md).
+The build runs in a container: the KLOS builder. It contains only KLOS
+packages (the compiler, the build tools and the test tools), and KLOS
+builds it itself (`./klos builder`). `./klos bootstrap` checks the
+SHA-256 value of the builder image (the seed) and imports it. Read
+[build-system.md](build-system.md) and [toolchain.md](toolchain.md).

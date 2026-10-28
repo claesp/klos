@@ -1,0 +1,19 @@
+# The ACPI tools of Intel (iasl), a host tool: the OVMF build needs it.
+[package]
+name = "acpica"
+version = "20260930"
+summary = "ACPI source language compiler (iasl)"
+license = "BSD-3-Clause OR GPL-2.0-only"
+homepage = "https://github.com/open-acpica/acpica"
+kind = "host"
+
+# Upstream does not sign releases. The SHA-256 is pinned.
+[[source]]
+url = "https://github.com/open-acpica/acpica/releases/download/20260930/acpica-unix-20260930.tar.gz"
+sha256 = "aa18901b92e30749be0edc3081c8d550c61fce4fa37546fc6a65d367a4ae71a5"
+
+[build]
+script = '''
+make -j"$JOBS" iasl NOWERROR=TRUE
+install -D -m 0755 generate/unix/bin/iasl "$DESTDIR$PREFIX/bin/iasl"
+'''

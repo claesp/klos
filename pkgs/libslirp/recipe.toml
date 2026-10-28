@@ -1,0 +1,22 @@
+# User-mode networking for QEMU. A test tool of the KLOS builder (manifests/builder.toml):
+# "./klos test" uses it. The images do not contain it.
+[package]
+name = "libslirp"
+version = "4.9.6"
+summary = "User-mode networking library"
+license = "BSD-3-Clause AND MIT"
+homepage = "https://gitlab.freedesktop.org/slirp/libslirp"
+build-depends = ["glib"]
+
+# Upstream does not sign releases (the archive of the Git tag). The SHA-256
+# is pinned.
+[[source]]
+url = "https://gitlab.freedesktop.org/slirp/libslirp/-/archive/v4.9.6/libslirp-v4.9.6.tar.gz"
+sha256 = "5bb4d30fd74042c23b4a0475f44d974a8e41dfdcf005476f03754bebc756b760"
+
+[build]
+script = '''
+kmeson
+kninja
+kninja_install
+'''
