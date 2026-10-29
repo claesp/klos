@@ -84,3 +84,33 @@ func TestGitRepoFor(t *testing.T) {
 		t.Error("zlib.net is not a forge")
 	}
 }
+
+func TestParseCargoLock(t *testing.T) {
+	lock := `version = 4
+
+[[package]]
+name = "cbindgen"
+version = "0.29.4"
+
+[[package]]
+name = "serde"
+version = "1.0.228"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
+dependencies = [
+ "serde_core",
+]
+`
+	got, err := parseCargoLock(lock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Crate{{"serde", "1.0.228", "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("parseCargoLock = %v, want %v", got, want)
+	}
+	git := lock + "\n[[package]]\nname = \"x\"\nversion = \"1.0.0\"\nsource = \"git+https://example.org/x#abc\"\n"
+	if _, err := parseCargoLock(git); err == nil {
+		t.Fatal("a Git source: no error")
+	}
+}

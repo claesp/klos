@@ -245,6 +245,8 @@ func fetchSource(s Source) string {
 	mkdirAll(SRCCACHE)
 	p := s.path()
 	if exists(p) {
+		fetchGoModules(s, p)
+		fetchCrates(s, p)
 		return p
 	}
 	download(s.URL, p)
@@ -253,7 +255,57 @@ func fetchSource(s Source) string {
 		die("SHA-256 mismatch for %s\n  expected %s\n  got      %s", s.URL, s.SHA256, got)
 	}
 	verifySignature(s, p)
+	fetchGoModules(s, p)
+	fetchCrates(s, p)
 	return p
+}
+
+// goModCache is the Go module cache of a source with go-modules.
+func goModCache(s Source) string {
+	return filepath.Join(CACHE, "gomod", s.SHA256[:16])
+}
+
+// fetchGoModules downloads the Go modules of the go.mod files of a source
+// with "go mod download". Go checks each module with the go.sum file of
+// the source and with the Go checksum database (sum.golang.org). The build
+// uses the module cache without the network.
+func fetchGoModules(s Source, path string) {
+	cache := goModCache(s)
+	if len(s.GoModules) == 0 || exists(filepath.Join(cache, ".done")) {
+		return
+	}
+	tmp, err := os.MkdirTemp(WORK, "gomod")
+	check(err)
+	defer func() { _ = os.RemoveAll(tmp) }() // temporary files only
+	run(Cmd{Args: []string{"tar", "-xf", path, "-C", tmp, "--no-same-owner", "--warning=no-timestamp"}})
+	root := tmp
+	if ents, err := os.ReadDir(tmp); err == nil && len(ents) == 1 && ents[0].IsDir() {
+		root = filepath.Join(tmp, ents[0].Name())
+	}
+	removeAll(cache)
+	mkdirAll(cache)
+	env := append(os.Environ(), "GOMODCACHE="+cache, "GOPATH="+filepath.Join(tmp, "gopath"),
+		"GOCACHE="+filepath.Join(tmp, "gocache"), "GOFLAGS=-mod=mod", "GOTOOLCHAIN=local",
+		"GOPROXY=https://proxy.golang.org", "GOSUMDB=sum.golang.org", "GONOSUMDB=", "GOPRIVATE=",
+		"GOINSECURE=", "GONOSUMCHECK=", "CGO_ENABLED=0")
+	for _, d := range s.GoModules {
+		dir := filepath.Join(root, d)
+		sum := filepath.Join(dir, "go.sum")
+		before, err := os.ReadFile(sum)
+		check(err)
+		logf("go mod download in %s of %s", d, s.filename())
+		run(Cmd{Args: []string{"go", "mod", "download"}, Dir: dir, Env: env})
+		run(Cmd{Args: []string{"go", "mod", "verify"}, Dir: dir, Env: env})
+		// All modules must be in the go.sum of the source (which the
+		// SHA-256 value and the signature of the source cover).
+		after, err := os.ReadFile(sum)
+		check(err)
+		if !bytes.Equal(before, after) {
+			removeAll(cache)
+			die("%s: go mod download changed %s/go.sum: the source does not list all modules", s.filename(), d)
+		}
+	}
+	writeFile(filepath.Join(cache, ".done"), "", 0o644)
 }
 
 // checkSource returns the cached path of a source after a new SHA-256 check.
@@ -264,6 +316,9 @@ func checkSource(s Source) string {
 	}
 	if sha256File(p) != s.SHA256 {
 		die("cached source changed: %s", p)
+	}
+	if len(s.GoModules) > 0 && !exists(filepath.Join(goModCache(s), ".done")) {
+		die("the Go modules of %s are not in the cache (run './klos fetch')", s.filename())
 	}
 	return p
 }

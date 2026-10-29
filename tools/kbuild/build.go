@@ -165,14 +165,48 @@ func buildEnv(r *Recipe, bdir, sysroot string) []string {
 	for _, h := range r.HostDepends {
 		env["HOST_"+strings.ToUpper(strings.ReplaceAll(h, "-", "_"))] = hostRoot(h)
 	}
+	rustBin := ""
+	if contains(r.HostDepends, "rust") {
+		rust := filepath.Join(hostRoot("rust"), "opt/klos/rust")
+		rustBin = filepath.Join(rust, "bin")
+		env["CARGO_HOME"] = filepath.Join(bdir, "cargo-home")
+		env["CARGO_BUILD_JOBS"] = JOBS
+		env["CARGO_TERM_COLOR"] = "never"
+		// Rust programs keep paths in panic messages: use the same paths as
+		// the C programs (-ffile-prefix-map).
+		remap := fmt.Sprintf("--remap-path-prefix=%s/src=/usr/src/%s --remap-path-prefix=%s=/usr/src/cargo",
+			bdir, r.Name, filepath.Join(bdir, "src", "cargo-vendor"))
+		if r.Kind == "target" {
+			// Link with the C library of KLOS (not the static musl of Rust).
+			env["CARGO_BUILD_TARGET"] = target
+			env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER"] = filepath.Join(bindir, "cc")
+			env["RUSTFLAGS"] = "-C target-feature=-crt-static -C target-cpu=x86-64-v2 " + remap
+		} else {
+			env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER"] = BCONF.HostCC
+			env["RUSTFLAGS"] = remap
+		}
+	}
+	finish := func() []string {
+		if rustBin != "" {
+			env["PATH"] = rustBin + ":" + env["PATH"]
+		}
+		return envList(env)
+	}
+	for _, s := range r.Source {
+		if len(s.GoModules) > 0 {
+			// The modules that "fetch" downloaded (fetchGoModules).
+			env["GOMODCACHE"] = goModCache(s)
+			env["KLOS_GOFLAGS"] = "-mod=readonly -trimpath -buildvcs=false"
+		}
+	}
 	if r.Kind == "host" {
 		env["CC"], env["CXX"] = BCONF.HostCC, BCONF.HostCXX
 		env["PREFIX"] = "/" + toolchainPrefix
-		return envList(env)
+		return finish()
 	}
 	if !contains(r.HostDepends, "compiler-rt") {
 		// A target package without compiled code (for example headers or data).
-		return envList(env)
+		return finish()
 	}
 
 	tc := filepath.Join(toolchainRoot(), toolchainPrefix)
@@ -288,7 +322,7 @@ cpp_link_args = %[6]s
 	} {
 		env[k] = v
 	}
-	return envList(env)
+	return finish()
 }
 
 // writeRunTool makes a wrapper that runs a target program of the sysroot in
@@ -375,6 +409,10 @@ func extractSources(r *Recipe, srcdir string) string {
 	}
 	if top == "" {
 		top = srcdir
+	}
+	if len(r.Source) > 0 && r.Source[0].CargoLock != "" {
+		vendorCrates(r.Source[0], top, filepath.Join(srcdir, "cargo-vendor"),
+			filepath.Join(filepath.Dir(srcdir), "cargo-home"))
 	}
 	return top
 }

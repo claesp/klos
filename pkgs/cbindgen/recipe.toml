@@ -1,0 +1,25 @@
+# cbindgen makes C headers from Rust code: a build tool of Firefox (host
+# tool). The images do not contain it. Upstream does not sign releases;
+# the SHA-256 is the checksum of crates.io. kbuild downloads the crates of
+# Cargo.lock (cargo-lock) and checks their checksums.
+[package]
+name = "cbindgen"
+version = "0.29.4"
+summary = "C bindings generator for Rust (build tool)"
+license = "MPL-2.0"
+homepage = "https://github.com/mozilla/cbindgen"
+kind = "host"
+host-depends = ["rust"]
+
+[[source]]
+url = "https://static.crates.io/crates/cbindgen/cbindgen-0.29.4.crate"
+filename = "cbindgen-0.29.4.tar.gz"
+sha256 = "2ecb53484c9c167ba674026b656d8a27d7657a58e6066aa902bfb1a4aa00ae20"
+cargo-lock = "Cargo.lock"
+
+[build]
+script = '''
+cargo build --release --locked --offline
+install -D -m 0755 target/release/cbindgen "$DESTDIR/$PREFIX/bin/cbindgen"
+"$DESTDIR/$PREFIX/bin/cbindgen" --version
+'''

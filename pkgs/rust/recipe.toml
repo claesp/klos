@@ -1,0 +1,135 @@
+# The Rust compiler and Cargo (host tool) for Rust programs in KLOS. kbuild
+# builds it from source. Rust needs an earlier Rust compiler (stage 0) to
+# build. The signed source tarball gives the SHA-256 values of the stage 0
+# tarballs (src/stage0); the Rust release key also signs each of them. The
+# stage 0 compiler builds the new compiler, and the new compiler builds
+# itself again (stage 2). The bundled LLVM of Rust is part of the build.
+[package]
+name = "rust"
+version = "1.99.1"
+summary = "The Rust compiler and Cargo"
+license = "MIT OR Apache-2.0"
+homepage = "https://www.rust-lang.org/"
+kind = "host"
+
+[[source]]
+url = "https://static.rust-lang.org/dist/2026-10-15/rustc-1.99.1-src.tar.xz"
+sha256 = "6451598a99e77f07571960f6b21d577399d3a30f33e80cbd2e3a4aae6535d265"
+signature = "https://static.rust-lang.org/dist/2026-10-15/rustc-1.99.1-src.tar.xz.asc"
+key = ["rust"]
+
+# Stage 0: the values are the same as in src/stage0 of the source tarball.
+[[source]]
+url = "https://static.rust-lang.org/dist/2026-08-20/rustc-1.98.0-x86_64-unknown-linux-musl.tar.xz"
+sha256 = "4783d0963e5566b03e5e5be6bcb900672c177389d148d138fe1d75bc52554c91"
+signature = "https://static.rust-lang.org/dist/2026-08-20/rustc-1.98.0-x86_64-unknown-linux-musl.tar.xz.asc"
+key = ["rust"]
+dest = "stage0"
+
+[[source]]
+url = "https://static.rust-lang.org/dist/2026-08-20/rust-std-1.98.0-x86_64-unknown-linux-musl.tar.xz"
+sha256 = "1a76f782db2d540e1cd16ea47829b323f4a8f4dda64bca4b23be189109c510f8"
+signature = "https://static.rust-lang.org/dist/2026-08-20/rust-std-1.98.0-x86_64-unknown-linux-musl.tar.xz.asc"
+key = ["rust"]
+dest = "stage0"
+
+[[source]]
+url = "https://static.rust-lang.org/dist/2026-08-20/cargo-1.98.0-x86_64-unknown-linux-musl.tar.xz"
+sha256 = "8a4da98a9a099e2bf8c210a236cd0cc8d6a259254f4b8fdf6997177ea9e1e4bf"
+signature = "https://static.rust-lang.org/dist/2026-08-20/cargo-1.98.0-x86_64-unknown-linux-musl.tar.xz.asc"
+key = ["rust"]
+dest = "stage0"
+
+[build]
+script = '''
+T=x86_64-unknown-linux-musl
+# The stage 0 tarballs must be the ones that src/stage0 names.
+for f in rustc rust-std cargo; do
+	grep -q "^dist/[0-9-]*/$f-[0-9.]*-$T.tar.xz=" src/stage0 || { echo "no $f in src/stage0"; exit 1; }
+done
+grep -qx 'compiler_version=1.98.0' src/stage0 || { echo "src/stage0 names a different stage 0 version"; exit 1; }
+S0="$S/../stage0-root"
+for d in "$S"/../stage0/*-$T; do
+	bash "$d/install.sh" --prefix="$S0" --disable-ldconfig >/dev/null
+done
+# The stage 0 programs need libgcc_s.so.1 (the unwinder). The LLVM
+# libunwind of the builder has the same _Unwind functions. The new compiler
+# has its own copy of libunwind (llvm-libunwind = "in-tree").
+mkdir -p "$S/../stage0-shim"
+ln -sf /usr/lib/libunwind.so.1 "$S/../stage0-shim/libgcc_s.so.1"
+# The stage 0 standard library also links the build scripts of the
+# bootstrap program with -lgcc_s.
+ln -sf /usr/lib/libunwind.so "$S/../stage0-shim/libgcc_s.so"
+export LD_LIBRARY_PATH="$S/../stage0-shim" LIBRARY_PATH="$S/../stage0-shim"
+"$S0/bin/rustc" --version
+"$S0/bin/cargo" --version
+
+cat > bootstrap.toml <<EOT
+change-id = "ignore"
+profile = "dist"
+
+[build]
+build = "$T"
+description = "KLOS"
+host = ["$T"]
+target = ["$T"]
+rustc = "$S0/bin/rustc"
+cargo = "$S0/bin/cargo"
+python = "python3"
+docs = false
+extended = true
+tools = ["cargo", "src"]
+vendor = true
+locked-deps = true
+submodules = false
+jobs = $JOBS
+verbose = 0
+
+[install]
+prefix = "/opt/klos/rust"
+sysconfdir = "etc"
+
+[llvm]
+download-ci-llvm = false
+targets = "X86;BPF"
+experimental-targets = ""
+use-libcxx = true
+static-libstdcpp = false
+libzstd = false
+ninja = true
+link-shared = false
+
+[rust]
+channel = "stable"
+# rustc finds its libraries in ../lib from its directory (as in the
+# official builds).
+rpath = true
+jemalloc = false
+debuginfo-level = 0
+remap-debuginfo = true
+lld = false
+llvm-tools = false
+deny-warnings = false
+codegen-tests = false
+
+[target.$T]
+cc = "$CC"
+cxx = "$CXX"
+ar = "llvm-ar"
+ranlib = "llvm-ranlib"
+linker = "$CC"
+crt-static = false
+musl-root = "/usr"
+llvm-libunwind = "in-tree"
+
+[dist]
+compression-formats = ["xz"]
+EOT
+python3 x.py install --config bootstrap.toml
+rm -rf "$DESTDIR/opt/klos/rust/share/doc" "$DESTDIR/opt/klos/rust/lib/rustlib/uninstall.sh" \
+	"$DESTDIR/opt/klos/rust/lib/rustlib/install.log"
+"$DESTDIR/opt/klos/rust/bin/rustc" --version
+'''
+
+[watch]
+url = "https://github.com/rust-lang/rust.git"

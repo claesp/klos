@@ -24,6 +24,7 @@ func cmdGC(args []string) {
 	var unused []string
 	unused = append(unused, unusedSources()...)
 	unused = append(unused, unusedSeeds()...)
+	unused = append(unused, unusedGoModules()...)
 	unused = append(unused, unusedPackageFiles()...)
 	var total int64
 	for _, p := range unused {
@@ -63,6 +64,20 @@ func usedSourceFiles() map[string]bool {
 func unusedSources() []string {
 	used := usedSourceFiles()
 	return unusedIn(SRCCACHE, func(name string) bool { return used[name] })
+}
+
+// unusedGoModules lists the Go module caches of sources that no recipe
+// uses.
+func unusedGoModules() []string {
+	keep := map[string]bool{}
+	for _, r := range recipes() {
+		for _, s := range r.Source {
+			if len(s.GoModules) > 0 {
+				keep[filepath.Base(goModCache(s))] = true
+			}
+		}
+	}
+	return unusedIn(filepath.Join(CACHE, "gomod"), func(name string) bool { return keep[name] })
 }
 
 // unusedSeeds lists the builder tarballs in cache/builder that are not the

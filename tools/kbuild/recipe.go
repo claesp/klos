@@ -45,6 +45,14 @@ type Source struct {
 	AllowExpiredKey bool   `toml:"allow-expired-key"`
 	Extract         *bool  `toml:"extract"`
 	Dest            string `toml:"dest"`
+	// GoModules are the directories of the source with a go.mod file
+	// whose modules kbuild downloads (for a Go program without vendor/).
+	// Read docs/recipes.md.
+	GoModules []string `toml:"go-modules"`
+	// CargoLock is the path of a Cargo.lock file in the source (the first
+	// source of a recipe only). kbuild downloads the crates and vendors
+	// them for the build (read cargo.go).
+	CargoLock string `toml:"cargo-lock"`
 }
 
 // Watch is the [watch] table of a recipe (read docs/maintenance.md).

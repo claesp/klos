@@ -49,6 +49,11 @@ Each target package has these default dependencies: the build dependencies
 `filesystem`, `linux-headers`, `musl` and `llvm-runtimes`, and the host
 dependency `llvm`.
 
+## The [watch] table
+
+The `[watch]` table tells `./klos outdated` where to find new releases.
+Read [maintenance.md](maintenance.md).
+
 ## The [package.options] table
 
 | Key | Meaning |
@@ -87,16 +92,45 @@ could link to a library of the builder.
 | `url` | The official download address. |
 | `sha256` | The SHA-256 value of the file. It is mandatory. |
 | `signature` | The address of the signature file, if upstream signs the release. |
-| `signature-type` | `pgp` (default), `minisign`, `pgp-checksums` or `pgp-checksum-file`. With `pgp-checksums`, the signature file is a signed OpenPGP message that contains a `sha256sum` or `sha512sum` list. kbuild checks the message, then it compares the file with the line for the file name. With `pgp-checksum-file`, the signature is a detached signature of the checksum list in `checksums`. |
+| `signature-type` | `pgp` (default), `minisign`, `pgp-checksums`, `pgp-checksum-file`, `sigstore`, `pypi-attestation` or `git-tag`. Read [sources-and-keys.md](sources-and-keys.md) for each type. |
 | `signed-content` | `uncompressed` if the signature is for the `.tar` file in a `.tar.xz` file (kernel.org does this). |
 | `checksums` | The address of the checksum list (only with `pgp-checksum-file`). |
 | `key` | A list of key names in `keys/` (`keys/<name>.asc`). |
 | `filename` | A different file name in the cache. |
 | `extract` | `false` copies the file into the source directory and does not extract it. |
 | `dest` | Extract into this subdirectory of the source directory. |
+| `identity`, `issuer`, `certificate` | The Sigstore signer, its OIDC issuer and the address of the certificate (`sigstore`, `pypi-attestation`). |
+| `git`, `tag`, `extra-files`, `missing-files`, `subtrees` | The repository and the signed tag (`git-tag`). |
+| `go-modules` | The directories of the source with a `go.mod` file. "fetch" downloads the Go modules (read below). |
+| `cargo-lock` | The path of `Cargo.lock` in the source (first source only). "fetch" downloads the Rust crates (read below). |
 
 The first source that is an archive sets the start directory `$S` of the
 build script.
+
+## Go modules and Rust crates
+
+Some programs do not include their dependencies (`vendor/`):
+
+- Go (`go-modules`): "fetch" runs `go mod download` with the network.
+  Go checks each module with the `go.sum` file of the source and with the
+  Go checksum database (sum.golang.org). If the download changes `go.sum`,
+  the fetch stops: the source must list all modules. The modules go to
+  `cache/gomod/`. The build gets `GOMODCACHE` and `KLOS_GOFLAGS`
+  (`-mod=readonly`); set `GOFLAGS="$KLOS_GOFLAGS" GOPROXY=off` after
+  `kgoenv`.
+- Rust (`cargo-lock`): "fetch" downloads each crates.io package of
+  `Cargo.lock` into `cache/crates/` and compares its SHA-256 value with
+  `Cargo.lock`. A package from a Git repository is an error. The build
+  unpacks the crates into `$S/../cargo-vendor` and writes
+  `$CARGO_HOME/config.toml`, so that Cargo uses them without the network.
+
+The SHA-256 value (and the signature) of the source covers `go.sum` and
+`Cargo.lock`, so these files cover the dependencies.
+
+A recipe with the host dependency `rust` gets the Rust compiler and Cargo
+in `PATH`, `CARGO_HOME`, and `RUSTFLAGS` with the path remapping. For a
+target package, Cargo builds for `x86_64-unknown-linux-musl` and links with
+the KLOS C library (`-C target-feature=-crt-static`).
 
 ## The build script
 
