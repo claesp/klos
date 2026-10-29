@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# The SELinux file contexts of the desktop flavor. Read docs/selinux.md.
+
+/usr/bin/klos			--	system_u:object_r:klos_exec_t:s0
+/usr/bin/seatd			--	system_u:object_r:seatd_exec_t:s0
+/usr/bin/sway			--	system_u:object_r:sway_exec_t:s0
+
+/run/seatd\.sock		-s	system_u:object_r:seatd_runtime_t:s0
+/run/user			-d	system_u:object_r:var_run_t:s0
+/run/user/[0-9]+(/.*)?			system_u:object_r:user_runtime_t:s0
+
+/dev/dri(/.*)?				system_u:object_r:dri_device_t:s0
+/dev/dri			-d	system_u:object_r:device_t:s0
+/dev/input(/.*)?			system_u:object_r:input_device_t:s0
+/dev/input			-d	system_u:object_r:device_t:s0
+/dev/snd(/.*)?				system_u:object_r:sound_device_t:s0
+/dev/snd			-d	system_u:object_r:device_t:s0
+/dev/tty[0-9]+			-c	system_u:object_r:tty_device_t:s0
+/var/cache/fontconfig(/.*)?		system_u:object_r:fonts_cache_t:s0

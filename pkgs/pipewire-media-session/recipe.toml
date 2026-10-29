@@ -1,0 +1,26 @@
+# The PipeWire session manager: it finds the sound cards (ALSA) and links
+# the streams of the programs to the cards. It is a C program (the other
+# session manager, WirePlumber, runs Lua scripts).
+[package]
+name = "pipewire-media-session"
+version = "0.4.3"
+summary = "PipeWire session manager"
+license = "MIT"
+homepage = "https://gitlab.freedesktop.org/pipewire/media-session"
+build-depends = ["pipewire", "alsa-lib", "dbus"]
+depends = ["pipewire", "dbus"]
+# Upstream does not sign releases (the tags are lightweight). The SHA-256
+# is pinned.
+
+[[source]]
+url = "https://gitlab.freedesktop.org/pipewire/media-session/-/archive/0.4.3/media-session-0.4.3.tar.gz"
+sha256 = "d3a88490b59dc99b4fd63d3349c8196d9f6dbcb635ea4ffe1407fbcde79bbc30"
+
+[build]
+script = '''
+kmeson -Ddocs=disabled -Dtests=disabled -Dinstalled_tests=disabled -Dsystemd=disabled \
+	-Dsystemd-system-service=disabled -Dsystemd-user-service=disabled \
+	-Dwith-module-sets=alsa,pulseaudio
+kninja
+kninja_install
+'''

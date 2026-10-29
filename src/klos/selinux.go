@@ -24,6 +24,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -236,11 +237,13 @@ func loadRunningContexts() error {
 
 func cmdSELinux(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: klos selinux status|relabel PATH...")
+		return errors.New("usage: klos selinux status|show PATH...|relabel PATH...")
 	}
 	switch args[0] {
 	case "status":
 		return seStatus()
+	case "show":
+		return seShow(args[1:])
 	case "relabel":
 		fs := flag.NewFlagSet("selinux relabel", flag.ContinueOnError)
 		if err := fs.Parse(args[1:]); err != nil {
@@ -266,7 +269,26 @@ func cmdSELinux(args []string) error {
 		}
 		return nil
 	}
-	return errors.New("usage: klos selinux status|relabel PATH...")
+	return errors.New("usage: klos selinux status|show PATH...|relabel PATH...")
+}
+
+// seShow prints the SELinux label of each file (as "ls -Z").
+func seShow(paths []string) error {
+	buf := make([]byte, 256)
+	failed := false
+	for _, p := range paths {
+		n, err := unix.Lgetxattr(p, seXattr, buf)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "klos: %s: %v\n", p, err)
+			failed = true
+			continue
+		}
+		fmt.Printf("%s %s\n", strings.TrimRight(string(buf[:n]), "\x00"), p)
+	}
+	if failed {
+		return errors.New("some files have no label")
+	}
+	return nil
 }
 
 func seStatus() error {
@@ -296,4 +318,38 @@ func seStatus() error {
 		}
 	}
 	return nil
+}
+
+// enterDomain starts the program again in an SELinux domain. All commands
+// of the klos program are one file with one label (klos_exec_t), so a
+// domain transition at exec cannot select the domain of a daemon. The
+// daemon sets the domain for its next exec (/proc/thread-self/attr/exec)
+// and starts itself again. The policy allows the change only from init_t.
+func enterDomain(domain string) error {
+	if !seEnabled() {
+		return nil
+	}
+	cur, err := os.ReadFile("/proc/self/attr/current")
+	if err != nil {
+		return fmt.Errorf("SELinux context: %w", err)
+	}
+	f := strings.SplitN(strings.TrimRight(string(cur), "\x00\n"), ":", 4)
+	if len(f) != 4 {
+		return fmt.Errorf("SELinux context %q: want user:role:type:level", cur)
+	}
+	if f[2] == domain {
+		return nil
+	}
+	f[2] = domain
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	// attr/exec applies to one thread: the exec must come from that thread.
+	runtime.LockOSThread()
+	if err := os.WriteFile("/proc/thread-self/attr/exec", []byte(strings.Join(f, ":")), 0); err != nil {
+		runtime.UnlockOSThread()
+		return fmt.Errorf("set the SELinux domain %s: %w", domain, err)
+	}
+	return syscall.Exec(exe, os.Args, os.Environ())
 }

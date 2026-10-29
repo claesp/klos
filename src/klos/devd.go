@@ -15,6 +15,10 @@ package main
 //     (for example /dev/snd/* is root:audio 0660 and /dev/dri/* is
 //     root:video 0660). seatd opens the DRM master device and the input
 //     devices for the user; the render nodes need the group "video".
+//  5. It sets the SELinux label of new device nodes from the file
+//     contexts (for example dri_device_t for /dev/dri/*).
+//
+// devd runs in the SELinux domain devd_t (see enterDomain).
 
 import (
 	"bytes"
@@ -110,7 +114,8 @@ func lookupGroup(name string) (int, bool) {
 	return id, err == nil
 }
 
-// applyRules sets the group and mode of a device node from devRules.
+// applyRules sets the group and mode of a device node from devRules, and
+// its SELinux label from the file contexts.
 func applyRules(dev string) {
 	var st syscall.Stat_t
 	if syscall.Stat(dev, &st) != nil {
@@ -126,6 +131,9 @@ func applyRules(dev string) {
 		(st.Rdev>>8)&0xfff|((st.Rdev>>32)&^0xfff), (st.Rdev&0xff)|((st.Rdev>>12)&^0xff)))
 	if err != nil {
 		return
+	}
+	if err := labelPath(dev, dev); err != nil {
+		devLog("%v", err)
 	}
 	sub := filepath.Base(link)
 	for _, r := range devRules {
@@ -156,6 +164,12 @@ func parseUevent(b []byte) map[string]string {
 func cmdDevd(args []string) error {
 	if err := requireRoot(); err != nil {
 		return err
+	}
+	if err := enterDomain("devd_t"); err != nil {
+		return err
+	}
+	if err := loadRunningContexts(); err != nil {
+		devLog("SELinux file contexts: %v", err)
 	}
 	fd, err := syscall.Socket(syscall.AF_NETLINK, syscall.SOCK_DGRAM|syscall.SOCK_CLOEXEC, netlinkKobjectUevent)
 	if err != nil {

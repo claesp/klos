@@ -15,7 +15,7 @@ cmdline = ["console=ttyS0,115200", "console=tty0"]
 [packages]
 install = ["kmod", "seatd", "mesa", "sway", "swaybg", "foot", "font-dejavu",
   "xkeyboard-config", "linux-firmware", "wireless-regdb", "vulkan-loader",
-  "vulkan-tools"]
+  "vulkan-tools", "pipewire", "pipewire-media-session", "alsa-utils"]
 
 [services]
 enable = ["devd", "seatd"]
@@ -49,9 +49,12 @@ gid = 97
 # on the virtio GPU (without virgl on the host, Mesa uses llvmpipe).
 [selinux]
 policy = ["desktop.cil"]
+file-contexts = ["desktop.fc"]
 
 [test]
-qemu-args = ["-device", "virtio-gpu-pci"]
+# A sound card (HDA) without sound output on the host.
+qemu-args = ["-device", "virtio-gpu-pci", "-audiodev", "none,id=snd0",
+  "-device", "ich9-intel-hda", "-device", "hda-output,audiodev=snd0"]
 # A desktop computer often has a graphics card with an option ROM.
 secureboot = "enroll-microsoft"
 commands = [
@@ -66,7 +69,17 @@ commands = [
   # or a LoadPin denial gives a message.
   "modprobe -r cfg80211; modprobe cfg80211 ieee80211_regdom=SE && sleep 5 && grep -qx SE /sys/module/cfg80211/parameters/ieee80211_regdom && ! dmesg | grep -iE 'failed to load regulatory.db|regulatory.db is malformed|LoadPin: .*denied'",
   "for i in radeon intel lvp virtio; do test -f /usr/share/vulkan/icd.d/${i}_icd.x86_64.json || { echo no ICD $i; false; }; done",
-  "vulkaninfo --summary > /tmp/vulkaninfo.txt 2>&1; grep -q 'llvmpipe' /tmp/vulkaninfo.txt || { cat /tmp/vulkaninfo.txt; false; }",
+  # The SELinux domains of the desktop: the session is user_t.
+  "grep -q ':user_t:' /proc/$(pidof sway)/attr/current && grep -q ':seatd_t:' /proc/$(pidof seatd)/attr/current && grep -q ':devd_t:' /proc/$(pgrep -f 'klos devd')/attr/current || { for p in $(pidof sway) $(pidof seatd) $(pgrep -f 'klos devd'); do cat /proc/$p/attr/current; echo; done; false; }",
+  "klos selinux show /dev/dri/* | grep -q dri_device_t || { klos selinux show /dev/dri/*; false; }",
+  # vulkaninfo runs in the session (user_t has executable memory for the
+  # JIT compiler of lavapipe; init_t has not).
+  "setpriv --reuid=1000 --regid=1000 --init-groups env XDG_RUNTIME_DIR=/run/user/1000 SWAYSOCK=$(ls /run/user/1000/sway-ipc.*.sock) swaymsg exec 'vulkaninfo --summary > /tmp/vulkaninfo.txt 2>&1' && for i in $(seq 60); do grep -q 'llvmpipe' /tmp/vulkaninfo.txt 2>/dev/null && break; sleep 1; done; grep -q 'llvmpipe' /tmp/vulkaninfo.txt || { cat /tmp/vulkaninfo.txt; false; }",
   "for d in iris crocus radeonsi nouveau virtio_gpu llvmpipe; do strings /usr/lib/libgallium-*.so | grep -qx $d || { echo no driver $d; false; }; done",
-  "pkill sway; sleep 1; setpriv --reuid=1000 --regid=1000 --init-groups env HOME=/home/klos XDG_RUNTIME_DIR=/run/user/1000 WLR_BACKENDS=headless WLR_RENDERER=gles2 WLR_LIBINPUT_NO_DEVICES=1 sway -d > /tmp/sway-gl.log 2>&1 & for i in $(seq 30); do grep -q 'GL renderer' /tmp/sway-gl.log && break; sleep 1; done; grep 'GL renderer' /tmp/sway-gl.log | grep -q llvmpipe || { grep -iE 'egl|gl|error' /tmp/sway-gl.log | tail -20; false; }",
+  # Sound: sway starts PipeWire, PipeWire starts the session manager. An
+  # ALSA program (aplay) plays through PipeWire to the HDA sound card.
+  "for i in $(seq 30); do pidof pipewire-media-session >/dev/null && [ -S /run/user/1000/pipewire-0 ] && break; sleep 1; done; pidof pipewire && pidof pipewire-media-session && grep -q ':user_t:' /proc/$(pidof pipewire-media-session)/attr/current || { ls -la /run/user/1000; false; }",
+  "for i in $(seq 30); do setpriv --reuid=1000 --regid=1000 --init-groups env XDG_RUNTIME_DIR=/run/user/1000 pw-dump 2>/dev/null | grep -q '\"Audio/Sink\"' && break; sleep 1; done; setpriv --reuid=1000 --regid=1000 --init-groups env XDG_RUNTIME_DIR=/run/user/1000 pw-dump | grep -q '\"Audio/Sink\"' || { cat /proc/asound/cards; setpriv --reuid=1000 --regid=1000 --init-groups env XDG_RUNTIME_DIR=/run/user/1000 pw-cli ls Node; false; }",
+  "(head -c 1920000 /dev/urandom | setpriv --reuid=1000 --regid=1000 --init-groups env XDG_RUNTIME_DIR=/run/user/1000 aplay -q -t raw -f S16_LE -c 2 -r 48000) & sleep 4; grep -q RUNNING /proc/asound/card0/pcm*p/sub0/status || { cat /proc/asound/card0/pcm*p/sub0/status; false; }; wait",
+  "pkill pipewire; pkill sway; sleep 1; setpriv --reuid=1000 --regid=1000 --init-groups env HOME=/home/klos XDG_RUNTIME_DIR=/run/user/1000 WLR_BACKENDS=headless WLR_RENDERER=gles2 WLR_LIBINPUT_NO_DEVICES=1 sway -d > /tmp/sway-gl.log 2>&1 & for i in $(seq 30); do grep -q 'GL renderer' /tmp/sway-gl.log && break; sleep 1; done; grep 'GL renderer' /tmp/sway-gl.log | grep -q llvmpipe || { grep -iE 'egl|gl|error' /tmp/sway-gl.log | tail -20; false; }",
 ]

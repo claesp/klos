@@ -11,8 +11,13 @@
 ;     load a policy, change the SELinux mode or use executable memory.
 ;     dinit is init_t, and the processes that dinit starts are init_t,
 ;     except when a rule below gives a different domain.
-;   - The network daemons that read data from the network (dhcpcd and
-;     chronyd) are confined: they get only the permissions in this file.
+;   - The network daemons that read data from the network (dhcpcd,
+;     chronyd and sshd) are confined: they get only the permissions in
+;     this file. sshd has three domains: the listener (sshd_t), the
+;     privileged monitor of a connection (sshd_session_t) and the
+;     unprivileged process that reads the data of the client before the
+;     authentication (sshd_auth_t). After the authentication, the shell of
+;     the user is init_t again (the administrator domain).
 
 ; --- Users, roles and levels ---
 
@@ -58,6 +63,8 @@
 (typeattributeset dhcpcd_state_type (dhcpcd_var_lib_t dhcpcd_runtime_t))
 (typeattribute chronyd_state_type)
 (typeattributeset chronyd_state_type (chronyd_var_lib_t chronyd_runtime_t))
+(typeattribute home_dir_type)
+(typeattributeset home_dir_type (home_t root_home_t))
 
 ; A flavor that needs executable memory (a JIT compiler) puts the domain
 ; in execmem_domain.
@@ -69,7 +76,11 @@
 (type init_t)
 (type dhcpcd_t)
 (type chronyd_t)
-(typeattributeset domain (kernel_t init_t dhcpcd_t chronyd_t))
+(type sshd_t)
+(type sshd_session_t)
+(type sshd_auth_t)
+(typeattributeset domain (kernel_t init_t dhcpcd_t chronyd_t sshd_t
+	sshd_session_t sshd_auth_t))
 (typeattributeset unconfined_domain (kernel_t init_t))
 
 ; --- Files ---
@@ -99,11 +110,19 @@
 (type chronyd_exec_t)
 (type chronyd_var_lib_t)
 (type chronyd_runtime_t)
-(typeattributeset exec_type (init_exec_t shell_exec_t dhcpcd_exec_t chronyd_exec_t))
+(type sshd_exec_t)
+(type sshd_session_exec_t)
+(type sshd_auth_exec_t)
+(type sshd_key_t)
+(type sshd_runtime_t)
+(type ptmx_device_t)
+(type devtty_t)
+(typeattributeset exec_type (init_exec_t shell_exec_t dhcpcd_exec_t chronyd_exec_t
+	sshd_exec_t sshd_session_exec_t sshd_auth_exec_t))
 (typeattributeset file_type (unlabeled_t file_t root_t usr_t bin_t lib_t etc_t
 	shadow_t net_conf_t var_t var_lib_t var_log_t var_run_t tmp_t home_t
 	root_home_t boot_t dhcpcd_var_lib_t dhcpcd_runtime_t chronyd_var_lib_t
-	chronyd_runtime_t exec_type))
+	chronyd_runtime_t sshd_key_t sshd_runtime_t exec_type))
 
 ; --- File systems ---
 
@@ -141,7 +160,8 @@
 (type device_t)
 (type null_device_t)
 (type random_device_t)
-(typeattributeset dev_type (device_t null_device_t random_device_t))
+(typeattributeset dev_type (device_t null_device_t random_device_t ptmx_device_t
+	devtty_t))
 (typeattributeset fs_type (device_t))
 
 ; --- Network ---
@@ -150,9 +170,10 @@
 (type dhcpc_port_t)
 (type ntp_port_t)
 (type dns_port_t)
+(type ssh_port_t)
 (type node_t)
 (type netif_t)
-(typeattributeset port_type (port_t dhcpc_port_t ntp_port_t dns_port_t))
+(typeattributeset port_type (port_t dhcpc_port_t ntp_port_t dns_port_t ssh_port_t))
 
 ; Files and device nodes can be on the file systems.
 (allow file_type fs_type (filesystem (associate)))
@@ -168,6 +189,7 @@
 (portcon udp 123 (system_u object_r ntp_port_t low_low))
 (portcon udp 53 (system_u object_r dns_port_t low_low))
 (portcon tcp 53 (system_u object_r dns_port_t low_low))
+(portcon tcp 22 (system_u object_r ssh_port_t low_low))
 
 ; --- Initial SIDs (kbuild gives the other SIDs unlabeled_t) ---
 
@@ -219,11 +241,17 @@
 (typetransition kernel_t init_exec_t process init_t)
 (typetransition init_t dhcpcd_exec_t process dhcpcd_t)
 (typetransition init_t chronyd_exec_t process chronyd_t)
+(typetransition init_t sshd_exec_t process sshd_t)
+(typetransition sshd_t sshd_session_exec_t process sshd_session_t)
+(typetransition sshd_session_t sshd_auth_exec_t process sshd_auth_t)
+; The shell of the user after the authentication.
+(typetransition sshd_session_t shell_exec_t process init_t)
 
 ; Labels of new files.
 (typetransition dhcpcd_t var_run_t dir "dhcpcd" dhcpcd_runtime_t)
 (typetransition dhcpcd_t etc_t file "resolv.conf" net_conf_t)
 (typetransition chronyd_t var_run_t dir "chrony" chronyd_runtime_t)
+(typetransition sshd_t var_run_t file "sshd.pid" sshd_runtime_t)
 
 ; --- The base permissions of a confined daemon ---
 
@@ -272,6 +300,7 @@
 	; A daemon that an administrator starts from a shell inherits the
 	; terminal. SELinux closes this file at the domain transition.
 	(dontaudit d device_t (chr_file (read write)))
+	(dontaudit d devtty_t (chr_file (read write open)))
 	; Name resolution.
 	(allow d self (udp_socket (create read write getattr setattr connect
 		getopt setopt shutdown bind)))
@@ -349,3 +378,84 @@
 (allow chronyd_t self (unix_dgram_socket (bind)))
 ; stdio does isatty() (an ioctl) on the drift file.
 (allow chronyd_t chronyd_state_type (file (ioctl)))
+
+; --- sshd ---
+
+; The listener: it accepts the connections and starts sshd-session for each.
+(call daemon (sshd_t sshd_exec_t))
+(allow sshd_t self (capability (net_bind_service setuid setgid kill
+	sys_resource)))
+(allow sshd_t self (tcp_socket (create read write getattr setattr bind
+	listen accept getopt setopt shutdown ioctl)))
+(allow sshd_t ssh_port_t (tcp_socket (name_bind)))
+(allow sshd_t node_t (tcp_socket (node_bind)))
+(allow sshd_t sshd_key_t (file (read open getattr)))
+(allow sshd_t var_run_t (dir (write add_name remove_name)))
+(allow sshd_t sshd_runtime_t (file (create write open getattr unlink ioctl)))
+; sshd protects itself from the OOM killer (/proc/self/oom_score_adj).
+(allow sshd_t self (file (write ioctl)))
+; sshd -D tries /dev/tty (it has no terminal).
+(dontaudit sshd_t device_t (chr_file (read write open)))
+(allow sshd_t sshd_auth_exec_t (file (getattr)))
+; sshd starts itself again after SIGHUP.
+(allow sshd_t sshd_exec_t (file (execute_no_trans)))
+(allow sshd_t sshd_session_exec_t (file (execute read open getattr map)))
+(allow sshd_t sshd_session_t (process (transition sigkill signal)))
+(allow sshd_session_t sshd_t (process (sigchld)))
+(allow sshd_session_t sshd_t (fd (use)))
+(allow sshd_session_t sshd_t (tcp_socket (read write getattr setattr getopt
+	setopt shutdown ioctl)))
+(allow sshd_session_t sshd_t (unix_stream_socket (read write getattr
+	setattr shutdown)))
+(allow sshd_session_t sshd_t (fifo_file (read write getattr)))
+
+; The monitor of a connection (root). It reads the keys of the users,
+; makes the pseudo terminal and starts the shell of the user.
+(call daemon (sshd_session_t sshd_session_exec_t))
+(allow sshd_session_t self (capability (setuid setgid chown fowner fsetid
+	dac_override dac_read_search sys_chroot kill sys_resource audit_write)))
+(allow sshd_session_t self (tcp_socket (read write getattr setattr getopt
+	setopt shutdown ioctl)))
+(allow sshd_session_t self (unix_stream_socket (bind listen accept)))
+(allow sshd_session_t self (netlink_audit_socket (create read write getattr
+	setattr bind getopt setopt shutdown nlmsg_relay)))
+(allow sshd_session_t sshd_key_t (file (read open getattr)))
+(allow sshd_session_t shadow_t (file (read open getattr)))
+(allow sshd_session_t home_dir_type (dir (search getattr read open)))
+(allow sshd_session_t home_dir_type (file (read open getattr)))
+(allow sshd_session_t home_dir_type (lnk_file (read getattr)))
+(allow sshd_session_t var_t (dir (search getattr)))
+(allow sshd_session_t var_log_t (dir (search getattr)))
+(allow sshd_session_t var_log_t (file (read write open getattr lock)))
+(allow sshd_session_t ptmx_device_t (chr_file (read write open getattr ioctl)))
+(allow sshd_session_t devpts_t (dir (search getattr read open)))
+(allow sshd_session_t devpts_t (chr_file (read write open getattr setattr
+	ioctl)))
+(allow sshd_session_t devpts_t (filesystem (getattr)))
+(allow sshd_session_t sshd_auth_exec_t (file (execute read open getattr map)))
+(allow sshd_session_t sshd_auth_t (process (transition sigkill signal)))
+(allow sshd_session_t shell_exec_t (file (execute read open getattr map)))
+(allow sshd_session_t init_t (process (transition sigkill signal)))
+(allow sshd_session_t usr_t (dir (search getattr)))
+(allow init_t sshd_session_t (process (sigchld)))
+; The new domains do not inherit the signal state and the resource limits,
+; and the C library starts in secure mode (AT_SECURE). These are the
+; defaults of a domain transition; do not log them.
+(dontaudit sshd_t sshd_session_t (process (noatsecure rlimitinh siginh)))
+(dontaudit sshd_session_t sshd_auth_t (process (noatsecure rlimitinh siginh)))
+(dontaudit sshd_session_t init_t (process (noatsecure rlimitinh siginh)))
+(allow init_t sshd_session_t (fd (use)))
+
+; The process before the authentication: it reads the data of the client.
+; It changes its root directory to /usr/share/empty.sshd and runs as the
+; user sshd. It cannot start programs or write files.
+(call daemon (sshd_auth_t sshd_auth_exec_t))
+(allow sshd_auth_t self (capability (setuid setgid sys_chroot)))
+(allow sshd_auth_t sshd_session_t (process (sigchld)))
+(allow sshd_auth_t sshd_session_t (fd (use)))
+(allow sshd_auth_t sshd_session_t (unix_stream_socket (read write getattr
+	setattr shutdown)))
+(allow sshd_auth_t sshd_session_t (fifo_file (read write getattr)))
+(allow sshd_auth_t sshd_t (tcp_socket (read write getattr setattr getopt
+	setopt shutdown ioctl)))
+(allow sshd_auth_t sshd_t (fd (use)))

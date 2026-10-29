@@ -1,7 +1,208 @@
 ; SPDX-License-Identifier: BSD-2-Clause
 ;
 ; The SELinux policy additions of the desktop flavor. Read docs/selinux.md.
+;
+; The desktop services and the desktop session are confined:
+;   - devd_t: "klos devd" (loads the modules for devices, sets the groups,
+;     modes and labels of device nodes).
+;   - seatd_t: seatd (opens the graphics and input devices for the users).
+;   - user_t: the desktop session. sway starts in user_t, and the programs
+;     that sway starts (foot, the shell in foot, the programs of the user)
+;     stay in user_t. user_t cannot change system files, load modules, use
+;     raw sockets, trace other domains or change to another domain.
+
+; --- Types ---
+
+(type devd_t)
+(type seatd_t)
+(type user_t)
+(typeattributeset domain (devd_t seatd_t user_t))
+
+(type klos_exec_t)
+(type seatd_exec_t)
+(type sway_exec_t)
+(type seatd_runtime_t)
+(type user_runtime_t)
+(type user_tmp_t)
+(type user_tmpfs_t)
+(type fonts_cache_t)
+(typeattributeset exec_type (klos_exec_t seatd_exec_t sway_exec_t))
+(typeattributeset file_type (seatd_runtime_t user_runtime_t user_tmp_t user_tmpfs_t
+	fonts_cache_t))
+(allow user_tmpfs_t tmpfs_t (filesystem (associate)))
+
+(type dri_device_t)
+(type input_device_t)
+(type sound_device_t)
+(type tty_device_t)
+(typeattributeset dev_type (dri_device_t input_device_t sound_device_t tty_device_t))
 
 ; The llvmpipe and lavapipe drivers of Mesa compile shaders to machine
-; code (a JIT compiler).
-(typeattributeset execmem_domain (init_t))
+; code (a JIT compiler). Only the desktop session needs this.
+(typeattributeset execmem_domain (user_t))
+
+; --- Domain transitions ---
+
+(typetransition init_t sway_exec_t process user_t)
+(typetransition init_t seatd_exec_t process seatd_t)
+(typetransition seatd_t var_run_t sock_file "seatd.sock" seatd_runtime_t)
+(typetransition user_t tmp_t file user_tmp_t)
+(typetransition user_t tmp_t dir user_tmp_t)
+(typetransition user_t tmpfs_t file user_tmpfs_t)
+; fc-cache and fc-list of the administrator make the system font cache.
+(typetransition init_t var_t dir "fontconfig" fonts_cache_t)
+
+; --- devd ---
+
+; "klos devd" starts itself again in devd_t (enterDomain in src/klos).
+(call daemon (devd_t klos_exec_t))
+(allow init_t self (process (setexec)))
+(allow devd_t self (capability (chown fowner fsetid sys_module net_admin
+	dac_override dac_read_search)))
+(allow devd_t self (netlink_kobject_uevent_socket (create read write getattr
+	setattr bind getopt setopt shutdown)))
+; The kernel modules (modprobe from kmod).
+(allow devd_t bin_t (file (read open getattr map execute execute_no_trans)))
+(allow devd_t lib_t (system (module_load)))
+(allow devd_t kernel_t (system (module_request)))
+(allow devd_t etc_t (dir (search getattr read open)))
+(allow devd_t proc_t (file (read open getattr)))
+; The device nodes: group, mode and SELinux label.
+(allow devd_t device_t (dir (search getattr read open)))
+(allow devd_t device_t (lnk_file (read getattr)))
+(allow devd_t dev_type (chr_file (getattr setattr relabelfrom)))
+(allow devd_t dev_type (blk_file (getattr setattr relabelfrom)))
+(allow devd_t dev_type (chr_file (relabelto)))
+(allow devd_t dev_type (blk_file (relabelto)))
+(allow devd_t devpts_t (dir (search getattr)))
+(allow devd_t devpts_t (chr_file (getattr)))
+(allow devd_t tmpfs_t (dir (search getattr read open)))
+(allow devd_t devpts_t (dir (read open)))
+; The Go runtime reads the cgroup of the process (CPU limits).
+(allow devd_t cgroup_t (dir (search getattr)))
+(allow devd_t cgroup_t (file (read open getattr)))
+; The kernel checks the signature of a module with its keyring; the
+; process that loads the module must be able to search the keyring.
+(allow devd_t kernel_t (key (search)))
+(allow devd_t security_t (dir (search getattr)))
+(allow devd_t security_t (file (read open getattr)))
+
+; --- seatd ---
+
+(call daemon (seatd_t seatd_exec_t))
+(allow seatd_t self (capability (sys_tty_config sys_admin chown fowner
+	dac_override setgid)))
+(allow seatd_t self (unix_stream_socket (bind listen accept)))
+(allow seatd_t var_run_t (dir (write add_name remove_name)))
+(allow seatd_t seatd_runtime_t (sock_file (create unlink getattr setattr write)))
+(allow seatd_t device_t (dir (read open)))
+(allow seatd_t dri_device_t (chr_file (read write open getattr ioctl map)))
+(allow seatd_t input_device_t (chr_file (read write open getattr ioctl)))
+(allow seatd_t tty_device_t (chr_file (read write open getattr ioctl)))
+(allow seatd_t user_t (process (signal)))
+
+; --- The desktop session ---
+
+(allow init_t user_t (process (transition)))
+(allow user_t sway_exec_t (file (entrypoint execute read open getattr map
+	execute_no_trans)))
+(allow user_t init_t (process (sigchld)))
+(allow user_t init_t (fd (use)))
+(allow user_t init_t (fifo_file (read write getattr ioctl)))
+(allow user_t init_t (unix_stream_socket (read write getattr)))
+; Output to a file that the administrator opened (for example a log in /tmp).
+(allow user_t tmp_t (file (write append getattr ioctl)))
+(allow user_t var_log_t (file (write append getattr ioctl)))
+; The processes of the session.
+(allow user_t self (process (fork sigchld signal signull sigkill sigstop
+	getsched setsched getpgid setpgid getcap getattr setrlimit getsession)))
+(allow user_t self (fd (use)))
+(allow user_t self (fifo_file (read write open getattr ioctl)))
+(allow user_t self (unix_stream_socket (create read write getattr setattr
+	bind listen accept connect connectto getopt setopt shutdown)))
+(allow user_t self (unix_dgram_socket (create read write getattr setattr
+	bind connect getopt setopt shutdown sendto)))
+(allow user_t self (netlink_kobject_uevent_socket (create read getattr
+	setattr bind getopt setopt shutdown)))
+(allow user_t self (tcp_socket (create read write getattr setattr connect
+	getopt setopt shutdown ioctl)))
+(allow user_t self (udp_socket (create read write getattr setattr connect
+	getopt setopt shutdown ioctl bind)))
+(allow user_t port_type (tcp_socket (name_connect)))
+(allow user_t node_t (udp_socket (node_bind)))
+; Programs, libraries and data.
+(allow user_t os_dir_type (dir (search getattr read open)))
+(allow user_t os_dir_type (lnk_file (read getattr)))
+(allow user_t bin_t (file (read open getattr map execute execute_no_trans)))
+(allow user_t shell_exec_t (file (read open getattr map execute execute_no_trans)))
+(allow user_t lib_t (file (read open getattr map execute)))
+(allow user_t os_read_type (file (read open getattr map)))
+(allow user_t net_conf_t (file (read open getattr)))
+(allow user_t root_t (dir (search getattr read open)))
+(allow user_t root_t (lnk_file (read getattr)))
+(allow user_t var_dir_type (dir (search getattr)))
+(allow user_t var_dir_type (lnk_file (read getattr)))
+(allow user_t var_t (dir (search getattr)))
+; The font cache that the image build makes (fc-cache).
+(allow user_t fonts_cache_t (dir (search getattr read open)))
+(allow user_t fonts_cache_t (file (read open getattr map)))
+; A shell looks at the home directory of root ($HOME of the administrator).
+(dontaudit user_t root_home_t (dir (getattr search)))
+; The files of the user.
+(allow user_t home_t (dir (search getattr read open write add_name
+	remove_name create setattr rmdir rename reparent)))
+(allow user_t home_t (file (read write open getattr setattr create unlink
+	rename link lock append map ioctl)))
+(allow user_t home_t (lnk_file (read getattr create unlink rename)))
+(allow user_t home_t (sock_file (read write getattr create unlink)))
+(allow user_t home_t (fifo_file (read write open getattr create unlink)))
+(allow user_t user_runtime_t (dir (search getattr read open write add_name
+	remove_name create setattr rmdir)))
+(allow user_t user_runtime_t (file (read write open getattr setattr create
+	unlink rename lock map ioctl)))
+(allow user_t user_runtime_t (sock_file (read write getattr create unlink setattr)))
+(allow user_t user_t (unix_stream_socket (connectto)))
+(allow user_t tmp_t (dir (search getattr read open write add_name remove_name)))
+(allow user_t user_tmp_t (dir (search getattr read open write add_name
+	remove_name create setattr rmdir)))
+(allow user_t user_tmp_t (file (read write open getattr setattr create unlink
+	rename lock append map ioctl)))
+(allow user_t user_tmp_t (sock_file (read write getattr create unlink)))
+; Shared memory (memfd, /dev/shm) for Wayland buffers.
+(allow user_t tmpfs_t (dir (search getattr read open write add_name remove_name)))
+(allow user_t user_tmpfs_t (file (read write open getattr setattr create unlink
+	map)))
+; seatd and the devices.
+(allow user_t seatd_runtime_t (sock_file (write getattr)))
+(allow user_t seatd_t (unix_stream_socket (connectto)))
+(allow user_t seatd_t (fd (use)))
+(allow user_t device_t (dir (search getattr read open watch)))
+(allow user_t device_t (lnk_file (read getattr)))
+(allow user_t dri_device_t (chr_file (read write open getattr ioctl map)))
+(allow user_t input_device_t (chr_file (read write getattr ioctl)))
+(allow user_t sound_device_t (chr_file (read write open getattr ioctl map)))
+(allow user_t null_device_t (chr_file (read write open getattr ioctl append)))
+(allow user_t random_device_t (chr_file (read open getattr)))
+(allow user_t tty_device_t (chr_file (read write getattr ioctl)))
+; /dev/tty: the controlling terminal of the process.
+(allow user_t devtty_t (chr_file (read write open getattr ioctl)))
+(allow user_t ptmx_device_t (chr_file (read write open getattr ioctl)))
+(allow user_t devpts_t (dir (search getattr)))
+(allow user_t devpts_t (chr_file (read write open getattr setattr ioctl)))
+(allow user_t devpts_t (filesystem (getattr)))
+; System information (Mesa, libinput and wlroots read sysfs).
+(allow user_t proc_t (dir (search getattr read open)))
+(allow user_t proc_t (file (read open getattr)))
+(allow user_t proc_t (lnk_file (read getattr)))
+(allow user_t self (dir (search getattr read open)))
+(allow user_t self (file (read write open getattr)))
+(allow user_t self (lnk_file (read getattr)))
+(allow user_t sysctl_t (dir (search getattr)))
+(allow user_t sysctl_t (file (read open getattr)))
+(allow user_t sysfs_t (dir (search getattr read open)))
+(allow user_t sysfs_t (file (read open getattr)))
+(allow user_t sysfs_t (lnk_file (read getattr)))
+(allow user_t fs_t (filesystem (getattr)))
+(allow user_t tmpfs_t (filesystem (getattr)))
+; The administrator (init_t) can see and stop the session.
+(allow user_t init_t (process (signal)))

@@ -1,0 +1,27 @@
+# The D-Bus library (libdbus), without the message bus daemon and the
+# tools. pipewire-media-session needs the library. KLOS has no D-Bus
+# daemon: the programs work without a bus.
+[package]
+name = "dbus"
+version = "1.16.2"
+summary = "D-Bus library"
+license = "AFL-2.1 OR GPL-2.0-or-later"
+homepage = "https://www.freedesktop.org/wiki/Software/dbus/"
+build-depends = ["expat"]
+
+[[source]]
+url = "https://dbus.freedesktop.org/releases/dbus/dbus-1.16.2.tar.xz"
+sha256 = "0ba2a1a4b16afe7bceb2c07e9ce99a8c2c3508e5dec290dbb643384bd6beb7e2"
+signature = "https://dbus.freedesktop.org/releases/dbus/dbus-1.16.2.tar.xz.asc"
+key = ["dbus-smcv"]
+
+[build]
+script = '''
+kmeson -Dmessage_bus=false -Dtools=false -Dmodular_tests=disabled \
+	-Dinstalled_tests=false -Ddoxygen_docs=disabled -Dducktype_docs=disabled \
+	-Dxml_docs=disabled -Dqt_help=disabled -Dsystemd=disabled -Dselinux=disabled \
+	-Dapparmor=disabled -Dlibaudit=disabled -Dx11_autolaunch=disabled \
+	-Dvalgrind=disabled -Dverbose_mode=false -Duser_session=false -Dasserts=false
+kninja
+kninja_install
+'''

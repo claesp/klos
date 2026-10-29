@@ -1,0 +1,22 @@
+# The ALSA library (sound). PipeWire uses it for the sound cards, and the
+# PipeWire ALSA plugin lets ALSA programs play through PipeWire.
+[package]
+name = "alsa-lib"
+version = "1.2.16.1"
+summary = "Advanced Linux Sound Architecture library"
+license = "LGPL-2.1-or-later"
+homepage = "https://www.alsa-project.org/"
+
+[[source]]
+url = "https://www.alsa-project.org/files/pub/lib/alsa-lib-1.2.16.1.tar.bz2"
+sha256 = "f740db7f488255944ffd4428416ee3390a96742856916433df468c281436480e"
+signature = "https://www.alsa-project.org/files/pub/lib/alsa-lib-1.2.16.1.tar.bz2.sig"
+key = ["alsa-release"]
+
+[build]
+script = '''
+kconfigure --disable-static --disable-python --disable-aload --without-debug \
+	--with-plugindir=/usr/lib/alsa-lib
+kmake
+make DESTDIR="$DESTDIR" install
+'''

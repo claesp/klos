@@ -1,0 +1,46 @@
+# PipeWire: the sound server of the desktop. It also serves the PulseAudio
+# protocol (pipewire-pulse) and the ALSA plugin. The session manager is
+# pipewire-media-session (WirePlumber needs a Lua interpreter).
+[package]
+name = "pipewire"
+version = "1.6.11"
+summary = "Sound and video server"
+license = "MIT"
+homepage = "https://pipewire.org/"
+build-depends = ["alsa-lib", "libudev-zero"]
+# Upstream does not sign releases (the tags are lightweight). The SHA-256
+# is pinned.
+
+[[source]]
+url = "https://gitlab.freedesktop.org/pipewire/pipewire/-/archive/1.6.11/pipewire-1.6.11.tar.gz"
+sha256 = "f3f70c4af173cc93d05070a9d412efe3ef5889bdf4ac32298e2c0d9ae1350559"
+
+[build]
+script = '''
+kmeson -Ddocs=disabled -Dman=disabled -Dexamples=disabled -Dtests=disabled \
+	-Dinstalled_tests=disabled -Dgstreamer=disabled -Dgstreamer-device-provider=disabled \
+	-Dlibsystemd=disabled -Dlogind=disabled -Dsystemd-system-service=disabled \
+	-Dsystemd-user-service=disabled -Dselinux=disabled -Dpipewire-alsa=enabled \
+	-Dpipewire-jack=disabled -Dpipewire-v4l2=disabled -Djack-devel=false \
+	-Dspa-plugins=enabled -Dalsa=enabled -Daudiomixer=enabled -Daudioconvert=enabled \
+	-Dbluez5=disabled -Dcontrol=enabled -Daudiotestsrc=enabled -Dffmpeg=disabled \
+	-Djack=disabled -Dsupport=enabled -Devl=disabled -Dtest=disabled -Dv4l2=disabled \
+	-Ddbus=disabled -Dlibcamera=disabled -Dvideoconvert=disabled -Dvideotestsrc=disabled \
+	-Dvolume=enabled -Dvulkan=disabled -Dpw-cat=disabled -Dpw-cat-ffmpeg=disabled \
+	-Dudev=enabled -Dsdl2=disabled -Dsndfile=disabled -Dlibmysofa=disabled \
+	-Dlibpulse=disabled -Droc=disabled -Davahi=disabled -Decho-cancel-webrtc=disabled \
+	-Dlibusb=disabled -Dsession-managers=[] -Draop=disabled -Dlv2=disabled \
+	-Dx11=disabled -Dx11-xfixes=disabled -Dlibcanberra=disabled -Dlegacy-rtkit=false \
+	-Davb=disabled -Dflatpak=disabled -Dreadline=disabled -Dgsettings=disabled \
+	-Dcompress-offload=disabled -Dpam-defaults-install=false -Drlimits-install=false \
+	-Dopus=disabled -Dlibffado=disabled -Dgsettings-pulse-schema=disabled \
+	-Dsnap=disabled -Debur128=disabled -Dfftw=disabled -Donnxruntime=disabled \
+	-Dbluez5-codec-lc3plus=disabled -Dbluez5-codec-opus=disabled -Dbluez5-codec-lc3=disabled
+kninja
+kninja_install
+# ALSA programs use PipeWire (the configuration of the ALSA plugin).
+mkdir -p "$DESTDIR/etc/alsa/conf.d"
+for f in 50-pipewire.conf 99-pipewire-default.conf; do
+	ln -s "/usr/share/alsa/alsa.conf.d/$f" "$DESTDIR/etc/alsa/conf.d/$f"
+done
+'''

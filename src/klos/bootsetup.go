@@ -72,6 +72,10 @@ func cmdBootSetup(args []string) error {
 		key := "/etc/ssh/ssh_host_ed25519_key"
 		if _, err := os.Stat(key); err != nil {
 			note(run("ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", key))
+			// The private key has its own SELinux type (sshd_key_t).
+			for _, p := range []string{key, key + ".pub"} {
+				note(labelPath(p, p))
+			}
 		}
 	}
 	if len(errs) > 0 {
@@ -293,6 +297,12 @@ func userRuntimeDirs() error {
 		}
 		if err := os.Chown(d, uid, gid); err != nil {
 			return err
+		}
+		// The desktop policy has a type for these directories.
+		for _, p := range []string{"/run/user", d} {
+			if err := labelPath(p, p); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

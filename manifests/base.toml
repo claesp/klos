@@ -115,11 +115,17 @@ file-contexts = ["base.fc"]
 # "klos test" runs these commands on all flavors.
 [test]
 commands = [
-  "for i in $(seq 60); do ip route | grep -q default && break; sleep 1; done; ip route | grep -q default || { ip addr; ip route; cat /var/log/dhcpcd.log; false; }",
+  "for i in $(seq 60); do ip route | grep -q default && break; sleep 1; done; ip route | grep -q default || { ip addr; ip route; cat /var/log/dhcpcd.log; tail -20 /var/log/devd.log 2>/dev/null; false; }",
   "sleep 5; pgrep chronyd && grep -q 'Loaded seccomp filter' /var/log/chronyd.log || { cat /var/log/chronyd.log; dmesg | grep type=1326; false; }",
   # The test VM has no network. A second chronyd (without the filter) is a
   # local NTP server, so that the chronyd with the filter gets NTP packets.
   "printf 'port 11123\\nbindaddress 127.0.0.1\\nallow 127.0.0.1\\nlocal stratum 8\\ncmdport 0\\npidfile /run/chrony/test-server.pid\\n' > /etc/chrony/test-server.conf && chronyd -x -u chrony -f /etc/chrony/test-server.conf </dev/null >/dev/null 2>&1",
   "echo 'server 127.0.0.1 port 11123 iburst minpoll -4 maxpoll -4' >> /etc/chrony/chrony.conf && dinitctl restart chronyd && for i in $(seq 60); do grep -q 'Selected source 127.0.0.1' /var/log/chronyd.log && break; sleep 1; done; sleep 5; grep -q 'Selected source 127.0.0.1' /var/log/chronyd.log && pgrep -f 'chronyd -d -u chrony -F 1' || { cat /var/log/chronyd.log; dmesg | grep type=1326; false; }",
   "sed -i '/port 11123/d' /etc/chrony/chrony.conf && kill $(cat /run/chrony/test-server.pid) && rm /etc/chrony/test-server.conf && dinitctl restart chronyd",
+  # An SSH login with a key. sshd is confined (sshd_t, sshd_session_t,
+  # sshd_auth_t); the shell of the user is init_t again.
+  "ssh-keygen -q -t ed25519 -N '' -C sshtest -f /tmp/sshtest && mkdir -p -m 700 /root/.ssh && cat /tmp/sshtest.pub >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys",
+  "ssh -i /tmp/sshtest -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes root@127.0.0.1 'cat /proc/self/attr/current; echo; cat /proc/$PPID/attr/current' > /tmp/ssh.out 2>&1; cat /tmp/ssh.out; grep -q ':init_t:' /tmp/ssh.out && grep -q ':sshd_session_t:' /tmp/ssh.out || { tail /var/log/sshd.log; false; }",
+  "for p in $(pgrep -x sshd); do grep -q ':sshd_t:' /proc/$p/attr/current || { cat /proc/$p/attr/current; false; }; done",
+  "sed -i '/sshtest/d' /root/.ssh/authorized_keys 2>/dev/null; grep -c . /root/.ssh/authorized_keys >/dev/null || rm /root/.ssh/authorized_keys; rm -f /tmp/sshtest /tmp/sshtest.pub",
 ]
