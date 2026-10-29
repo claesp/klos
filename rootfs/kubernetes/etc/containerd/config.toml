@@ -6,8 +6,15 @@ state = "/run/containerd"
 [grpc]
   address = "/run/containerd/containerd.sock"
 
+# The pause image of the package kubernetes-images (imported by the
+# service k8s-images).
+[plugins."io.containerd.cri.v1.images".pinned_images]
+  sandbox = "klos.local/pause:3.10.2"
+
 [plugins."io.containerd.cri.v1.runtime"]
-  enable_selinux = false
+  # containerd gives each pod container_t and its own MCS categories
+  # (read docs/selinux.md).
+  enable_selinux = true
   [plugins."io.containerd.cri.v1.runtime".containerd]
     default_runtime_name = "crun"
     [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.crun]

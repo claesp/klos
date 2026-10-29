@@ -16,8 +16,11 @@ SELinux reference policy.
   a boolean. The root user cannot turn SELinux off.
 - No process can make memory that is writable and executable (W^X), except
   on the flavors that need a JIT compiler (see below).
-- The network daemons of the base system (dhcpcd and chronyd) are
+- The network daemons of the base system (dhcpcd, chronyd and sshd) are
   confined: they get only the permissions that they need.
+- On the desktop, the device services and the desktop session are
+  confined. On a Kubernetes node, the containers are confined, and the
+  MCS categories keep the pods apart.
 
 ## The model
 
@@ -27,6 +30,16 @@ SELinux reference policy.
 | `init_t` | dinit and all processes that dinit starts, except the processes below. The login shells and the administrator tools are also `init_t`. | No |
 | `dhcpcd_t` | dhcpcd and its hook scripts. | Yes |
 | `chronyd_t` | chronyd. | Yes |
+| `sshd_t` | The sshd listener. | Yes |
+| `sshd_session_t` | `sshd-session`: the privileged monitor of a connection. It starts the shell of the user, which is `init_t` again. | Yes |
+| `sshd_auth_t` | `sshd-auth`: it reads the data of the client before the authentication. It runs as the user `sshd` in an empty root directory and cannot start programs. | Yes |
+| `devd_t` | `klos devd` (desktop). | Yes |
+| `seatd_t` | seatd (desktop). | Yes |
+| `user_t` | The desktop session: sway and all programs that sway starts (foot, PipeWire, Firefox, the shells in foot). | Yes |
+| `containerd_t` | containerd, the shims and crun (kubernetes). | No |
+| `kubelet_t` | kubelet (kubernetes). | No |
+| `container_t` | The containers of the pods (kubernetes). Each pod has its own MCS categories. | Yes |
+| `kube_control_plane_t` | The static pods of the control plane: etcd, kube-apiserver, kube-controller-manager and kube-scheduler (kubernetes). | Yes |
 
 An unconfined domain (attribute `unconfined_domain`) gets all permissions
 on all types, except these permissions:
@@ -38,9 +51,49 @@ on all types, except these permissions:
 | `file` | `execmod` |
 | `capability2` | `mac_admin`, `mac_override` |
 
-The attribute `execmem_domain` gives `execmem` back. The `kubernetes`
-flavor (containers) and the `desktop` flavor (the llvmpipe JIT compiler of
-Mesa) put `init_t` in this attribute.
+The attribute `execmem_domain` gives `execmem` back. Only the domains
+with a JIT compiler are in it: `user_t` on the desktop (the llvmpipe and
+lavapipe drivers of Mesa, the JavaScript engine of Firefox) and the
+container domains on the kubernetes flavor. `init_t` has no executable
+memory on any flavor.
+
+### The desktop
+
+sway starts in `user_t` (`/usr/bin/sway` is `sway_exec_t`). The programs
+that sway starts stay in `user_t`. `user_t` can use the files of the users
+(`/var/home`), `/run/user/<uid>`, `/tmp`, the network as a client, and the
+graphics, input and sound devices. It cannot change system files, load
+modules, use raw sockets, see the files of daemons or change to another
+domain. A login shell on a console is `init_t`.
+
+`klos devd` sets the labels of new device nodes (for example
+`dri_device_t` for `/dev/dri/*`). All commands of the `klos` program are
+one file, so `klos devd` starts itself again in `devd_t` (it writes
+`/proc/thread-self/attr/exec`).
+
+### Kubernetes
+
+containerd and kubelet need almost all permissions (mounts, namespaces,
+the network, the labels of volumes), so their domains are unconfined, as
+in the container-selinux policy of Fedora. The containers are confined:
+
+1. containerd gives each pod `container_t` and a pair of MCS categories
+   (for example `s0:c12,c345`). The files of the pod (its volumes and
+   `/dev`) get the same categories.
+2. The MCS constraints stop a `container_t` process from using files and
+   processes with other categories. Thus a container cannot read the
+   volumes of another pod or send signals to it.
+3. The root file systems of the containers (`/var/lib/containerd/...`)
+   are `container_file_t`.
+4. The static pods of the control plane run as `kube_control_plane_t`
+   with the level `s0`. Only this domain can read the keys in
+   `/etc/kubernetes` (`kube_etc_t`) and write `/var/lib/etcd`
+   (`etcd_var_lib_t`). The kubeadm patches in
+   `/usr/share/kubernetes/kubeadm-patches` set the type.
+
+A privileged container gets no SELinux label from containerd: it runs as
+`containerd_t`. Use the Pod Security admission (level `baseline` or
+`restricted`) to stop other pods from setting their own SELinux type.
 
 A process changes its domain only when it starts a program with an entry
 point type (a domain transition). For example, dinit (`init_t`) starts
@@ -133,6 +186,12 @@ klos selinux status
 
 The command shows the mode, the policy version, the context of the
 process and the state of the `/var` labels.
+
+```sh
+klos selinux show /dev/dri/card0
+```
+
+The command shows the label of each file (toybox `ls` has no `-Z`).
 
 ```sh
 klos selinux relabel /var/lib/myservice

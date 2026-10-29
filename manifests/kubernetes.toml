@@ -12,26 +12,44 @@ config = ["kvm-guest", "kubernetes"]
 cmdline = ["console=tty0", "console=ttyS0,115200"]
 
 [packages]
-install = ["containerd", "crun", "cni-plugins", "cri-tools", "kubernetes"]
+install = ["containerd", "crun", "cni-plugins", "cri-tools", "kubernetes",
+  "kubernetes-images"]
 
 [services]
-enable = ["containerd", "kubelet"]
+enable = ["containerd", "k8s-images", "kubelet"]
 
 [rootfs]
 overlays = ["kubernetes"]
-dirs = ["etc/cni/net.d", "etc/kubernetes/manifests"]
+# kubeadm mounts the flexvolume directory into kube-controller-manager; /usr
+# is read-only, so the image has it.
+dirs = ["etc/cni/net.d", "etc/kubernetes/manifests",
+  "usr/libexec/kubernetes/kubelet-plugins/volume/exec"]
 
-# kubeadm cannot pull images in the test (no network), so the test checks
-# the node parts and the kubeadm preflight checks without the image pull.
 [selinux]
 policy = ["kubernetes.cil"]
+file-contexts = ["kubernetes.fc"]
 
+# The test makes a one-node cluster with kubeadm and the images of the
+# package kubernetes-images (the test VM has no network), and starts a pod.
 [test]
+qemu-args = ["-m", "4096"]
 commands = [
   "for i in $(seq 30); do [ -S /run/containerd/containerd.sock ] && break; sleep 1; done; crictl info >/dev/null",
   "crun --version",
   "kubelet --version && kubeadm version -o short && kubectl version --client",
-  "printf 'apiVersion: kubeadm.k8s.io/v1beta4\\nkind: InitConfiguration\\nnodeRegistration:\\n  imagePullPolicy: Never\\n---\\napiVersion: kubeadm.k8s.io/v1beta4\\nkind: ClusterConfiguration\\nkubernetesVersion: v1.37.1\\n' > /tmp/kubeadm.yaml && kubeadm init phase preflight --config /tmp/kubeadm.yaml --ignore-preflight-errors=ImagePull,NumCPU,Mem",
   "sysctl -n net.ipv4.ip_forward | grep -qx 1",
   "test -d /proc/sys/net/bridge && grep -q overlay /proc/filesystems",
+  "for i in $(seq 120); do [ $(ctr -n k8s.io images ls -q | grep -c '^klos.local/') -ge 5 ] && break; sleep 1; done; ctr -n k8s.io images ls -q | grep '^klos.local/' | sort | tr '\\n' ' '; [ $(ctr -n k8s.io images ls -q | grep -c '^klos.local/') -ge 5 ] || { dinitctl list; cat /var/log/k8s-images.log; tail -40 /var/log/containerd.log; false; }",
+  "printf '{\\n \"cniVersion\": \"1.0.0\",\\n \"name\": \"klos-test\",\\n \"plugins\": [\\n  {\"type\": \"bridge\", \"bridge\": \"cni0\", \"isGateway\": true, \"ipMasq\": true,\\n   \"ipam\": {\"type\": \"host-local\", \"ranges\": [[{\"subnet\": \"10.244.0.0/24\"}]], \"routes\": [{\"dst\": \"0.0.0.0/0\"}]}},\\n  {\"type\": \"portmap\", \"capabilities\": {\"portMappings\": true}}\\n ]\\n}\\n' > /etc/cni/net.d/10-klos-test.conflist",
+  "printf 'apiVersion: kubeadm.k8s.io/v1beta4\\nkind: InitConfiguration\\nnodeRegistration:\\n  criSocket: unix:///run/containerd/containerd.sock\\n  imagePullPolicy: Never\\npatches:\\n  directory: /usr/share/kubernetes/kubeadm-patches\\n---\\napiVersion: kubeadm.k8s.io/v1beta4\\nkind: ClusterConfiguration\\nkubernetesVersion: v1.37.1\\nimageRepository: klos.local\\netcd:\\n  local:\\n    imageTag: 3.7.3-0\\ndns:\\n  disabled: true\\nproxy:\\n  disabled: true\\nnetworking:\\n  podSubnet: 10.244.0.0/16\\n---\\napiVersion: kubelet.config.k8s.io/v1beta1\\nkind: KubeletConfiguration\\ncgroupDriver: cgroupfs\\n' > /tmp/kubeadm.yaml",
+  "kubeadm init --config /tmp/kubeadm.yaml --ignore-preflight-errors=NumCPU,Mem > /tmp/kubeadm-init.log 2>&1 || { tail -20 /tmp/kubeadm-init.log; crictl ps -a; for c in kube-apiserver etcd; do crictl logs --tail 15 $(crictl ps -a -q --name $c | head -1); done; grep -i etcd /var/log/kubelet.log | grep -iE 'error|fail' | tail -8; crictl pods; false; }",
+  "export KUBECONFIG=/etc/kubernetes/admin.conf; kubectl wait --for=condition=Ready node --all --timeout=300s || { kubectl describe node; tail -30 /var/log/kubelet.log; false; }",
+  "export KUBECONFIG=/etc/kubernetes/admin.conf; for i in $(seq 120); do [ $(kubectl -n kube-system get pods --no-headers 2>/dev/null | wc -l) -ge 4 ] && break; sleep 1; done; kubectl -n kube-system get pods -o wide; for p in etcd kube-apiserver kube-controller-manager kube-scheduler; do kubectl -n kube-system wait --for=condition=Ready pod -l component=$p --timeout=300s || { crictl ps -a; grep -iE 'mirror|error' /var/log/kubelet.log | tail -30; false; }; done",
+  "export KUBECONFIG=/etc/kubernetes/admin.conf; kubectl taint nodes --all node-role.kubernetes.io/control-plane- && printf 'apiVersion: v1\\nkind: Pod\\nmetadata:\\n  name: klos-test\\nspec:\\n  containers:\\n  - name: pause\\n    image: klos.local/pause:3.10.2\\n    imagePullPolicy: Never\\n' | kubectl apply -f - && kubectl wait --for=condition=Ready pod/klos-test --timeout=180s && kubectl get pod klos-test -o wide | grep -q '10\\.244\\.' || { kubectl describe pod klos-test; tail -30 /var/log/kubelet.log; false; }",
+  # The SELinux domains: the pod is container_t with MCS categories, the
+  # control plane is kube_control_plane_t.
+  "grep -l ':container_t:s0:c[0-9]*,c[0-9]*' /proc/[0-9]*/attr/current 2>/dev/null | grep -q . || { for p in $(pgrep -x pause); do cat /proc/$p/attr/current; echo; done; false; }",
+  "for c in etcd kube-apiserver; do grep -q ':kube_control_plane_t:s0' /proc/$(pgrep -x $c)/attr/current || { cat /proc/$(pgrep -x $c)/attr/current; false; }; done",
+  "grep -q ':containerd_t:' /proc/$(pgrep -x containerd)/attr/current && grep -q ':kubelet_t:' /proc/$(pgrep -x kubelet)/attr/current",
+  "export KUBECONFIG=/etc/kubernetes/admin.conf; kubectl delete pod klos-test --wait=true --timeout=120s",
 ]

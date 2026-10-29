@@ -1,0 +1,21 @@
+# The JSON library of nftables ("nft -j"). The CNI plugins and kube-proxy
+# use the JSON interface of nft.
+[package]
+name = "jansson"
+version = "2.15.1"
+summary = "JSON library"
+license = "MIT"
+homepage = "https://github.com/akheron/jansson"
+
+[[source]]
+url = "https://github.com/akheron/jansson/releases/download/v2.15.1/jansson-2.15.1.tar.bz2"
+sha256 = "f9aa4b3ec8496fee69db94f06f3d76fd4a26b012ee9bf1e917078c2cd2841881"
+signature = "https://github.com/akheron/jansson/releases/download/v2.15.1/jansson-2.15.1.tar.bz2.asc"
+key = ["jansson-akheron"]
+
+[build]
+script = '''
+kconfigure --disable-static
+kmake
+make DESTDIR="$DESTDIR" install
+'''

@@ -1,0 +1,121 @@
+# The container images of the Kubernetes control plane, built from source:
+# kube-apiserver, kube-controller-manager and kube-scheduler (from the
+# Kubernetes source), etcd and the pause program. Each image has only the
+# static program. The images are OCI image tarballs in
+# /usr/share/kubernetes/images; the service k8s-images imports them into
+# containerd. Thus "kubeadm init" works without a network. The image names
+# start with klos.local/ (not registry.k8s.io): they are KLOS builds.
+# Read docs/kubernetes.md.
+[package]
+name = "kubernetes-images"
+version = "1.37.1"
+summary = "Kubernetes control plane images (built from source)"
+license = "Apache-2.0"
+homepage = "https://kubernetes.io/"
+host-depends = ["go"]
+options = { no-strip = true }
+
+[[source]]
+url = "https://dl.k8s.io/v1.37.1/kubernetes-src.tar.gz"
+filename = "kubernetes-src-1.37.1.tar.gz"
+sha256 = "d58492a058ac7cb1db0829a9e12317024f48d4bcbf56344b32b11276f9bdc2cf"
+signature = "https://dl.k8s.io/v1.37.1/kubernetes-src.tar.gz.sig"
+certificate = "https://dl.k8s.io/v1.37.1/kubernetes-src.tar.gz.cert"
+signature-type = "sigstore"
+identity = "krel-staging@k8s-releng-prod.iam.gserviceaccount.com"
+issuer = "https://accounts.google.com"
+dest = "kubernetes"
+
+# etcd does not vendor its Go modules: kbuild downloads them (go-modules).
+# Upstream signs the Git tag. kbuild compares the tarball with the signed
+# Git tree (signature-type git-tag, docs/sources-and-keys.md).
+[[source]]
+url = "https://github.com/etcd-io/etcd/archive/refs/tags/v3.7.3.tar.gz"
+filename = "etcd-3.7.3.tar.gz"
+sha256 = "38455879fd3744d9aec12f45e890bede61df8b2323279e2c895bbb1bd484681f"
+signature-type = "git-tag"
+git = "https://github.com/etcd-io/etcd.git"
+tag = "v3.7.3"
+key = ["etcd-ivanvc"]
+go-modules = ["server"]
+
+[build]
+script = '''
+kgoenv
+KS="$S/kubernetes"
+ES="$S/etcd-3.7.3"
+ETCD_VERSION=3.7.3
+PAUSE_VERSION=3.10.2
+OUT="$S/out"
+mkdir -p "$OUT"
+
+# The Kubernetes programs (with vendor/).
+v=k8s.io/component-base/version
+ld="-s -w -buildid= -X $v.gitVersion=v$PKGVER -X $v.gitMajor=1 -X $v.gitMinor=37 \
+	-X $v.gitTreeState=clean -X $v.buildDate=1970-01-01T00:00:00Z"
+for c in kube-apiserver kube-controller-manager kube-scheduler; do
+	(cd "$KS" && go build -ldflags "$ld" -o "$OUT/$c" "./cmd/$c")
+done
+
+# etcd (with the modules of "fetch" in GOMODCACHE, without the network).
+export GOFLAGS="$KLOS_GOFLAGS" GOPROXY=off
+(cd "$ES/server" && go build -ldflags "-s -w -buildid= -X go.etcd.io/etcd/api/v3/version.GitSHA=klos" \
+	-o "$OUT/etcd" .)
+
+# pause (C), static.
+cc $CFLAGS -static -DVERSION="v$PAUSE_VERSION-klos" -o "$OUT/pause" "$KS/build/pause/linux/pause.c"
+
+# mkimage NAME TAG DIR ENTRYPOINT-JSON: write an OCI image tarball.
+dtar() {
+	tar --sort=name --mtime="@$SOURCE_DATE_EPOCH" --owner=0 --group=0 --numeric-owner \
+		--format=posix --pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime "$@"
+}
+blob() { # FILE: move FILE into blobs/sha256, print "digest size"
+	d=$(sha256sum "$1" | cut -c1-64)
+	s=$(stat -c %s "$1")
+	mv "$1" "blobs/sha256/$d"
+	echo "$d $s"
+}
+mkimage() {
+	name=$1 tag=$2 dir=$3 entry=$4
+	img="$S/img/$name"
+	rm -rf "$img"
+	mkdir -p "$img/blobs/sha256"
+	cd "$img"
+	dtar -C "$dir" -cf layer.tar .
+	read -r ldig lsize < <(blob layer.tar)
+	printf '{"architecture":"amd64","os":"linux","created":"1970-01-01T00:00:00Z","config":{"Env":["PATH=/usr/local/bin:/usr/bin:/bin"],"Entrypoint":%s,"WorkingDir":"/"},"rootfs":{"type":"layers","diff_ids":["sha256:%s"]}}' \
+		"$entry" "$ldig" > config.json
+	read -r cdig csize < <(blob config.json)
+	printf '{"schemaVersion":2,"mediaType":"application/vnd.oci.image.manifest.v1+json","config":{"mediaType":"application/vnd.oci.image.config.v1+json","digest":"sha256:%s","size":%s},"layers":[{"mediaType":"application/vnd.oci.image.layer.v1.tar","digest":"sha256:%s","size":%s}]}' \
+		"$cdig" "$csize" "$ldig" "$lsize" > manifest.json
+	read -r mdig msize < <(blob manifest.json)
+	printf '{"schemaVersion":2,"mediaType":"application/vnd.oci.image.index.v1+json","manifests":[{"mediaType":"application/vnd.oci.image.manifest.v1+json","digest":"sha256:%s","size":%s,"platform":{"architecture":"amd64","os":"linux"},"annotations":{"io.containerd.image.name":"klos.local/%s:%s","org.opencontainers.image.ref.name":"%s"}}]}' \
+		"$mdig" "$msize" "$name" "$tag" "$tag" > index.json
+	printf '{"imageLayoutVersion":"1.0.0"}' > oci-layout
+	mkdir -p "$DESTDIR/usr/share/kubernetes/images"
+	dtar -cf "$DESTDIR/usr/share/kubernetes/images/$name.tar" oci-layout index.json blobs
+	cd "$S"
+}
+# rootfs DIR PROGRAM...: a root file system with the programs in
+# /usr/local/bin and the usual directories.
+rootfs() {
+	r=$1; shift
+	rm -rf "$r"
+	mkdir -p "$r/usr/local/bin" "$r/etc" "$r/tmp" "$r/var/lib"
+	chmod 1777 "$r/tmp"
+	printf 'root:x:0:0:root:/:/sbin/nologin\nnobody:x:65534:65534:nobody:/:/sbin/nologin\n' > "$r/etc/passwd"
+	printf 'root:x:0:\nnobody:x:65534:\n' > "$r/etc/group"
+	for p in "$@"; do install -m 0755 "$OUT/$p" "$r/usr/local/bin/$p"; done
+}
+for c in kube-apiserver kube-controller-manager kube-scheduler; do
+	rootfs "$S/root-$c" "$c"
+	mkimage "$c" "v$PKGVER" "$S/root-$c" "[\"/usr/local/bin/$c\"]"
+done
+rootfs "$S/root-etcd" etcd
+mkimage etcd "$ETCD_VERSION-0" "$S/root-etcd" '["/usr/local/bin/etcd"]'
+rm -rf "$S/root-pause"
+mkdir -p "$S/root-pause"
+install -m 0755 "$OUT/pause" "$S/root-pause/pause"
+mkimage pause "$PAUSE_VERSION" "$S/root-pause" '["/pause"]'
+'''

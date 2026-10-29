@@ -1,0 +1,6 @@
+# The SELinux labels of containers (read docs/selinux.md). containerd
+# (go-selinux) reads this file and adds a pair of MCS categories for each
+# pod.
+process = "system_u:system_r:container_t:s0"
+file = "system_u:object_r:container_file_t:s0"
+ro_file = "system_u:object_r:container_file_t:s0"

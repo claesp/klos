@@ -1,0 +1,8 @@
+# The SELinux domain of the control plane (read docs/kubernetes.md):
+# kube_control_plane_t can read /etc/kubernetes and write /var/lib/etcd.
+# The level s0 (no MCS categories) stays the same when the pod restarts.
+spec:
+  securityContext:
+    seLinuxOptions:
+      type: kube_control_plane_t
+      level: s0

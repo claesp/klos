@@ -1,0 +1,10 @@
+# Import the control plane images of the package kubernetes-images into
+# containerd (namespace k8s.io). An image that is already in containerd
+# takes no time. dinit starts this service when the containerd process
+# runs, so the script waits for the socket of containerd. dinit replaces
+# $NAME with an environment variable: "$$" is a "$" for the shell.
+type = scripted
+command = /bin/sh -c "for i in $$(seq 120); do [ -S /run/containerd/containerd.sock ] && break; sleep 1; done; for f in /usr/share/kubernetes/images/*.tar; do /usr/bin/ctr -n k8s.io images import $$f || exit 1; done"
+depends-on = containerd
+log-type = file
+logfile = /var/log/k8s-images.log

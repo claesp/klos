@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# The SELinux file contexts of the kubernetes flavor. Read docs/selinux.md.
+
+/usr/bin/containerd		--	system_u:object_r:containerd_exec_t:s0
+/usr/bin/kubelet		--	system_u:object_r:kubelet_exec_t:s0
+
+/etc/kubernetes(/.*)?			system_u:object_r:kube_etc_t:s0
+
+/var/lib/containerd(/.*)?		system_u:object_r:containerd_var_lib_t:s0
+# The root file systems of the containers.
+/var/lib/containerd/io\.containerd\.snapshotter\.v1\.overlayfs(/.*)?	system_u:object_r:container_file_t:s0
+/var/lib/etcd(/.*)?			system_u:object_r:etcd_var_lib_t:s0

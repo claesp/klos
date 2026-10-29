@@ -1,7 +1,199 @@
 ; SPDX-License-Identifier: BSD-2-Clause
 ;
 ; The SELinux policy additions of the kubernetes flavor. Read docs/selinux.md.
+;
+; The model:
+;   - containerd_t (containerd, the shims and crun) and kubelet_t have their
+;     own domains, but they are unconfined: they mount file systems, make
+;     namespaces, set up the network and change the labels of volumes. (The
+;     container-selinux policy of Fedora does the same.)
+;   - Containers are confined. containerd gives each pod the type
+;     container_t and a pair of MCS categories (for example s0:c12,c345),
+;     and gives the files of the pod the same categories. The MCS
+;     constraints below stop a container from reading the files of another
+;     pod or sending signals to its processes.
+;   - The static pods of the control plane (etcd, kube-apiserver,
+;     kube-controller-manager, kube-scheduler) run as kube_control_plane_t
+;     (the kubeadm patches in /usr/share/kubernetes/kubeadm-patches set
+;     the type). Only this domain can read the keys in /etc/kubernetes and
+;     write the etcd data in /var/lib/etcd.
+
+; --- Types ---
+
+(type containerd_t)
+(type kubelet_t)
+(type container_t)
+(type kube_control_plane_t)
+(typeattributeset domain (containerd_t kubelet_t container_t kube_control_plane_t))
+(typeattributeset unconfined_domain (containerd_t kubelet_t))
+(typeattribute container_domain)
+(typeattributeset container_domain (container_t kube_control_plane_t))
+
+(type containerd_exec_t)
+(type kubelet_exec_t)
+(type containerd_var_lib_t)
+(type container_file_t)
+(type kube_etc_t)
+(type etcd_var_lib_t)
+(typeattributeset exec_type (containerd_exec_t kubelet_exec_t))
+(typeattributeset file_type (containerd_var_lib_t container_file_t kube_etc_t etcd_var_lib_t))
+; crun mounts the tmpfs file systems of a container (/dev, /dev/shm) with
+; the option context=container_file_t: the file system has this type.
+(allow container_file_t container_file_t (filesystem (associate)))
+(allow container_file_t fs_type (filesystem (associate)))
 
 ; Containers can run programs with a JIT compiler (for example Java or
-; Node.js).
-(typeattributeset execmem_domain (init_t))
+; Node.js). The other domains of the flavor get no executable memory.
+(typeattributeset execmem_domain (container_domain))
+
+; --- MCS: the separation of the pods ---
+
+(typeattribute mcs_constrained_type)
+(typeattributeset mcs_constrained_type (container_t))
+
+(mlsconstrain (file (read write append ioctl lock map execute open getattr setattr
+	unlink link rename create relabelfrom relabelto))
+	(or (dom h1 h2) (not (eq t1 mcs_constrained_type))))
+(mlsconstrain (dir (read write search add_name remove_name rmdir reparent create
+	open getattr setattr relabelfrom relabelto))
+	(or (dom h1 h2) (not (eq t1 mcs_constrained_type))))
+(mlsconstrain (lnk_file (read write getattr setattr create unlink rename))
+	(or (dom h1 h2) (not (eq t1 mcs_constrained_type))))
+(mlsconstrain (chr_file (read write append ioctl open getattr setattr create unlink map))
+	(or (dom h1 h2) (not (eq t1 mcs_constrained_type))))
+(mlsconstrain (blk_file (read write append ioctl open getattr setattr create unlink))
+	(or (dom h1 h2) (not (eq t1 mcs_constrained_type))))
+(mlsconstrain (sock_file (read write getattr setattr create unlink))
+	(or (dom h1 h2) (not (eq t1 mcs_constrained_type))))
+; The standard input and output of a container are pipes of the shim
+; (containerd_t, all categories).
+(mlsconstrain (fifo_file (read write append ioctl open getattr setattr create unlink))
+	(or (dom h1 h2) (or (not (eq t1 mcs_constrained_type)) (eq t2 containerd_t))))
+(mlsconstrain (process (transition dyntransition signal sigkill sigstop signull
+	sigchld ptrace getattr getsched setsched getpgid setpgid getsession))
+	(or (dom h1 h2) (or (not (eq t1 mcs_constrained_type)) (eq t2 containerd_t))))
+(mlsconstrain (unix_stream_socket (connectto))
+	(or (dom h1 h2) (not (eq t1 mcs_constrained_type))))
+(mlsconstrain (unix_dgram_socket (sendto))
+	(or (dom h1 h2) (not (eq t1 mcs_constrained_type))))
+
+; --- Domain transitions and labels of new files ---
+
+(typetransition init_t containerd_exec_t process containerd_t)
+(typetransition init_t kubelet_exec_t process kubelet_t)
+(typetransition containerd_t var_lib_t dir "containerd" containerd_var_lib_t)
+; The snapshots (the root file systems of the containers).
+(typetransition containerd_t containerd_var_lib_t dir "io.containerd.snapshotter.v1.overlayfs"
+	container_file_t)
+(typetransition init_t var_lib_t dir "etcd" etcd_var_lib_t)
+(typetransition kubelet_t var_lib_t dir "etcd" etcd_var_lib_t)
+(typetransition init_t etc_t dir "kubernetes" kube_etc_t)
+
+; crun sets the domain of the container process (attr/exec).
+(allow containerd_t container_domain (process (transition)))
+(allow container_domain container_file_t (file (entrypoint)))
+(dontaudit containerd_t container_domain (process (noatsecure rlimitinh siginh)))
+
+; --- The base permissions of a container ---
+
+(macro container ((type d))
+	(allow d self (process (fork sigchld signal signull sigkill sigstop getsched
+		setsched getpgid setpgid getcap setcap getattr setrlimit getsession)))
+	(allow d self (capability (chown dac_override dac_read_search fowner fsetid
+		kill setgid setuid setpcap net_bind_service net_raw sys_chroot mknod
+		audit_write setfcap)))
+	(allow d self (fd (use)))
+	(allow d self (fifo_file (read write open getattr ioctl)))
+	(allow d self (unix_stream_socket (create read write getattr setattr bind
+		listen accept connect connectto getopt setopt shutdown)))
+	(allow d self (unix_dgram_socket (create read write getattr setattr bind
+		connect getopt setopt shutdown sendto)))
+	(allow d self (tcp_socket (create read write getattr setattr bind listen
+		accept connect getopt setopt shutdown ioctl)))
+	(allow d self (udp_socket (create read write getattr setattr bind connect
+		getopt setopt shutdown ioctl)))
+	(allow d self (icmp_socket (create read write getattr setattr bind connect
+		getopt setopt shutdown ioctl)))
+	(allow d self (rawip_socket (create read write getattr setattr bind connect
+		getopt setopt shutdown ioctl)))
+	(allow d self (netlink_route_socket (create read write getattr setattr bind
+		getopt setopt shutdown nlmsg_read)))
+	(allow d port_type (tcp_socket (name_bind name_connect)))
+	(allow d port_type (udp_socket (name_bind)))
+	(allow d node_t (tcp_socket (node_bind)))
+	(allow d node_t (udp_socket (node_bind)))
+	(allow d node_t (icmp_socket (node_bind)))
+	(allow d node_t (rawip_socket (node_bind)))
+	; The files of the container (the root file system and the volumes).
+	(allow d container_file_t (dir (read write search add_name remove_name rmdir
+		reparent create open getattr setattr rename lock ioctl watch)))
+	(allow d container_file_t (file (read write append ioctl lock map execute
+		execute_no_trans open getattr setattr unlink link rename create)))
+	(allow d container_file_t (lnk_file (read write getattr setattr create unlink
+		rename link)))
+	(allow d container_file_t (sock_file (read write getattr setattr create
+		unlink rename link)))
+	(allow d container_file_t (fifo_file (read write append ioctl open getattr
+		setattr create unlink rename link)))
+	(allow d container_file_t (chr_file (read write append ioctl open getattr
+		setattr create unlink map lock)))
+	(allow d container_file_t (filesystem (getattr)))
+	; The devices that crun puts into /dev of the container.
+	(allow d null_device_t (chr_file (read write append ioctl open getattr map)))
+	(allow d random_device_t (chr_file (read open getattr ioctl)))
+	(allow d device_t (chr_file (read write ioctl open getattr)))
+	(allow d ptmx_device_t (chr_file (read write ioctl open getattr)))
+	(allow d devpts_t (dir (search getattr read open)))
+	(allow d devpts_t (chr_file (read write ioctl open getattr setattr)))
+	(allow d devpts_t (filesystem (getattr)))
+	(allow d mqueue_t (dir (search getattr read open write add_name remove_name)))
+	(allow d mqueue_t (file (read write open getattr create unlink)))
+	; /proc, /sys and the cgroups of the container.
+	(allow d proc_t (dir (search getattr read open)))
+	(allow d proc_t (file (read open getattr ioctl)))
+	(allow d proc_t (lnk_file (read getattr)))
+	(allow d proc_t (filesystem (getattr)))
+	(allow d self (dir (search getattr read open)))
+	(allow d self (file (read write open getattr ioctl)))
+	(allow d self (lnk_file (read getattr)))
+	(allow d sysctl_t (dir (search getattr read open)))
+	(allow d sysctl_t (file (read open getattr)))
+	(allow d sysctl_net_t (dir (search getattr read open)))
+	(allow d sysctl_net_t (file (read open getattr)))
+	(allow d sysfs_t (dir (search getattr read open)))
+	(allow d sysfs_t (file (read open getattr)))
+	(allow d sysfs_t (lnk_file (read getattr)))
+	(allow d sysfs_t (filesystem (getattr)))
+	(allow d cgroup_t (dir (search getattr read open)))
+	(allow d cgroup_t (file (read open getattr)))
+	(allow d cgroup_t (filesystem (getattr)))
+	(allow d tmpfs_t (filesystem (getattr)))
+	(allow d fs_t (filesystem (getattr)))
+	(allow d nsfs_t (file (getattr read open)))
+	; The standard input and output of the container (pipes of the shim).
+	(allow d containerd_t (fd (use)))
+	(allow d containerd_t (fifo_file (read write append ioctl getattr)))
+	(allow d containerd_t (unix_stream_socket (read write getattr)))
+	(allow d containerd_t (process (sigchld)))
+	; A container must not load kernel modules.
+	(dontaudit d kernel_t (system (module_request)))
+)
+
+(call container (container_t))
+(call container (kube_control_plane_t))
+
+; --- The control plane ---
+
+(allow kube_control_plane_t kube_etc_t (dir (search getattr read open)))
+(allow kube_control_plane_t kube_etc_t (file (read open getattr map watch)))
+(allow kube_control_plane_t kube_etc_t (dir (watch)))
+(allow kube_control_plane_t kube_etc_t (lnk_file (read getattr)))
+(allow kube_control_plane_t etcd_var_lib_t (dir (read write search add_name
+	remove_name rmdir reparent create open getattr setattr rename lock)))
+(allow kube_control_plane_t etcd_var_lib_t (file (read write append ioctl lock
+	map open getattr setattr unlink link rename create)))
+; kube-apiserver and kube-controller-manager mount the CA certificates of
+; the host (/etc/ssl/certs) and the flexvolume directory (/usr/libexec).
+(allow kube_control_plane_t os_dir_type (dir (search getattr read open)))
+(allow kube_control_plane_t os_dir_type (lnk_file (read getattr)))
+(allow kube_control_plane_t os_read_type (file (read open getattr map)))

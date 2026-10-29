@@ -5,6 +5,7 @@
 type = process
 command = /usr/bin/klos run-env /var/lib/kubelet/kubeadm-flags.env /etc/default/kubelet -- /usr/bin/kubelet --config=/var/lib/kubelet/config.yaml --kubeconfig=/etc/kubernetes/kubelet.conf --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf @KUBELET_KUBEADM_ARGS@ @KUBELET_EXTRA_ARGS@
 depends-on = containerd
+waits-for = k8s-images
 restart = true
 restart-delay = 10
 restart-limit-count = 0

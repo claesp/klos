@@ -5,7 +5,9 @@ version = "1.1.7"
 summary = "Packet filtering and classification (nft)"
 license = "GPL-2.0-only"
 homepage = "https://www.netfilter.org/projects/nftables/"
-build-depends = ["libmnl", "libnftnl"]
+build-depends = ["libmnl", "libnftnl", "jansson"]
+# The CNI plugins and kube-proxy use the JSON interface ("nft -j").
+depends = ["libmnl", "libnftnl", "jansson"]
 
 [[source]]
 url = "https://www.netfilter.org/projects/nftables/files/nftables-1.1.7.tar.xz"
@@ -15,7 +17,7 @@ key = ["netfilter-pablo"]
 
 [build]
 script = '''
-kconfigure --disable-static --with-mini-gmp --without-cli --without-json \
+kconfigure --disable-static --with-mini-gmp --without-cli --with-json \
 	--disable-man-doc --disable-python --without-xtables
 kmake
 make DESTDIR="$DESTDIR" install
