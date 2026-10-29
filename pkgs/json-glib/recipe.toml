@@ -11,11 +11,19 @@ build-depends = ["glib"]
 [package.options]
 run-tools = ["glib-mkenums"]
 
-# Upstream does not sign releases. The pinned SHA-256 agrees with the value
-# that download.gnome.org publishes.
+# Upstream signs the Git tag. kbuild compares the tarball with the signed
+# Git tree (signature-type git-tag, docs/sources-and-keys.md).
 [[source]]
-url = "https://download.gnome.org/sources/json-glib/1.10/json-glib-1.10.8.tar.xz"
-sha256 = "55c5c141a564245b8f8fbe7698663c87a45a7333c2a2c56f06f811ab73b212dd"
+# The archive of the signed Git tag (the release tarball adds generated
+# documentation that the signature does not cover).
+url = "https://gitlab.gnome.org/GNOME/json-glib/-/archive/1.10.8/json-glib-1.10.8.tar.gz"
+sha256 = "7a114bdac0b2611a7207e981c37fa9b1e70d9cb642470cd9e967b135428cec52"
+signature-type = "git-tag"
+git = "https://gitlab.gnome.org/GNOME/json-glib.git"
+tag = "1.10.8"
+key = ["cairo-ebassi"]
+# The archive leaves out the files with export-ignore in .gitattributes.
+missing-files = [".gitattributes", ".gitignore", "json-glib.doap"]
 
 [build]
 script = '''
@@ -23,3 +31,7 @@ kmeson -Dintrospection=disabled -Dgtk_doc=disabled -Dtests=false -Dman=false -Dn
 kninja
 kninja_install
 '''
+
+[watch]
+# An odd minor version is a development release.
+ignore = '^[0-9]+\.[0-9]*[13579]\.'

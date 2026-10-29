@@ -24,3 +24,7 @@ kmake
 make DESTDIR="$DESTDIR" install
 rm -rf "$DESTDIR/usr/include" "$DESTDIR/etc/profile.d"
 '''
+
+[watch]
+# gawk 5.4 without MPFR has a fault (read the comment at the top).
+ignore = '^5\.4\.'

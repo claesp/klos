@@ -18,3 +18,7 @@ kconfigure --disable-static
 kmake
 make DESTDIR="$DESTDIR" install
 '''
+
+[watch]
+url = "https://git.netfilter.org/libnftnl"
+git = true

@@ -49,3 +49,6 @@ for f in KEK-*.der db-*.der; do
 	install -D -m 0644 "$f" "$DESTDIR/usr/share/klos/secureboot/microsoft/certs/$f"
 done
 '''
+
+[watch]
+disabled = "certificates without versions"

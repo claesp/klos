@@ -20,6 +20,7 @@ import (
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/clearsign"
 	pgperrors "github.com/ProtonMail/go-crypto/openpgp/errors"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"golang.org/x/crypto/blake2b"
@@ -80,45 +81,7 @@ func expiredErr(err error) bool {
 // allowExpired, a key that expired before the signature is accepted (a
 // recipe sets allow-expired-key when upstream signs with an expired key).
 func verifyDetached(ring openpgp.EntityList, sigPath, dataPath string, allowExpired bool) error {
-	raw, err := os.ReadFile(sigPath)
-	if err != nil {
-		return err
-	}
-	sigData, err := pgpPackets(raw)
-	if err != nil {
-		return fmt.Errorf("signature: %w", err)
-	}
-	p, err := packet.Read(bytes.NewReader(sigData))
-	if err != nil {
-		return fmt.Errorf("signature: %w", err)
-	}
-	sig, ok := p.(*packet.Signature)
-	if !ok {
-		return errors.New("the signature file has no signature packet")
-	}
-	data, err := os.Open(dataPath)
-	if err != nil {
-		return err
-	}
-	defer closeQuietly(data)
-	// First check at the current time (the newest self-signatures of the
-	// key apply), then at the time of the signature.
-	signer, err := openpgp.CheckDetachedSignature(ring, data, bytes.NewReader(sigData), nil)
-	if err != nil && expiredErr(err) {
-		if _, serr := data.Seek(0, io.SeekStart); serr != nil {
-			return serr
-		}
-		signer, err = openpgp.CheckDetachedSignature(ring, data, bytes.NewReader(sigData), sigConfig(sig.CreationTime))
-	}
-	if err != nil && expiredErr(err) && allowExpired {
-		if _, serr := data.Seek(0, io.SeekStart); serr != nil {
-			return serr
-		}
-		signer, err = verifyIgnoringExpiry(ring, sig, data)
-		if err == nil {
-			logf("warning: the key %s has expired; the recipe accepts it (allow-expired-key)", signerName(signer))
-		}
-	}
+	signer, err := verifyDetachedSigner(ring, sigPath, dataPath, allowExpired)
 	if err != nil {
 		return err
 	}
@@ -126,11 +89,63 @@ func verifyDetached(ring openpgp.EntityList, sigPath, dataPath string, allowExpi
 	return nil
 }
 
-// verifyMessage checks a signed OpenPGP message and returns its text.
+// verifyDetachedSigner is verifyDetached; it returns the key that made the
+// signature.
+func verifyDetachedSigner(ring openpgp.EntityList, sigPath, dataPath string, allowExpired bool) (*openpgp.Entity, error) {
+	raw, err := os.ReadFile(sigPath)
+	if err != nil {
+		return nil, err
+	}
+	sigData, err := pgpPackets(raw)
+	if err != nil {
+		return nil, fmt.Errorf("signature: %w", err)
+	}
+	p, err := packet.Read(bytes.NewReader(sigData))
+	if err != nil {
+		return nil, fmt.Errorf("signature: %w", err)
+	}
+	sig, ok := p.(*packet.Signature)
+	if !ok {
+		return nil, errors.New("the signature file has no signature packet")
+	}
+	data, err := os.Open(dataPath)
+	if err != nil {
+		return nil, err
+	}
+	defer closeQuietly(data)
+	// First check at the current time (the newest self-signatures of the
+	// key apply), then at the time of the signature.
+	signer, err := openpgp.CheckDetachedSignature(ring, data, bytes.NewReader(sigData), nil)
+	if err != nil && expiredErr(err) {
+		if _, serr := data.Seek(0, io.SeekStart); serr != nil {
+			return nil, serr
+		}
+		signer, err = openpgp.CheckDetachedSignature(ring, data, bytes.NewReader(sigData), sigConfig(sig.CreationTime))
+	}
+	if err != nil && expiredErr(err) && allowExpired {
+		if _, serr := data.Seek(0, io.SeekStart); serr != nil {
+			return nil, serr
+		}
+		signer, err = verifyIgnoringExpiry(ring, sig, data)
+		if err == nil {
+			logf("warning: the key %s has expired; the recipe accepts it (allow-expired-key)", signerName(signer))
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	return signer, nil
+}
+
+// verifyMessage checks a signed OpenPGP message (also a cleartext signed
+// message) and returns its text.
 func verifyMessage(ring openpgp.EntityList, msgPath string) (string, error) {
 	raw, err := os.ReadFile(msgPath)
 	if err != nil {
 		return "", err
+	}
+	if bytes.Contains(raw[:min(len(raw), 1024)], []byte("-----BEGIN PGP SIGNED MESSAGE-----")) {
+		return verifyClearsigned(ring, raw)
 	}
 	data, err := pgpPackets(raw)
 	if err != nil {
@@ -164,12 +179,41 @@ func verifyMessage(ring openpgp.EntityList, msgPath string) (string, error) {
 	return string(text), nil
 }
 
+// verifyClearsigned checks a cleartext signed message. As for a detached
+// signature, the check is first at the current time, then at the time of
+// the signature.
+func verifyClearsigned(ring openpgp.EntityList, raw []byte) (string, error) {
+	blk, _ := clearsign.Decode(raw)
+	if blk == nil || blk.ArmoredSignature == nil {
+		return "", errors.New("not a cleartext signed message")
+	}
+	sigData, err := io.ReadAll(blk.ArmoredSignature.Body)
+	if err != nil {
+		return "", err
+	}
+	signer, err := openpgp.CheckDetachedSignature(ring, bytes.NewReader(blk.Bytes), bytes.NewReader(sigData), nil)
+	if err != nil && expiredErr(err) {
+		p, perr := packet.Read(bytes.NewReader(sigData))
+		sig, ok := p.(*packet.Signature)
+		if perr != nil || !ok {
+			return "", err
+		}
+		signer, err = openpgp.CheckDetachedSignature(ring, bytes.NewReader(blk.Bytes), bytes.NewReader(sigData),
+			sigConfig(sig.CreationTime))
+	}
+	if err != nil {
+		return "", err
+	}
+	logf("signature by %s", signerName(signer))
+	return string(blk.Plaintext), nil
+}
+
 func signerName(e *openpgp.Entity) string {
 	if e == nil {
 		return "an unknown key"
 	}
-	for name := range e.Identities {
-		return fmt.Sprintf("%q (%X)", name, e.PrimaryKey.Fingerprint)
+	if id := e.PrimaryIdentity(); id != nil {
+		return fmt.Sprintf("%q (%X)", id.Name, e.PrimaryKey.Fingerprint)
 	}
 	return fmt.Sprintf("%X", e.PrimaryKey.Fingerprint)
 }

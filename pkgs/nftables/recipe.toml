@@ -20,3 +20,7 @@ kconfigure --disable-static --with-mini-gmp --without-cli --without-json \
 kmake
 make DESTDIR="$DESTDIR" install
 '''
+
+[watch]
+url = "https://git.netfilter.org/nftables"
+git = true

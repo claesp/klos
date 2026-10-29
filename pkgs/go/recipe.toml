@@ -1,5 +1,6 @@
 # The Go toolchain (host tool) for Go programs in KLOS. This is the
-# official binary release; go.dev publishes the SHA-256 values.
+# official binary release. Google signs it with the key of its Linux
+# packages (keys/google-linux.asc); go.dev publishes the SHA-256 values.
 [package]
 name = "go"
 version = "1.27.3"
@@ -9,8 +10,10 @@ homepage = "https://go.dev/"
 kind = "host"
 
 [[source]]
-url = "https://go.dev/dl/go1.27.3.linux-amd64.tar.gz"
+url = "https://dl.google.com/go/go1.27.3.linux-amd64.tar.gz"
 sha256 = "65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40"
+signature = "https://dl.google.com/go/go1.27.3.linux-amd64.tar.gz.asc"
+key = ["google-linux"]
 
 [build]
 script = '''

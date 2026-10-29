@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Start the KLOS nightly check each night (read docs/maintenance.md).
+[Unit]
+Description=KLOS nightly check
+
+[Timer]
+OnCalendar=*-*-* 01:30
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

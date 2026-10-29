@@ -154,3 +154,15 @@ func TestParseBuilderConf(t *testing.T) {
 		}
 	}
 }
+
+func TestStripWatch(t *testing.T) {
+	orig := "[package]\nname = \"x\"\n\n[build]\nscript = '''\nmake\n'''\n"
+	with := orig + "\n[watch]\n# a comment\nurl = \"https://example.org/x.git\"\n"
+	if got := string(stripWatch([]byte(with))); got != orig {
+		t.Fatalf("stripWatch at the end:\n%q\nwant\n%q", got, orig)
+	}
+	mid := "[package]\nname = \"x\"\n\n[watch]\nurl = \"u\"\n\n[build]\nscript = \"s\"\n"
+	if got, want := string(stripWatch([]byte(mid))), "[package]\nname = \"x\"\n[build]\nscript = \"s\"\n"; got != want {
+		t.Fatalf("stripWatch in the middle:\n%q\nwant\n%q", got, want)
+	}
+}

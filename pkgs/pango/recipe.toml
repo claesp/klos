@@ -22,3 +22,7 @@ kmeson -Dintrospection=disabled -Dbuild-testsuite=false -Dbuild-examples=false -
 kninja
 kninja_install
 '''
+
+[watch]
+# An odd minor version is a development release.
+ignore = '^[0-9]+\.[0-9]*[13579]\.'

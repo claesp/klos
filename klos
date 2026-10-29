@@ -23,17 +23,25 @@ usage() {
 Usage: ./klos <command> [arguments]
 
 Host commands:
-  bootstrap            Check the seed (the builder image tarball) and import it.
+  bootstrap [dir]      Check the seed (the builder image tarball) and import it.
+                       With dir, copy the seed from dir (an export of
+                       seed-export) into cache/builder first.
   builder [-update]    Build the KLOS builder again in the KLOS builder and
                        compare it with the seed. -update makes the new
                        builder the seed.
   shell                Open a shell in the builder (no network).
   check                Run gofmt, go vet and the Go unit tests.
   keygen               Make a development key pair for update bundles.
+  seed-keygen          Make the key that signs exported seeds.
+  seed-export <dir>    Write the seed with a signature and checksums to dir.
+  seed-verify <tar>    Check the signature and the SHA-256 value of a seed.
+  nightly              Run all checks (Go checks, sources, outdated, the
+                       builder fixed point, verify and test of all flavors).
 
 Build commands (run in the builder):
   fetch <target>...    Download and verify sources (uses the network).
-  check-sources        Check the SHA-256 value and signature of all sources.
+  check-sources [pkg...]
+                       Check the SHA-256 value and signature of the sources.
   build <pkg>...       Build packages and their dependencies.
   image <flavor>       Build the OS image, kernel and update bundle.
   installer <flavor>   Build a bootable installer disk image.
@@ -42,6 +50,8 @@ Build commands (run in the builder):
   test <flavor>        Install the flavor in QEMU and run the boot tests.
   qemu <flavor>        Boot an installed test disk in QEMU (interactive).
   list                 Show all recipes.
+  outdated [pkg...]    Show new upstream releases and known vulnerabilities.
+  gc [-n]              Remove sources, seeds and packages that no recipe uses.
   revoke <klos.efi>... Make a signed dbx update that revokes EFI binaries.
   selinux <flavor>     Compile the SELinux policy of a flavor (for development).
   compare -a A -b B <flavor>
@@ -59,6 +69,13 @@ import_image() {
 }
 
 cmd_bootstrap() {
+	if [ $# -eq 1 ]; then
+		src="$1/$(basename "$SEED_TAR")"
+		[ -f "$src" ] || die "no $src"
+		echo "$SEED_SHA256  $src" | sha256sum -c - >/dev/null || die "SHA-256 mismatch for $src"
+		mkdir -p "$TOP/cache/builder"
+		cp "$src" "$SEED_TAR"
+	fi
 	[ -f "$SEED_TAR" ] || die "no seed $SEED_TAR (copy it from a KLOS release or from a computer that has it)"
 	echo "$SEED_SHA256  $SEED_TAR" | sha256sum -c - >/dev/null || die "SHA-256 mismatch for $SEED_TAR"
 	import_image "$SEED_TAR" "$IMAGE"
@@ -91,6 +108,42 @@ cmd_builder() {
 	fi
 }
 
+# cmd_nightly: run all checks, one klos command for each step. The logs and
+# a summary go to out/nightly/<time>/. The exit status is 1 if a step
+# failed. Read docs/maintenance.md.
+cmd_nightly() {
+	dir="$TOP/out/nightly/$(date -u +%Y%m%dT%H%M%SZ)"
+	lock="$TOP/out/nightly/.lock"
+	mkdir -p "$TOP/out/nightly"
+	mkdir "$lock" 2>/dev/null || die "a nightly run is active ($lock)"
+	trap 'rmdir "$lock"' EXIT
+	mkdir -p "$dir"
+	failed=0
+	step() {
+		name=$1; shift
+		start=$(date +%s)
+		if "$TOP/klos" "$@" > "$dir/$name.log" 2>&1 </dev/null; then
+			result=pass
+		else
+			result=FAIL
+			failed=1
+		fi
+		printf '%-24s %s %5ss  %s\n' "$name" "$result" "$(( $(date +%s) - start ))" "$*" | tee -a "$dir/summary.txt"
+	}
+	step check check
+	step check-sources check-sources
+	step outdated outdated -fail
+	step builder builder
+	for m in "$TOP"/manifests/*.toml; do
+		f=$(basename "$m" .toml)
+		case $f in base|builder) continue ;; esac
+		step "verify-$f" verify "$f"
+		step "test-$f" test "$f"
+	done
+	echo "klos nightly: logs in $dir"
+	return $failed
+}
+
 # run_builder <network: yes|no> <kvm: yes|no> <command...>
 run_builder() {
 	net=$1; kvm=$2; shift 2
@@ -106,6 +159,8 @@ run_builder() {
 		[ -n "$val" ] && set -- -e "$v=$val" "$@"
 	done
 	[ "$net" = no ] && set -- --network=none "$@"
+	# EXTRA_DIR: a host directory for a command (mounted at /extra).
+	[ -n "${EXTRA_DIR:-}" ] && set -- -v "$EXTRA_DIR:/extra:Z" -e KLOS_EXTRA_DIR="$EXTRA_DIR" "$@"
 	[ "$kvm" = yes ] && [ -e /dev/kvm ] && set -- --device /dev/kvm "$@"
 	[ -t 0 ] && set -- -it "$@"
 	exec podman run "$@"
@@ -138,18 +193,28 @@ kbuild() {
 [ $# -ge 1 ] || { usage; exit 1; }
 cmd=$1; shift
 case $cmd in
-	bootstrap) cmd_bootstrap ;;
+	bootstrap) cmd_bootstrap "$@" ;;
 	builder) cmd_builder "$@" ;;
 	shell) run_builder no no bash -l ;;
 	check) run_builder no no sh -c "$CHECK_SH" ;;
 	keygen) kbuild no no keygen "$@" ;;
 	fetch) kbuild yes no fetch "$@" ;;
-	check-sources) kbuild yes no check-sources ;;
+	check-sources) kbuild yes no check-sources "$@" ;;
 	build|image|installer|verify|selinux)
 		# Download first with the network, then build without it.
 		(kbuild yes no fetch "$@")
 		kbuild no no "$cmd" "$@" ;;
-	lock|list|revoke|compare) kbuild no no "$cmd" "$@" ;;
+	lock|list|revoke|compare|gc|seed-keygen) kbuild no no "$cmd" "$@" ;;
+	outdated) kbuild yes no outdated "$@" ;;
+	seed-export|seed-verify)
+		[ $# -eq 1 ] || die "usage: $cmd <path>"
+		if [ "$cmd" = seed-export ]; then
+			mkdir -p "$1"
+			EXTRA_DIR=$(cd "$1" && pwd) kbuild no no seed-export /extra
+		else
+			EXTRA_DIR=$(cd "$(dirname "$1")" && pwd) kbuild no no seed-verify "/extra/$(basename "$1")"
+		fi ;;
+	nightly) cmd_nightly ;;
 	test)
 		(kbuild yes no fetch "$@")
 		kbuild no yes test "$@" ;;

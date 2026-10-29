@@ -33,3 +33,7 @@ rm -f "$DESTDIR/usr/lib/ssh/ssh-keysign"
 
 [package.options]
 keep-empty-dirs = true
+
+[watch]
+url = "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/"
+regex = 'openssh-([0-9]+\.[0-9]+p[0-9]+)\.tar\.gz'

@@ -74,11 +74,25 @@ func fetchURL(ctx context.Context, url, dest string) error {
 }
 
 func verifySignature(s Source, path string) {
+	if s.SignatureType == "git-tag" {
+		if len(s.Key) == 0 {
+			die("%s: a signature needs a key", s.URL)
+		}
+		if err := verifyGitTag(s, path); err != nil {
+			die("signature check failed for %s: %v", filepath.Base(path), err)
+		}
+		logf("signature good: %s", s.filename())
+		return
+	}
 	if s.Signature == "" {
 		return
 	}
-	if len(s.Key) == 0 {
+	sigstore := s.SignatureType == "sigstore" || s.SignatureType == "pypi-attestation"
+	if len(s.Key) == 0 && !sigstore {
 		die("%s: a signature needs a key", s.URL)
+	}
+	if sigstore && (s.Identity == "" || s.Issuer == "") {
+		die("%s: a Sigstore signature needs identity and issuer", s.URL)
 	}
 	sig := path + ".sig"
 	if !exists(sig) {
@@ -134,6 +148,20 @@ func verifySignature(s Source, path string) {
 		if text, verr = verifyMessage(ring, sig); verr == nil {
 			verr = checkChecksumList(text, filepath.Base(s.URL), data)
 		}
+	case "sigstore":
+		if s.Certificate == "" {
+			die("%s: signature-type sigstore needs certificate", s.URL)
+		}
+		cert := path + ".cert"
+		if !exists(cert) {
+			download(s.Certificate, cert)
+		}
+		verr = verifySigstoreBlob(s, sig, cert, data)
+		if verr != nil {
+			_ = os.Remove(cert) // download it again next time; the build stops
+		}
+	case "pypi-attestation":
+		verr = verifyPyPIProvenance(s, sig, data)
 	default:
 		die("unknown signature type %q", s.SignatureType)
 	}
@@ -148,34 +176,62 @@ func verifySignature(s Source, path string) {
 // sha512sum(1) list, and compares the value with the file at path. The
 // length of the value selects the algorithm.
 func checkChecksumList(list, name, path string) error {
+	if sum, ok := cpanChecksum(list, name); ok {
+		return compareChecksum(name, sum, path)
+	}
 	for _, l := range strings.Split(list, "\n") {
 		f := strings.Fields(l)
 		if len(f) != 2 || strings.TrimPrefix(f[1], "*") != name {
 			continue
 		}
-		var h hash.Hash
-		switch len(f[0]) {
-		case 64:
-			h = sha256.New()
-		case 128:
-			h = sha512.New()
-		default:
-			return fmt.Errorf("%s: unknown checksum length %d", name, len(f[0]))
-		}
-		in, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer closeQuietly(in)
-		if _, err := io.Copy(h, in); err != nil {
-			return err
-		}
-		if got := hex.EncodeToString(h.Sum(nil)); got != strings.ToLower(f[0]) {
-			return fmt.Errorf("%s: the signed checksum is %s, the file has %s", name, f[0], got)
-		}
-		return nil
+		return compareChecksum(name, f[0], path)
 	}
 	return fmt.Errorf("the signed checksum list has no line for %s", name)
+}
+
+// compareChecksum compares a SHA-256 or SHA-512 value (the length selects
+// the algorithm) with the file at path.
+func compareChecksum(name, sum, path string) error {
+	var h hash.Hash
+	switch len(sum) {
+	case 64:
+		h = sha256.New()
+	case 128:
+		h = sha512.New()
+	default:
+		return fmt.Errorf("%s: unknown checksum length %d", name, len(sum))
+	}
+	in, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer closeQuietly(in)
+	if _, err := io.Copy(h, in); err != nil {
+		return err
+	}
+	if got := hex.EncodeToString(h.Sum(nil)); got != strings.ToLower(sum) {
+		return fmt.Errorf("%s: the signed checksum is %s, the file has %s", name, sum, got)
+	}
+	return nil
+}
+
+// cpanChecksum finds the SHA-256 value of a file in a CPAN CHECKSUMS file
+// (a Perl data structure: 'name' => { ..., 'sha256' => 'value', ... }).
+func cpanChecksum(list, name string) (string, bool) {
+	start := strings.Index(list, "'"+name+"' => {")
+	if start < 0 {
+		return "", false
+	}
+	block := list[start:]
+	if end := strings.Index(block, "}"); end >= 0 {
+		block = block[:end]
+	}
+	for _, l := range strings.Split(block, "\n") {
+		if v, ok := strings.CutPrefix(strings.TrimSpace(l), "'sha256' => '"); ok {
+			return strings.TrimSuffix(strings.TrimSuffix(v, ","), "'"), true
+		}
+	}
+	return "", false
 }
 
 // runCapture runs a command and keeps its error output in stderr.

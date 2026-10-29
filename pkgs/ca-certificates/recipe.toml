@@ -18,3 +18,7 @@ mkdir -p "$DESTDIR/etc/ssl/certs"
 ln -s ../../../usr/share/ca-certificates/cacert.pem "$DESTDIR/etc/ssl/certs/ca-certificates.crt"
 ln -s certs/ca-certificates.crt "$DESTDIR/etc/ssl/cert.pem"
 '''
+
+[watch]
+url = "https://curl.se/docs/caextract.html"
+regex = 'cacert-([0-9]{4}-[0-9]{2}-[0-9]{2})\.pem'

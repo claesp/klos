@@ -11,10 +11,16 @@ depends = ["crun"]
 options = { no-strip = true }
 # GitHub makes the source archive from the signed tag v2.4.2.
 
+# Upstream signs the Git tag. kbuild compares the tarball with the signed
+# Git tree (signature-type git-tag, docs/sources-and-keys.md).
 [[source]]
 url = "https://github.com/containerd/containerd/archive/refs/tags/v2.4.2.tar.gz"
 filename = "containerd-2.4.2.tar.gz"
 sha256 = "02cbbecd0ef78a521d124afa791b843ba5458ef206e1f7f017999ff45c80c0b4"
+signature-type = "git-tag"
+git = "https://github.com/containerd/containerd.git"
+tag = "v2.4.2"
+key = ["containerd-skarp"]
 
 [build]
 script = '''

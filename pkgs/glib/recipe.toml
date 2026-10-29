@@ -1,5 +1,3 @@
-# GNOME publishes the SHA-256 values (glib-2.90.1.sha256sum), not
-# signatures. The values agree.
 [package]
 name = "glib"
 version = "2.90.1"
@@ -7,11 +5,18 @@ summary = "GLib and GObject libraries"
 license = "LGPL-2.1-or-later"
 homepage = "https://gitlab.gnome.org/GNOME/glib"
 build-depends = ["libffi", "pcre2", "zlib", "util-linux"]
-# Upstream does not sign this release. The SHA-256 is pinned.
+# Upstream signs the Git tag. kbuild compares the tarball with the signed
+# Git tree (signature-type git-tag, docs/sources-and-keys.md).
 
 [[source]]
 url = "https://download.gnome.org/sources/glib/2.90/glib-2.90.1.tar.xz"
 sha256 = "93c941aa17d5eb1d53fe838365f29a8b4e539c222a256d974ec8f30fc413e396"
+signature-type = "git-tag"
+git = "https://gitlab.gnome.org/GNOME/glib.git"
+tag = "2.90.1"
+key = ["gnome-pwithnall"]
+# meson dist adds the gvdb subproject at the revision of subprojects/gvdb.wrap.
+subtrees = ["subprojects/gvdb=https://gitlab.gnome.org/GNOME/gvdb.git"]
 
 [build]
 script = '''
@@ -22,3 +27,7 @@ kninja_install
 # the run-tools wrappers in PATH.
 sed -i -E 's#^(glib_[a-z_]+|gdbus_codegen)=.*/([a-z-]+)$#\1=\2#' "$DESTDIR"/usr/lib/pkgconfig/*.pc
 '''
+
+[watch]
+# An odd minor version is a development release.
+ignore = '^[0-9]+\.[0-9]*[13579]\.'

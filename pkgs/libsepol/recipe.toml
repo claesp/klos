@@ -19,3 +19,7 @@ kmake PREFIX=/usr LIBDIR=/usr/lib SHLIBDIR=/usr/lib
 make PREFIX=/usr LIBDIR=/usr/lib SHLIBDIR=/usr/lib DESTDIR="$DESTDIR" install
 rm -rf "$DESTDIR/usr/share/man" "$DESTDIR/usr/bin"
 '''
+
+[watch]
+# The old tags (before 2.x) have dates.
+ignore = '^20'

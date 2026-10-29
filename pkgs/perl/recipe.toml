@@ -14,11 +14,16 @@ license = "Artistic-1.0-Perl OR GPL-1.0-or-later"
 homepage = "https://www.perl.org/"
 options = { no-strip = true }
 
-# Upstream does not sign releases. The pinned SHA-256 agrees with the value
-# that www.cpan.org publishes.
+# The CHECKSUMS file of the release manager on CPAN has the SHA-256 value.
+# PAUSE (the CPAN upload server) signs the file. Its signing subkey changes
+# each year: get keys/perl-pause.asc again from keyserver.ubuntu.com
+# (2E66557AB97C19C791AF8E20328DA867450F89EC) when it expires.
 [[source]]
 url = "https://www.cpan.org/src/5.0/perl-5.42.3.tar.xz"
 sha256 = "c9387e1473a1866935cb047ece7c2e0a80767a3acdecb79d4a375f8a95970ddc"
+signature = "https://www.cpan.org/authors/id/S/SH/SHAY/CHECKSUMS"
+signature-type = "pgp-checksums"
+key = ["perl-pause"]
 
 [build]
 script = '''
@@ -39,3 +44,7 @@ grep -q "Configuration time: $t" config.h
 kmake
 make DESTDIR="$DESTDIR" install
 '''
+
+[watch]
+# An odd minor version is a development release.
+ignore = '^5\.[0-9]*[13579]\.'

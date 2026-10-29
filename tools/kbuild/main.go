@@ -38,8 +38,13 @@ var commands = map[string]command{
 	"revoke":        {"revoke <klos.efi>...", cmdRevoke},
 	"selinux":       {"selinux <flavor>", cmdSELinux},
 	"builder-image": {"builder-image", cmdBuilderImage},
-	"check-sources": {"check-sources", cmdCheckSources},
+	"check-sources": {"check-sources [package...]", cmdCheckSources},
 	"compare":       {"compare -a builder -b builder <flavor>", cmdCompare},
+	"gc":            {"gc [-n]", cmdGC},
+	"outdated":      {"outdated [-fail] [-no-osv] [package...]", cmdOutdated},
+	"seed-keygen":   {"seed-keygen [-force]", cmdSeedKeygen},
+	"seed-export":   {"seed-export <directory>", cmdSeedExport},
+	"seed-verify":   {"seed-verify <tarball>", cmdSeedVerify},
 }
 
 func usage() {
@@ -163,17 +168,17 @@ func rel(p string) string {
 	return r
 }
 
-// cmdCheckSources checks the SHA-256 and the signature of all sources of all
-// recipes and of the kernel again (it downloads the signature files that
+// cmdCheckSources checks the SHA-256 and the signature of all sources of the
+// packages (all recipes and the kernel if there are no arguments) again (it downloads the signature files that
 // are not in the cache).
 func cmdCheckSources(args []string) {
-	if len(args) != 0 {
-		die("usage: check-sources")
-	}
-	sources := append([]Source{}, kernelDef().Source...)
-	var names []string
-	for n := range recipes() {
-		names = append(names, n)
+	var sources []Source
+	names := args
+	if len(args) == 0 {
+		sources = append(sources, kernelDef().Source...)
+		for n := range recipes() {
+			names = append(names, n)
+		}
 	}
 	sort.Strings(names)
 	for _, n := range names {
@@ -181,7 +186,7 @@ func cmdCheckSources(args []string) {
 	}
 	for _, s := range sources {
 		p := fetchSource(s)
-		if s.Signature != "" {
+		if s.Signature != "" || s.SignatureType == "git-tag" {
 			verifySignature(s, p)
 		}
 	}

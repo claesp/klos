@@ -128,3 +128,23 @@ func TestVerifyMinisign(t *testing.T) {
 		t.Fatal("changed data verified")
 	}
 }
+
+func TestCPANChecksum(t *testing.T) {
+	list := `$cksum = {
+  'perl-5.42.3.tar.gz' => {
+    'sha256' => 'aaaa',
+    'size' => 1
+  },
+  'perl-5.42.3.tar.xz' => {
+    'md5' => 'fb96',
+    'sha256' => 'c9387e14',
+    'size' => 14495300
+  },
+};`
+	if got, ok := cpanChecksum(list, "perl-5.42.3.tar.xz"); !ok || got != "c9387e14" {
+		t.Fatalf("cpanChecksum = %q, %v", got, ok)
+	}
+	if _, ok := cpanChecksum(list, "perl-5.42.4.tar.xz"); ok {
+		t.Fatal("found a file that is not in the list")
+	}
+}

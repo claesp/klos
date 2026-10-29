@@ -58,10 +58,16 @@ The build uses approximately 40 GB of disk space and 16 GB of memory.
 
 | Command | Function |
 |---------|----------|
-| `./klos bootstrap` | Check the seed and import it as the builder image. |
+| `./klos bootstrap [dir]` | Check the seed and import it as the builder image. With `dir` (an export of `seed-export`), copy the seed from `dir` first. |
+| `./klos seed-keygen` | Make the key that signs exported seeds (`secrets/seed.key`, `keys/klos-seed.pub`). |
+| `./klos seed-export <dir>` | Write the seed, its minisign signature and its checksum to `dir` (read [maintenance.md](maintenance.md)). |
+| `./klos seed-verify <tar>` | Check the signature and the SHA-256 value of a seed tarball. |
+| `./klos outdated [package...]` | Show new upstream releases and the known vulnerabilities of the pinned versions. |
+| `./klos gc [-n]` | Remove sources, seeds and packages that no recipe uses. |
+| `./klos nightly` | Run all checks, and write the logs to `out/nightly/` (read [maintenance.md](maintenance.md)). |
 | `./klos builder [-update]` | Build the KLOS builder in the KLOS builder and compare it with the seed. `-update` makes the new builder the seed. |
 | `./klos compare -a A -b B <flavor>` | Compare the builds of two builders (`out/A` and `out/B`). |
-| `./klos check-sources` | Check the SHA-256 value and the signature of all sources again. |
+| `./klos check-sources [package...]` | Check the SHA-256 value and the signature of the sources again (all sources without arguments). |
 | `./klos selinux <flavor>` | Compile the SELinux policy of a flavor (read [selinux.md](selinux.md)). |
 | `./klos shell` | Open a shell in the builder (no network). |
 | `./klos check` | Run gofmt, go vet and the Go unit tests of kbuild and the klos tool. |
@@ -79,7 +85,7 @@ The build uses approximately 40 GB of disk space and 16 GB of memory.
 
 ## The network
 
-Only the `fetch` and `check-sources` steps use the network. All build steps run
+Only the `fetch`, `check-sources` and `outdated` steps use the network. All build steps run
 in a container without a network (`podman run --network=none`). The `build`,
 `image`, `installer`, `verify` and `test` commands run `fetch` first.
 
@@ -93,7 +99,8 @@ in a container without a network (`podman run --network=none`). The `build`,
 | `out/klos/builder/` | The root file system of a new KLOS builder (`./klos builder`). |
 | `cache/builder/` | The seed (`klos-builder-<hash>.tar`). |
 | `work/<builder>/` | Temporary build directories and the build logs (`work/<builder>/logs/`). |
-| `secrets/` | The private keys: update bundles (`bundle.key`), Secure Boot (`secureboot/`) and kernel modules (`module-signing.pem`). Do not put this in Git. |
+| `out/nightly/<time>/` | The logs and the summary of `./klos nightly`. |
+| `secrets/` | The private keys: update bundles (`bundle.key`), Secure Boot (`secureboot/`), kernel modules (`module-signing.pem`) and exported seeds (`seed.key`). Do not put this in Git. |
 
 ## Environment variables
 

@@ -5,12 +5,17 @@ summary = "Hardware identification data (build only)"
 license = "GPL-2.0-or-later"
 homepage = "https://github.com/vcrhonek/hwdata"
 implicit-deps = false
-# Upstream does not sign this release. The SHA-256 is pinned.
+# Upstream signs the Git tag. kbuild compares the tarball with the signed
+# Git tree (signature-type git-tag, docs/sources-and-keys.md).
 
 [[source]]
 url = "https://github.com/vcrhonek/hwdata/archive/refs/tags/v0.412.tar.gz"
 filename = "hwdata-0.412.tar.gz"
 sha256 = "f0c64cd7e31d70a5fb3a52e53ab50a61e74c0421a6381eaa45114eec3bde5fe7"
+signature-type = "git-tag"
+git = "https://github.com/vcrhonek/hwdata.git"
+tag = "v0.412"
+key = ["hwdata-vcrhonek"]
 
 [build]
 script = '''

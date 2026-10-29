@@ -24,3 +24,7 @@ ln -sf libc.so "$DESTDIR/usr/lib/ld-musl-x86_64.so.1"
 mkdir -p "$DESTDIR/usr/bin"
 ln -sf ../lib/libc.so "$DESTDIR/usr/bin/ldd"
 '''
+
+[watch]
+url = "https://musl.libc.org/releases.html"
+regex = 'musl-([0-9.]+)\.tar\.gz'

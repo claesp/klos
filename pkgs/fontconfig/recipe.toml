@@ -1,5 +1,3 @@
-# The fontconfig release page publishes the same SHA-256 value
-# (fontconfig-2.18.3.tar.xz.sha256sum).
 [package]
 name = "fontconfig"
 version = "2.18.3"
@@ -7,11 +5,20 @@ summary = "Font configuration library"
 license = "HPND AND MIT"
 homepage = "https://www.freedesktop.org/wiki/Software/fontconfig/"
 build-depends = ["freetype", "expat"]
-# Upstream does not sign this release. The SHA-256 is pinned.
+# Upstream signs the Git tag. kbuild compares the tarball with the signed
+# Git tree (signature-type git-tag, docs/sources-and-keys.md).
 
 [[source]]
-url = "https://gitlab.freedesktop.org/api/v4/projects/890/packages/generic/fontconfig/2.18.3/fontconfig-2.18.3.tar.xz"
-sha256 = "4f7b554a38cdf78c033f666c8871f3749e14a094f65a07f630c91ed0b43d35e3"
+# The archive of the signed Git tag (the release tarball adds generated
+# documentation that the signature does not cover).
+url = "https://gitlab.freedesktop.org/fontconfig/fontconfig/-/archive/2.18.3/fontconfig-2.18.3.tar.gz"
+sha256 = "9ae01e1d53acdef56010c5451cd34aa41d325b2faccd8606448d8fa01b2496b3"
+signature-type = "git-tag"
+git = "https://gitlab.freedesktop.org/fontconfig/fontconfig.git"
+tag = "2.18.3"
+key = ["fontconfig-tagoh"]
+# The archive leaves out the files with export-ignore in .gitattributes.
+missing-files = [".*", ".gitlab-ci/*", "subprojects/.gitignore"]
 
 [build]
 script = '''
@@ -19,3 +26,6 @@ kmeson -Ddoc=disabled -Dtests=disabled -Dnls=disabled -Dcache-build=disabled -Dt
 kninja
 kninja_install
 '''
+
+[watch]
+url = "https://gitlab.freedesktop.org/fontconfig/fontconfig.git"

@@ -36,5 +36,6 @@ All documentation uses Simplified Technical English (see [style.md](style.md)).
 ## Development
 
 - [testing.md](testing.md): The QEMU tests.
+- [maintenance.md](maintenance.md): New releases, vulnerabilities, the nightly check, the seed backup and the cleanup.
 - [status.md](status.md): What works now and what is planned.
 - [style.md](style.md): The rules for documentation and code.

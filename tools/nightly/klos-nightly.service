@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# The nightly check of KLOS (read docs/maintenance.md). Change
+# WorkingDirectory and ExecStart to the directory of the repository.
+[Unit]
+Description=KLOS nightly check
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/code/klos
+ExecStart=%h/code/klos/klos nightly
+Nice=10
+IOSchedulingClass=idle

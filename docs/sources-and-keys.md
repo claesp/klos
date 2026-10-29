@@ -74,46 +74,126 @@ in the recipes (`key = ["musl"]` is `keys/musl.asc`).
 | gnu-pizzini.asc | Ken Pizzini (bc) | 325B 54E4 653F 935A 25CF 32BD A186 278D 426A 38E9 | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
 | gnu-haible.asc | Bruno Haible (gperf) | E0FF BD97 5397 F77A 32AB 76EC B630 1D9E 1BBE AC08 | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
 | gnu-knaff.asc | Alain Knaff (mtools) | 51A2 3D9D 7C4D F41A A48F A893 E99C F553 7790 B839 | the GNU keyring (ftp.gnu.org/gnu/gnu-keyring.gpg), compared with keyserver.ubuntu.com |
+| rust.asc | Rust Language (Tag and Release Signing Key) | 108F 6620 5EAE B0AA A8DD 5E1C 85AB 96E6 FA1B E5FE | static.rust-lang.org/rust-key.gpg.ascii, compared with keys.openpgp.org |
+| google-linux.asc | Google Linux Packages Signing Authority (Go) | EB4C 1BFD 4F04 2F6D DDCC EC91 7721 F63B D38B 4796 | dl.google.com/dl/linux/linux_signing_key.pub |
+| stefanberger.asc | Stefan Berger (libtpms, swtpm) | B818 B9CA DF90 89C2 D5CE C66B 75AD 6580 2A0B 4211 | github.com/stefanberger.gpg |
+| perl-pause.asc | PAUSE Batch Signing Key (CPAN) | 2E66 557A B97C 19C7 91AF 8E20 328D A867 450F 89EC | keyserver.ubuntu.com, compared with pause.perl.org |
+| containerd-skarp.asc | Samuel Karp (containerd tags) | 910C 2860 8D33 DDE6 89C0 3290 997C 5A3C D316 7CB5 | github.com/samuelkarp.gpg |
+| fribidi-dov.asc | Dov Grobgeld (fribidi tags) | 0AD0 41B2 7CA1 66DD A1FE 3BAE A7B3 409C 0CA4 ED14 | github.com/dov.gpg |
+| harfbuzz-khaledhosny.asc | Khaled Hosny (HarfBuzz tags) | 053D 20F1 7CCC A965 1B2C 6FCB 9AB2 4930 C0B9 97A2 | github.com/khaledhosny.gpg |
+| hwdata-vcrhonek.asc | Vitezslav Crhonek (hwdata tags) | 3C40 194F B791 38CE 0F78 FD49 19C2 F062 574F 5403 | keyserver.ubuntu.com |
+| erofs-hsiangkao.asc | Gao Xiang (erofs-utils tags) | 4340 3A6C 3512 F58F BCDC D3C5 5176 67E5 996E E6AA | keys.openpgp.org |
+| fontconfig-tagoh.asc | Akira TAGOH (fontconfig tags) | ECFF BC3A 6B36 5E72 1E5B D798 3075 7AA2 1971 A672 | gitlab.freedesktop.org/tagoh.gpg |
+| gnome-pwithnall.asc | Philip Withnall (GLib tags) | 923B 7025 EE03 C1C5 9F42 684C F094 2E89 4B2E AFA0 | keyserver.ubuntu.com |
+| slirp-sthibault.asc | Samuel Thibault (libslirp tags) | 900C B024 B679 31D4 0F82 304B D017 8C76 7D06 9EE6 | keys.openpgp.org |
+| libpng-ctruta.asc | Cosmin Truta (libpng tags) | 1FED 507E 3236 B4A6 E53E 922B B292 C648 43FF 5BCF | github.com/ctruta.gpg |
+| sigstore-trusted-root.json | Sigstore (Fulcio CA and Rekor log keys) | SHA-256 6494 e21e a73f a7ee 769f 85f5 7d5a 3e6a 0872 5eae 1e38 c755 fc35 17c9 e6bc 0b66 | github.com/sigstore/root-signing (targets/trusted_root.json) |
+| klos-seed.pub | The KLOS seed key (minisign) | key ID 59FA6379CFDC7319 | this repository (`./klos seed-keygen`) |
 
 Before you add a key, compare its fingerprint with a second source. For
 example, use the web site of the project, the release announcement, or the
 kernel.org key ring.
 
+The keys of the signed Git tags are the keys of the persons that tagged
+the release. Another maintainer can tag the next release: then add the key
+of that person.
+
+The PAUSE key of CPAN gets a new signing subkey each year. Get
+`perl-pause.asc` again when the subkey expires.
+
 The GNU packages come from `ftpmirror.gnu.org`, which sends the request to
 a GNU mirror. The signature and the SHA-256 value make sure that the file
 is the official release.
 
+## Signature types
+
+The `signature-type` of a source tells kbuild how to check it:
+
+| Type | Check |
+|------|-------|
+| `pgp` (default) | A detached OpenPGP signature of the file (`signature`, `key`). |
+| `pgp-checksums` | A signed OpenPGP message (also a cleartext signed message) with the SHA-256 or SHA-512 value of the file. kbuild also reads the CHECKSUMS files of CPAN. |
+| `pgp-checksum-file` | A detached OpenPGP signature of a checksum list (`checksums`). |
+| `minisign` | A minisign signature (`keys/<name>.pub`). |
+| `sigstore` | A Sigstore signature of the file (`signature`, `certificate`). Read "Sigstore" below. |
+| `pypi-attestation` | A PyPI attestation (PEP 740) of the file. Read "Sigstore" below. |
+| `git-tag` | A signed Git tag (`git`, `tag`, `key`). Read "Signed Git tags" below. |
+
+kbuild checks each signature first at the current time, then at the time
+of the signature. Thus a key that expired after the release still checks
+the release. `allow-expired-key = true` accepts a key that expired before
+the signature (the recipe must tell why).
+
+### Sigstore
+
+Sigstore gives a short-lived certificate (Fulcio) for an identity: an
+e-mail address or a CI workflow. The transparency log (Rekor) records each
+signature. kbuild checks these items:
+
+1. The signature of the file, or of the in-toto statement that names the
+   file and its SHA-256 value (`pypi-attestation`).
+2. The certificate chain to the Fulcio CA in `keys/sigstore-trusted-root.json`.
+3. The identity (`identity`) and the OIDC issuer (`issuer`) in the
+   certificate.
+4. The signed entry timestamp of the Rekor entry, with the Rekor key in
+   the trusted root. The log time must be in the validity of the
+   certificate.
+
+For a `sigstore` source, kbuild gets the Rekor entry from the Rekor API.
+A PyPI attestation contains the Rekor entry.
+
+### Signed Git tags
+
+Many projects sign their Git tags, but not their release tarballs. For a
+`git-tag` source, kbuild does these steps (it needs no Git program):
+
+1. It gets the tag, the commit and the trees from `git` with the Git
+   protocol version 2 over HTTPS. It does not get the file contents.
+2. It checks the OpenPGP signature of the tag with `key`.
+3. It calculates the Git object ID of each file in the tarball. Each file
+   must be the same as the file of the same path in the signed tree.
+
+Some tarballs are not the same as the tree:
+
+- `extra-files` are the files that the tarball adds or changes (for
+  example generated files). The signature does not cover them, so keep
+  this list short. Use the archive of the tag if possible.
+- `missing-files` are the files of the tree that the tarball does not
+  have (for example the files with `export-ignore` in `.gitattributes`).
+- `subtrees` are the directories that come from another repository
+  (`"path=repository"`). The commit is the submodule of the signed tree,
+  or the `revision` of the Meson wrap file `path.wrap` in the signed tree.
+  kbuild compares the files with the tree of that commit.
+
 ## Sources without signatures
 
-These upstream projects do not sign their releases. Their recipes have
-only a pinned SHA-256 value:
+These upstream projects do not sign their releases, or sign them only with
+a weak key. Their recipes have only a pinned SHA-256 value:
 
 - toybox, dash, dinit, popt, json-c, libaio, argp-standalone, mtdev,
-  libudev-zero, seatd, libinput, libxkbcommon, libffi, fribidi, harfbuzz,
-  utf8proc, tllist, hwdata, libpng, the DejaVu fonts, containerd, the CNI plugins,
-  cri-tools (upstream publishes no signatures, or only signed Git tags)
-- glib, pango, fontconfig, libaio (upstream publishes SHA-256 or SHA-512
-  values; the pinned values agree with them)
-- Kubernetes (dl.k8s.io publishes the SHA-256 value and Sigstore signatures;
-  kbuild does not check Sigstore signatures yet)
-- the Python build modules (PyPI publishes the SHA-256 values)
+  libudev-zero, seatd, libxkbcommon, libffi, utf8proc, the DejaVu fonts,
+  the CNI plugins, cri-tools, acpica, nasm, musl-fts, musl-obstack, lz4,
+  samurai, pkgconf, pango, glslang, the SPIR-V and Vulkan SDK
+  repositories, SPIRV-LLVM-Translator, libcap-ng, EDK II and its
+  submodules (upstream publishes no signatures, or only unsigned or
+  lightweight Git tags)
+- libevdev and libinput (upstream signs with a DSA-1024 key; kbuild does
+  not accept keys that weak)
+- mako and PyYAML (PyPI has no attestations for these releases), and
+  setuptools (only the Git tag is signed, not the wheel)
 - the Mozilla CA bundle from curl.se (served with HTTPS only)
-- Go (go.dev publishes the SHA-256 values with HTTPS)
-- libevdev (upstream signs with a DSA-1024 key; kbuild does not accept
-  keys that weak)
-- Perl and lz4 (upstream publishes SHA-256 values; the pinned values agree
-  with them)
-- samurai, pkgconf (upstream does not sign the release tarballs)
-- erofs-utils (upstream signs the Git tags; the snapshot tarball of
-  git.kernel.org has no signature)
+- the Microsoft Secure Boot certificates (served with HTTPS only)
+
+`./klos outdated` shows new releases. Look again for signatures when you
+update a recipe.
 
 ## The trust chain
 
 1. The host verifies the seed (the image of the KLOS builder) with the
    SHA-256 value in `builder/seed.conf`.
 2. kbuild verifies each source (SHA-256 and the signature, if available).
-   kbuild checks OpenPGP and minisign signatures itself (Go); it needs no
-   gpgv or minisign program.
+   kbuild checks OpenPGP, minisign and Sigstore signatures and signed Git
+   tags itself (Go); it needs no gpgv, minisign, cosign or git program.
 3. kbuild signs each update bundle with the KLOS key (Ed25519).
 4. The installed system verifies the update bundles with its public key,
    and dm-verity verifies each block of the OS image when it reads it.

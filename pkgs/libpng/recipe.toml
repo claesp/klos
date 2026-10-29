@@ -5,11 +5,16 @@ summary = "PNG image library"
 license = "libpng-2.0"
 homepage = "http://www.libpng.org/pub/png/libpng.html"
 build-depends = ["zlib"]
-# Upstream does not sign this release. The SHA-256 is pinned.
+# Upstream signs the Git tag. kbuild compares the tarball with the signed
+# Git tree (signature-type git-tag, docs/sources-and-keys.md).
 
 [[source]]
 url = "https://downloads.sourceforge.net/project/libpng/libpng16/1.6.59/libpng-1.6.59.tar.xz"
 sha256 = "d80dd2a38a37f803cb9b6ac7b14bd6e74ddc3b654780a8380bdf93523fdb4389"
+signature-type = "git-tag"
+git = "https://github.com/pnggroup/libpng.git"
+tag = "v1.6.59"
+key = ["libpng-ctruta"]
 
 [build]
 script = '''
@@ -18,3 +23,6 @@ kmake
 make DESTDIR="$DESTDIR" install
 rm -f "$DESTDIR"/usr/bin/libpng*-config
 '''
+
+[watch]
+url = "https://github.com/pnggroup/libpng.git"

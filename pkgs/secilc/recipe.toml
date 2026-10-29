@@ -20,3 +20,7 @@ kmake secilc secilcheck
 install -D -m 0755 secilc "$DESTDIR/usr/bin/secilc"
 install -D -m 0755 secilcheck "$DESTDIR/usr/bin/secilcheck"
 '''
+
+[watch]
+# The old tags (before 2.x) have dates.
+ignore = '^20'

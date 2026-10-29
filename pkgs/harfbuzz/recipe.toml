@@ -5,7 +5,8 @@ summary = "Text shaping library"
 license = "MIT"
 homepage = "https://harfbuzz.github.io/"
 build-depends = ["freetype", "glib"]
-# Upstream does not sign this release. The SHA-256 is pinned.
+# Upstream signs the Git tag. kbuild compares the tarball with the signed
+# Git tree (signature-type git-tag, docs/sources-and-keys.md).
 
 [package.options]
 run-tools = ["glib-mkenums"]
@@ -13,6 +14,10 @@ run-tools = ["glib-mkenums"]
 [[source]]
 url = "https://github.com/harfbuzz/harfbuzz/releases/download/15.0.0/harfbuzz-15.0.0.tar.xz"
 sha256 = "968536e9abd782f07f7954044c0c4020199fcdd39b41d221ec42d2a3be4a44df"
+signature-type = "git-tag"
+git = "https://github.com/harfbuzz/harfbuzz.git"
+tag = "15.0.0"
+key = ["harfbuzz-khaledhosny"]
 
 [build]
 script = '''

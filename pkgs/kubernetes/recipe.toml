@@ -15,6 +15,12 @@ options = { no-strip = true }
 url = "https://dl.k8s.io/v1.37.1/kubernetes-src.tar.gz"
 filename = "kubernetes-src-1.37.1.tar.gz"
 sha256 = "d58492a058ac7cb1db0829a9e12317024f48d4bcbf56344b32b11276f9bdc2cf"
+# The release process signs the tarball with Sigstore (cosign sign-blob).
+signature = "https://dl.k8s.io/v1.37.1/kubernetes-src.tar.gz.sig"
+certificate = "https://dl.k8s.io/v1.37.1/kubernetes-src.tar.gz.cert"
+signature-type = "sigstore"
+identity = "krel-staging@k8s-releng-prod.iam.gserviceaccount.com"
+issuer = "https://accounts.google.com"
 
 [build]
 script = '''
@@ -28,3 +34,6 @@ for c in kubelet kubeadm kubectl; do
 	go build -ldflags "$ld" -o "$DESTDIR/usr/bin/$c" "./cmd/$c"
 done
 '''
+
+[watch]
+url = "https://github.com/kubernetes/kubernetes.git"

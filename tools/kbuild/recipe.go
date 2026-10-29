@@ -23,11 +23,48 @@ type Source struct {
 	Checksums     string   `toml:"checksums"`      // pgp-checksum-file: the checksum list that the signature covers
 	SignedContent string   `toml:"signed-content"` // "uncompressed": signature is over the .tar
 	Key           []string `toml:"key"`            // names of files in keys/
+	// Sigstore (signature-type sigstore or pypi-attestation): the signer
+	// identity (an e-mail address or a workflow URI) and the OIDC issuer
+	// in the certificate, and the URL of the certificate (sigstore).
+	Identity    string `toml:"identity"`
+	Issuer      string `toml:"issuer"`
+	Certificate string `toml:"certificate"`
+	// git-tag: the Git repository and the signed tag. ExtraFiles are the
+	// globs of the files that the tarball adds or changes (for example
+	// generated files); MissingFiles are the globs of files of the tree
+	// that the tarball does not have.
+	Git          string   `toml:"git"`
+	Tag          string   `toml:"tag"`
+	ExtraFiles   []string `toml:"extra-files"`
+	MissingFiles []string `toml:"missing-files"`
+	// Subtrees are "path=repository": the files in path come from a
+	// submodule or a Meson wrap of the signed tree (read gittag.go).
+	Subtrees []string `toml:"subtrees"`
 	// AllowExpiredKey accepts a signature by a key that expired before the
 	// release (the recipe must say why).
 	AllowExpiredKey bool   `toml:"allow-expired-key"`
 	Extract         *bool  `toml:"extract"`
 	Dest            string `toml:"dest"`
+}
+
+// Watch is the [watch] table of a recipe (read docs/maintenance.md).
+type Watch struct {
+	// URL is a page or a Git repository (ending in .git) with the releases.
+	URL string `toml:"url"`
+	// Git tells that URL is a Git repository (a URL that ends in .git
+	// is always one).
+	Git bool `toml:"git"`
+	// Regex finds the versions in the page (group 1 is the version). For a
+	// Git repository it matches the tag names.
+	Regex string `toml:"regex"`
+	// Ignore is a regular expression of versions that are not releases
+	// (for example the development series of Perl).
+	Ignore string `toml:"ignore"`
+	// Disabled with a reason: kbuild cannot find new releases.
+	Disabled string `toml:"disabled"`
+	// OSV names packages in the OSV.dev database: "ecosystem:name". The
+	// version is the version of the recipe.
+	OSV []string `toml:"osv"`
 }
 
 type Options struct {
@@ -61,7 +98,10 @@ type Recipe struct {
 		LocalSource string `toml:"local-source"`
 	} `toml:"package"`
 	Source []Source `toml:"source"`
-	Build  struct {
+	// Watch tells "kbuild outdated" where to find new releases, when the
+	// URL of the first source does not tell it.
+	Watch Watch `toml:"watch"`
+	Build struct {
 		Script string `toml:"script"`
 	} `toml:"build"`
 
@@ -221,6 +261,9 @@ func inputHash(r *Recipe) string {
 	for _, f := range files {
 		b, err := os.ReadFile(f)
 		check(err)
+		if filepath.Base(f) == "recipe.toml" {
+			b = stripWatch(b)
+		}
 		relp, _ := filepath.Rel(TOP, f)
 		_, _ = fmt.Fprintf(h, "%s\x00%d\x00", relp, len(b)) // hash.Hash.Write never fails
 		h.Write(b)
@@ -295,3 +338,28 @@ func isCurrent(r *Recipe) bool {
 }
 
 func sortStrings(s []string) { sort.Strings(s) }
+
+// stripWatch removes the [watch] table from the text of a recipe. The table
+// is for "kbuild outdated" only, so a change of it does not change the
+// input hash.
+func stripWatch(b []byte) []byte {
+	lines := strings.SplitAfter(string(b), "\n")
+	var out strings.Builder
+	in := false
+	for i, l := range lines {
+		t := strings.TrimSpace(l)
+		if strings.HasPrefix(t, "[") {
+			in = t == "[watch]"
+			if in && i > 0 && strings.TrimSpace(lines[i-1]) == "" {
+				// The empty line before the table belongs to it.
+				s := out.String()
+				out.Reset()
+				out.WriteString(strings.TrimSuffix(s, lines[i-1]))
+			}
+		}
+		if !in {
+			out.WriteString(l)
+		}
+	}
+	return []byte(out.String())
+}
