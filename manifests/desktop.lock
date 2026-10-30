@@ -4,14 +4,19 @@
 [image]
 flavor = "desktop"
 version = "2026.10.0"
-roothash = "167868e27cae358387425a54c1c32ff7ff39ddb3fd3bec2c5ce3d6bbf3b84521"
-root_img_sha256 = "271d1364964a165db5277e2a732e565bbdbba0a49461b275ecf67f6451372701"
-efi_sha256 = "75b2f6be1e724214c7625d2a87116c5787d427865ca734ba624d7e003b7a93a9"
-efi_live_sha256 = "e3f33ab52464749b045de9704623bd7570261262c395b5653533fbf36e5f645e"
+roothash = "770bd33c9e7d9aa872c89a5801eeffe815437a122a94ec6a4fb5c2aa7d3d95a3"
+root_img_sha256 = "0fd69961ce1cba8a401b67f942b66af50d71ee2ab75244c1f111a759e5fe123d"
+efi_sha256 = "e4a7ac71fc0d54de48cf2d931ddcf79d5a248ce753104d4357a3c7052eefe790"
+efi_live_sha256 = "91dd8b44ffc1e725ada91ed6ac83aaad2689118be7cc0a60c84f960f0e88431a"
 
 [kernel]
 release = "6.18.58-klos"
-config_sha256 = "69e4c577602bb1ab8e84289d834dde2262ed3d8db15b69e14e94cab00ed1f941"
+config_sha256 = "9874ff64cdb961187a0aa27c3b7978fd2d071ae68c32909511b17a168c1967e4"
+
+[[tool]]
+name = "cbindgen"
+version = "0.29.4-r1"
+sha256 = "b4451de5970b045a4b6ed393d065589c93acb275589dc6a98b12f82e94c4b6e3"
 
 [[tool]]
 name = "compiler-rt"
@@ -29,9 +34,44 @@ version = "23.1.4-r1"
 sha256 = "91199c84ef43d3ebd64784e46ad6cc83ce4395a6e6f51ca155f9e3ce834e1cce"
 
 [[tool]]
+name = "nasm"
+version = "3.02-r1"
+sha256 = "c7cad20f1663e95066b195c388c9a41aa9cf0f940fcf1f1382b201ec5895a563"
+
+[[tool]]
+name = "nodejs"
+version = "24.22.2-r1"
+sha256 = "2c6546ff1d6eec10f35bcee94712c0498912bec840146d7711302ced10c14dca"
+
+[[tool]]
 name = "python-build-modules"
 version = "1-r1"
 sha256 = "00c9241da380ba3e4f8ade9a573ab0082610b2f576fec1b5f8e60cc1baf2676e"
+
+[[tool]]
+name = "python3-host"
+version = "3.13.18-r1"
+sha256 = "aea6051e9f64e8c227aa8eefd26e90f3db732ba9b8d226bcac93569f874725bb"
+
+[[tool]]
+name = "rust"
+version = "1.99.1-r1"
+sha256 = "1bdc2cd6e5dbc5c55b4c361211a4c04dd7df07f03e0a4b182e5926fadc15eb2e"
+
+[[package]]
+name = "alsa-lib"
+version = "1.2.16.1-r1"
+sha256 = "dc8a66f1648e58c5293187f0409c2740dd4e5b194939eecb94572592fef5a7dd"
+
+[[package]]
+name = "alsa-utils"
+version = "1.2.16-r1"
+sha256 = "0597bdb66160a64a92d4a4e44f79c3a566bc7cb7681597097c710a8bdf95af5e"
+
+[[package]]
+name = "at-spi2-core"
+version = "2.60.7-r1"
+sha256 = "2aae9499678eb5cc72ed89be9c78e2ec015c8b2077c15d3bf772b7e3c94a881b"
 
 [[package]]
 name = "ca-certificates"
@@ -57,6 +97,11 @@ sha256 = "fcaee42c47055e75835c8530caaae62067e1e36aa266dc8cceb1ef24cfbb4144"
 name = "dash"
 version = "0.5.13.5-r1"
 sha256 = "ba1c2f99ef3a007a58eb3e191dd28796f466b8b1be19d75513835fe0a64d7bfb"
+
+[[package]]
+name = "dbus"
+version = "1.16.2-r1"
+sha256 = "d38e022c9929f9c78abfdd7ce5fcda41dfd0a44c0f38365e473bf94ca8242236"
 
 [[package]]
 name = "dhcpcd"
@@ -99,6 +144,11 @@ version = "1-r1"
 sha256 = "f1c5bd3f1c6c91d67a2bf7180dea7f3ad4ad3b78d461dbebbf9da63443109192"
 
 [[package]]
+name = "firefox"
+version = "153.6.0-r1"
+sha256 = "6cc61c2be7b0d5b9c3005056ff22efc7a0c6b79de6070fabda2a730af2c8009a"
+
+[[package]]
 name = "font-dejavu"
 version = "2.37-r1"
 sha256 = "51b79588144b9602032f8ddaf2bef5b123754f7a57cf78a0f4d8fcee99200108"
@@ -121,12 +171,22 @@ sha256 = "8d31f2251f677efca7469aebbefa2682c0b0ba12d4e0d9cb5f17d3ab6ef5ffa9"
 [[package]]
 name = "fribidi"
 version = "1.0.17-r1"
-sha256 = "21d51b063252bfebb10a7611eed31f8976c6a3fcc8e913fc2a816400719ca4dd"
+sha256 = "60337e146a3bf120634428d5931f305759825528bf5e9b26e17d106b8097d15f"
+
+[[package]]
+name = "gdk-pixbuf"
+version = "2.44.8-r1"
+sha256 = "43491dd0e71d3a3352e3dbf32aaa346bb048527095a256df73cb0a6f09c643c9"
 
 [[package]]
 name = "glib"
 version = "2.90.1-r1"
 sha256 = "52736073256e074495cbc16730ed1cdc1de5277330445a3179d281fa56c22a90"
+
+[[package]]
+name = "gtk3"
+version = "3.24.52-r1"
+sha256 = "975be963d244a371a850e930127912052b8e231a8073d433d78c8d876374975c"
 
 [[package]]
 name = "harfbuzz"
@@ -139,6 +199,11 @@ version = "7.3.0-r1"
 sha256 = "bcd34fbbfd6d8eebdfae19d614ba327f5dd0ba2f84b49331f3e5ce75f1b2de10"
 
 [[package]]
+name = "jansson"
+version = "2.15.1-r1"
+sha256 = "c7e934540b69e4ac7df29373bfad05f78cd1533f00b764c324e4535b87bd3696"
+
+[[package]]
 name = "json-c"
 version = "0.19-r1"
 sha256 = "69907cb37e45bf32584aaeb3b4f1b397a167712b84a45bc6599e4125b541799c"
@@ -146,7 +211,7 @@ sha256 = "69907cb37e45bf32584aaeb3b4f1b397a167712b84a45bc6599e4125b541799c"
 [[package]]
 name = "klos-tools"
 version = "0.1.0-r1"
-sha256 = "07d9765e3c5345fdeae2a1e38e94cf20f550d3bdf8e41bbdfb48fbcd73287dee"
+sha256 = "95bbbc3ff74557320bd6ace727a9ccbf2c015a7bca66b97ee428e91572ccb41c"
 
 [[package]]
 name = "kmod"
@@ -177,6 +242,11 @@ sha256 = "63e5a974819f375d8165eabf20e8bfed576b71bc37edeea68501da1d25635f42"
 name = "libdrm"
 version = "2.4.134-r1"
 sha256 = "76ea07cee147c561a39395669b1f99c8c3be4aa9aa538bde588376f4cb4b5fc4"
+
+[[package]]
+name = "libepoxy"
+version = "1.5.10-r1"
+sha256 = "d7e5111823291bf759e1efe6fabb94718690a2588b8efd4ab98a7465c4f22b52"
 
 [[package]]
 name = "libevdev"
@@ -261,7 +331,7 @@ sha256 = "3579fda37eb250e373126c42aae454eef17932a8a081a35b2aecf068d5cfba6c"
 [[package]]
 name = "nftables"
 version = "1.1.7-r1"
-sha256 = "9dbb14ba3acb7212def55029925e08c6ef5fe62f27e6033dc91b25974d58de2a"
+sha256 = "f0e6d9f304605938976f3d28cdc4ca627d67c5077462a3e1aaf85686155b0426"
 
 [[package]]
 name = "openssh"
@@ -277,6 +347,16 @@ sha256 = "b7b424b87017211f5c88543a518c1b7aea337e28e7bc9a83938016895d4f065d"
 name = "pcre2"
 version = "10.49-r1"
 sha256 = "022afab44f36fcd6209e346b2f2b3de0df04315fefab80a937d8dc5a8ab4b056"
+
+[[package]]
+name = "pipewire"
+version = "1.6.11-r1"
+sha256 = "06d0be346592b865128ec88dc86393c0ec3e633e316cf93824e27aac32e94248"
+
+[[package]]
+name = "pipewire-media-session"
+version = "0.4.3-r1"
+sha256 = "e76405f1fbbddc35ee69f998a72370bd3cc605bcfe568cd3294d0ebb4d56942a"
 
 [[package]]
 name = "pixman"

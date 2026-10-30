@@ -4,14 +4,14 @@
 [image]
 flavor = "server"
 version = "2026.10.0"
-roothash = "da2eb1216785e1d94033eb16c1f50006966b736b1f6f8c2c5ad52611e253e619"
-root_img_sha256 = "c2381cab95964f20fbbd899ad304a77c983773993fb08312a5f40c6cf0e32228"
-efi_sha256 = "c1fe6b37f8694c93e76e5821c14c13b91fc8be6237743898735695e14f870308"
-efi_live_sha256 = "4a12de08c22e51eb25a0d40984b94fbca60fa7758b3261b9d38c3bc97cc5116a"
+roothash = "c0ebb1d56ee44a7466e246e897acb15a50f27d2143474e729638169aad66a62b"
+root_img_sha256 = "907b5bb99e0c53c537d04555208af14e5ad2becbd60dab410eb46700cfae6667"
+efi_sha256 = "37be706d9db76d67a333fd8019d12691bddf150edd5a0e32ecc1ef6570cf6322"
+efi_live_sha256 = "bf518ac39fb871797ddffc79f5dfd270cb9522bd0d17c7d650f423de9df9cde4"
 
 [kernel]
 release = "6.18.58-klos"
-config_sha256 = "2640ff105937dcd82c0c8a150504f33e2929c43138db088228675aab67019306"
+config_sha256 = "a7aa42e176296d22a5e7a57ce0d05d50502775c46343cf5505e7300ffe724073"
 
 [[tool]]
 name = "compiler-rt"
@@ -79,6 +79,11 @@ version = "7.3.0-r1"
 sha256 = "bcd34fbbfd6d8eebdfae19d614ba327f5dd0ba2f84b49331f3e5ce75f1b2de10"
 
 [[package]]
+name = "jansson"
+version = "2.15.1-r1"
+sha256 = "c7e934540b69e4ac7df29373bfad05f78cd1533f00b764c324e4535b87bd3696"
+
+[[package]]
 name = "json-c"
 version = "0.19-r1"
 sha256 = "69907cb37e45bf32584aaeb3b4f1b397a167712b84a45bc6599e4125b541799c"
@@ -86,7 +91,7 @@ sha256 = "69907cb37e45bf32584aaeb3b4f1b397a167712b84a45bc6599e4125b541799c"
 [[package]]
 name = "klos-tools"
 version = "0.1.0-r1"
-sha256 = "07d9765e3c5345fdeae2a1e38e94cf20f550d3bdf8e41bbdfb48fbcd73287dee"
+sha256 = "95bbbc3ff74557320bd6ace727a9ccbf2c015a7bca66b97ee428e91572ccb41c"
 
 [[package]]
 name = "libaio"
@@ -136,7 +141,7 @@ sha256 = "3579fda37eb250e373126c42aae454eef17932a8a081a35b2aecf068d5cfba6c"
 [[package]]
 name = "nftables"
 version = "1.1.7-r1"
-sha256 = "9dbb14ba3acb7212def55029925e08c6ef5fe62f27e6033dc91b25974d58de2a"
+sha256 = "f0e6d9f304605938976f3d28cdc4ca627d67c5077462a3e1aaf85686155b0426"
 
 [[package]]
 name = "openssh"

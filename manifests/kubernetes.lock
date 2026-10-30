@@ -4,14 +4,14 @@
 [image]
 flavor = "kubernetes"
 version = "2026.10.0"
-roothash = "2eb1baf67e24a04604be68eff23e29ac698b1b33be6eda7fb0108a7e7cae7d6d"
-root_img_sha256 = "dd128a8b8ec1b40b81430a9428d392fe84a7a396caa72abe0fcee901437c95fb"
-efi_sha256 = "710c6a5a37139ea8f1c93f6031b48ac5df2e0d3f57d575588c4728b8a60a6a3f"
-efi_live_sha256 = "494ba7f5f4e1d9a1011dfa9b12d5e2bf7afcaf38da2720e0c2b002b1a67a3025"
+roothash = "c773f6350f3d0594a6b11b8875cb5bea4141131c1e0b38da07ebe1a22be75cad"
+root_img_sha256 = "68234cc8e9ea781e10ac9a89c726f7a7dc422e6636459b365f027455aa3f7143"
+efi_sha256 = "3043845c6c4928ff422a86afed6958c05f91b0ebd0b95b1cb4fa7513140a8722"
+efi_live_sha256 = "29658af094362e3c5de33f1047d4fef910575dc1dfe103a8d834ee2ebb2b8ef1"
 
 [kernel]
 release = "6.18.58-klos"
-config_sha256 = "08b6a9b871117cd7c44e1941db49d565f9aba17d94fae4b83df34de92b44f60b"
+config_sha256 = "d5846219155305b7dfcc0a909c0ed5aa1a5f4d021b561c87edcb59c169c9e8b8"
 
 [[tool]]
 name = "compiler-rt"
@@ -99,6 +99,11 @@ version = "7.3.0-r1"
 sha256 = "bcd34fbbfd6d8eebdfae19d614ba327f5dd0ba2f84b49331f3e5ce75f1b2de10"
 
 [[package]]
+name = "jansson"
+version = "2.15.1-r1"
+sha256 = "c7e934540b69e4ac7df29373bfad05f78cd1533f00b764c324e4535b87bd3696"
+
+[[package]]
 name = "json-c"
 version = "0.19-r1"
 sha256 = "69907cb37e45bf32584aaeb3b4f1b397a167712b84a45bc6599e4125b541799c"
@@ -106,12 +111,17 @@ sha256 = "69907cb37e45bf32584aaeb3b4f1b397a167712b84a45bc6599e4125b541799c"
 [[package]]
 name = "klos-tools"
 version = "0.1.0-r1"
-sha256 = "07d9765e3c5345fdeae2a1e38e94cf20f550d3bdf8e41bbdfb48fbcd73287dee"
+sha256 = "95bbbc3ff74557320bd6ace727a9ccbf2c015a7bca66b97ee428e91572ccb41c"
 
 [[package]]
 name = "kubernetes"
 version = "1.37.1-r1"
 sha256 = "75fe3ce18a6e5d1b938fbf91ca88f02f3bf57e5509345776276a854608a071ea"
+
+[[package]]
+name = "kubernetes-images"
+version = "1.37.1-r1"
+sha256 = "3437aecbbc6ecb75613b0f57f48c032e8c43d4eeff6f70b19f554933886ab887"
 
 [[package]]
 name = "libaio"
@@ -161,7 +171,7 @@ sha256 = "3579fda37eb250e373126c42aae454eef17932a8a081a35b2aecf068d5cfba6c"
 [[package]]
 name = "nftables"
 version = "1.1.7-r1"
-sha256 = "9dbb14ba3acb7212def55029925e08c6ef5fe62f27e6033dc91b25974d58de2a"
+sha256 = "f0e6d9f304605938976f3d28cdc4ca627d67c5077462a3e1aaf85686155b0426"
 
 [[package]]
 name = "openssh"
