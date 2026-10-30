@@ -1,0 +1,110 @@
+# Firefox ESR: the web browser of the desktop flavor (Wayland only). The
+# build uses the KLOS Rust compiler, cbindgen and Node.js (build tools),
+# and libclang (bindgen) from llvm-target. Mozilla signs the source
+# tarball (keys/mozilla-releases.asc). The build uses the bundled NSS,
+# NSPR, ICU and media libraries of the source. KLOS uses the default
+# (unofficial) branding of the source.
+[package]
+name = "firefox"
+version = "153.6.0"
+summary = "Web browser (Firefox ESR)"
+license = "MPL-2.0"
+homepage = "https://www.mozilla.org/firefox/"
+build-depends = ["gtk3", "glib", "pango", "cairo", "gdk-pixbuf", "at-spi2-core",
+  "libepoxy", "fribidi", "harfbuzz", "fontconfig", "freetype", "libxkbcommon",
+  "wayland", "wayland-protocols", "mesa", "libdrm", "pixman", "libpng", "expat",
+  "zlib", "libffi", "alsa-lib", "llvm-target", "dbus", "expat"]
+# Without D-Bus, the remote service of Firefox needs X11. KLOS has no D-Bus
+# daemon: Firefox works without the bus.
+depends = ["gtk3", "alsa-lib", "libxkbcommon", "wayland", "fontconfig", "freetype", "dbus"]
+host-depends = ["rust", "cbindgen", "nodejs", "nasm", "python3-host"]
+options = { no-strip = true }
+
+[[source]]
+url = "https://archive.mozilla.org/pub/firefox/releases/153.6.0esr/source/firefox-153.6.0esr.source.tar.xz"
+sha256 = "91cb675ddfc678255f57ecd7aad498501961577686d19c1947a82b14edea7f25"
+signature = "https://archive.mozilla.org/pub/firefox/releases/153.6.0esr/source/firefox-153.6.0esr.source.tar.xz.asc"
+key = ["mozilla-releases"]
+
+[build]
+script = '''
+# Cargo checks the files of the vendored crates: give the patched file of
+# bindgen (0003-bindgen-layout-unknown-type.patch) their new checksums.
+python3 - <<'EOT'
+import hashlib, json
+p = "third_party/rust/bindgen/.cargo-checksum.json"
+d = json.load(open(p))
+for f in ("ir/ty.rs", "ir/comp.rs"):
+    d["files"][f] = hashlib.sha256(open("third_party/rust/bindgen/" + f, "rb").read()).hexdigest()
+json.dump(d, open(p, "w"), separators=(",", ":"))
+EOT
+# mach needs a Python with the curses module (python3-host).
+export PATH="$HOST_PYTHON3_HOST/$TOOLCHAIN_PREFIX/bin:$PATH"
+export MOZBUILD_STATE_PATH="$HOME/.mozbuild"
+export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=none
+export MOZ_NOSPAM=1 MOZ_MAKE_FLAGS="-j$JOBS" MOZ_PARALLEL_BUILD="$JOBS"
+export NODEJS="$HOST_NODEJS/$TOOLCHAIN_PREFIX/bin/node"
+export CBINDGEN="$HOST_CBINDGEN/$TOOLCHAIN_PREFIX/bin/cbindgen"
+export NASM="$HOST_NASM/$TOOLCHAIN_PREFIX/bin/nasm"
+# configure needs unzip; the build uses it only as "unzip FILE" (extract
+# into the current directory). A small unzip with the zipfile module of
+# Python is enough (a build tool only).
+mkdir -p "$S/../tools"
+cat > "$S/../tools/unzip" <<'EOT'
+#!/usr/bin/env python3
+import sys, zipfile
+files = [a for a in sys.argv[1:] if not a.startswith("-")]
+if len(files) != 1:
+    sys.exit("unzip (KLOS build tool): usage: unzip FILE")
+zipfile.ZipFile(files[0]).extractall(".")
+EOT
+chmod 0755 "$S/../tools/unzip"
+export PATH="$S/../tools:$PATH"
+# The libraries of Firefox are in /usr/lib/firefox. The musl dynamic linker
+# does not find them for each other without a run path.
+export LDFLAGS="$LDFLAGS -Wl,-rpath,/usr/lib/firefox"
+# The cc crate (in build scripts) links C++ code with libstdc++ unless
+# CXXSTDLIB names the library: KLOS has libc++.
+export CXXSTDLIB=c++
+# Firefox adds its own Rust flags; keep the KLOS flags for the target.
+export RUSTFLAGS="$RUSTFLAGS"
+cat > mozconfig <<EOT
+ac_add_options --enable-application=browser
+ac_add_options --prefix=/usr
+ac_add_options --libdir=/usr/lib
+ac_add_options --host=$TARGET
+ac_add_options --target=$TARGET
+ac_add_options --enable-default-toolkit=cairo-gtk3-wayland-only
+ac_add_options --enable-release
+ac_add_options --enable-optimize
+ac_add_options --disable-debug
+ac_add_options --disable-debug-symbols
+ac_add_options --disable-tests
+ac_add_options --disable-crashreporter
+ac_add_options --disable-updater
+ac_add_options --disable-necko-wifi
+ac_add_options --disable-eme
+ac_add_options --disable-webrtc
+ac_add_options --disable-jemalloc
+ac_add_options --disable-bootstrap
+ac_add_options --disable-geckodriver
+ac_add_options --disable-parental-controls
+ac_add_options --without-wasm-sandboxed-libraries
+ac_add_options --enable-audio-backends=alsa
+ac_add_options --enable-linker=lld
+ac_add_options --with-libclang-path=$SYSROOT/usr/lib
+ac_add_options --allow-addon-sideload
+ac_add_options --with-unsigned-addon-scopes=app,system
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
+EOT
+export MOZCONFIG="$S/mozconfig"
+./mach --no-interactive build
+DESTDIR="$DESTDIR" ./mach --no-interactive install
+# Shell scripts are not allowed in KLOS images; Firefox does not need it.
+rm -f "$DESTDIR/usr/lib/firefox/run-mozilla.sh"
+rm -rf "$DESTDIR/usr/include" "$DESTDIR/usr/share/idl" "$DESTDIR/usr/lib/firefox-devel"
+'''
+
+[watch]
+url = "https://archive.mozilla.org/pub/firefox/releases/"
+regex = '^([0-9]+\.[0-9]+(?:\.[0-9]+)?)esr$'

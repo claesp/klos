@@ -130,6 +130,17 @@
 	getopt setopt shutdown ioctl bind)))
 (allow user_t port_type (tcp_socket (name_connect)))
 (allow user_t node_t (udp_socket (node_bind)))
+; Firefox watches the network state (netlink).
+(allow user_t self (netlink_route_socket (create read write getattr setattr bind
+	getopt setopt shutdown nlmsg_read)))
+; The content sandbox of Firefox uses user namespaces (a chroot and new
+; user IDs in the namespace). This opens more kernel code to the session,
+; but the sandbox of web content is more important.
+(allow user_t self (user_namespace (create)))
+(allow user_t self (cap_userns (sys_admin sys_chroot setuid setgid dac_override
+	dac_read_search fowner sys_ptrace)))
+; The sandbox drops its capabilities.
+(allow user_t self (process (setcap)))
 ; Programs, libraries and data.
 (allow user_t os_dir_type (dir (search getattr read open)))
 (allow user_t os_dir_type (lnk_file (read getattr)))
@@ -146,6 +157,8 @@
 ; The font cache that the image build makes (fc-cache).
 (allow user_t fonts_cache_t (dir (search getattr read open)))
 (allow user_t fonts_cache_t (file (read open getattr map)))
+; fontconfig tries to update the time of the system cache.
+(dontaudit user_t fonts_cache_t (dir (setattr write)))
 ; A shell looks at the home directory of root ($HOME of the administrator).
 (dontaudit user_t root_home_t (dir (getattr search)))
 ; The files of the user.
@@ -168,6 +181,7 @@
 (allow user_t user_tmp_t (file (read write open getattr setattr create unlink
 	rename lock append map ioctl)))
 (allow user_t user_tmp_t (sock_file (read write getattr create unlink)))
+(allow user_t user_tmp_t (lnk_file (read getattr create unlink rename)))
 ; Shared memory (memfd, /dev/shm) for Wayland buffers.
 (allow user_t tmpfs_t (dir (search getattr read open write add_name remove_name)))
 (allow user_t user_tmpfs_t (file (read write open getattr setattr create unlink
@@ -203,6 +217,8 @@
 (allow user_t sysfs_t (file (read open getattr)))
 (allow user_t sysfs_t (lnk_file (read getattr)))
 (allow user_t fs_t (filesystem (getattr)))
+(allow user_t cgroup_t (dir (search getattr read open)))
+(allow user_t cgroup_t (file (read open getattr)))
 (allow user_t tmpfs_t (filesystem (getattr)))
 ; The administrator (init_t) can see and stop the session.
 (allow user_t init_t (process (signal)))

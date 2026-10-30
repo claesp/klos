@@ -1,0 +1,39 @@
+# Node.js: a build tool of Firefox (host tool). The images do not contain
+# it. The release managers sign SHASUMS256.txt; the keys are in
+# github.com/nodejs/release-keys and in the README of Node.js.
+[package]
+name = "nodejs"
+version = "24.22.2"
+summary = "JavaScript runtime (build tool)"
+license = "MIT"
+homepage = "https://nodejs.org/"
+kind = "host"
+
+[[source]]
+url = "https://nodejs.org/dist/v24.22.2/node-v24.22.2.tar.xz"
+sha256 = "8fe2ec1723bb9f8d0b683907c82708debbeda64af21cb2aa214c4241eed0a061"
+signature = "https://nodejs.org/dist/v24.22.2/SHASUMS256.txt.asc"
+signature-type = "pgp-checksums"
+key = ["nodejs-aduh95"]
+
+[build]
+script = '''
+# Node.js links with -latomic when the compiler is Clang (the GCC atomic
+# library). compiler-rt has the atomic operations of x86-64: an empty
+# library is enough.
+mkdir -p "$S/../stubs"
+llvm-ar rcs "$S/../stubs/libatomic.a"
+export LIBRARY_PATH="$S/../stubs"
+./configure --prefix="$PREFIX" --without-npm --without-corepack --with-intl=small-icu \
+	--ninja --without-inspector
+ninja -C out/Release -j"$JOBS"
+DESTDIR="$DESTDIR" python3 tools/install.py install --dest-dir "$DESTDIR" --prefix "$PREFIX"
+rm -rf "$DESTDIR/$PREFIX/include" "$DESTDIR/$PREFIX/share"
+"$DESTDIR/$PREFIX/bin/node" --version
+'''
+
+[watch]
+# An odd major version is not a long-term support release.
+url = "https://nodejs.org/dist/"
+regex = '^v([0-9]+\.[0-9]+\.[0-9]+)$'
+ignore = '^[0-9]*[13579]\.'

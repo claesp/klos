@@ -1,0 +1,27 @@
+# gdk-pixbuf: the image loading library of GTK 3 (only the PNG loader).
+[package]
+name = "gdk-pixbuf"
+version = "2.44.8"
+summary = "Image loading library"
+license = "LGPL-2.1-or-later"
+homepage = "https://gitlab.gnome.org/GNOME/gdk-pixbuf"
+build-depends = ["glib", "libpng", "zlib"]
+# Upstream does not sign releases (the tags are not signed). GNOME
+# publishes the same SHA-256 value (gdk-pixbuf-2.44.8.sha256sum).
+
+[package.options]
+run-tools = ["glib-mkenums", "glib-genmarshal", "glib-compile-resources"]
+
+[[source]]
+url = "https://download.gnome.org/sources/gdk-pixbuf/2.44/gdk-pixbuf-2.44.8.tar.xz"
+sha256 = "919f529512961a12e81cd4b4b466a48c3933469e7f9a310c6513cd4fb252ba3c"
+
+[build]
+script = '''
+kmeson -Dpng=enabled -Dtiff=disabled -Djpeg=disabled -Dgif=disabled -Dglycin=disabled \
+	-Dandroid=disabled -Dothers=disabled -Dbuiltin_loaders=png -Dgtk_doc=false \
+	-Ddocumentation=false -Dintrospection=disabled -Dman=false -Dtests=false \
+	-Dinstalled_tests=false -Dgio_sniffing=false -Dthumbnailer=disabled
+kninja
+kninja_install
+'''

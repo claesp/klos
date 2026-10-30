@@ -15,7 +15,7 @@ cmdline = ["console=ttyS0,115200", "console=tty0"]
 [packages]
 install = ["kmod", "seatd", "mesa", "sway", "swaybg", "foot", "font-dejavu",
   "xkeyboard-config", "linux-firmware", "wireless-regdb", "vulkan-loader",
-  "vulkan-tools", "pipewire", "pipewire-media-session", "alsa-utils"]
+  "vulkan-tools", "pipewire", "pipewire-media-session", "alsa-utils", "firefox"]
 
 [services]
 enable = ["devd", "seatd"]
@@ -81,5 +81,7 @@ commands = [
   "for i in $(seq 30); do pidof pipewire-media-session >/dev/null && [ -S /run/user/1000/pipewire-0 ] && break; sleep 1; done; pidof pipewire && pidof pipewire-media-session && grep -q ':user_t:' /proc/$(pidof pipewire-media-session)/attr/current || { ls -la /run/user/1000; false; }",
   "for i in $(seq 30); do setpriv --reuid=1000 --regid=1000 --init-groups env XDG_RUNTIME_DIR=/run/user/1000 pw-dump 2>/dev/null | grep -q '\"Audio/Sink\"' && break; sleep 1; done; setpriv --reuid=1000 --regid=1000 --init-groups env XDG_RUNTIME_DIR=/run/user/1000 pw-dump | grep -q '\"Audio/Sink\"' || { cat /proc/asound/cards; setpriv --reuid=1000 --regid=1000 --init-groups env XDG_RUNTIME_DIR=/run/user/1000 pw-cli ls Node; false; }",
   "(head -c 1920000 /dev/urandom | setpriv --reuid=1000 --regid=1000 --init-groups env XDG_RUNTIME_DIR=/run/user/1000 aplay -q -t raw -f S16_LE -c 2 -r 48000) & sleep 4; grep -q RUNNING /proc/asound/card0/pcm*p/sub0/status || { cat /proc/asound/card0/pcm*p/sub0/status; false; }; wait",
+  # Firefox in the session (user_t): a headless screenshot of a page.
+  "setpriv --reuid=1000 --regid=1000 --init-groups env XDG_RUNTIME_DIR=/run/user/1000 SWAYSOCK=$(ls /run/user/1000/sway-ipc.*.sock) swaymsg exec 'firefox --headless --screenshot /tmp/firefox.png \"data:text/html,<h1>KLOS</h1>\" > /tmp/firefox.log 2>&1' && for i in $(seq 180); do [ -s /tmp/firefox.png ] && break; sleep 1; done; head -c 8 /tmp/firefox.png | grep -q PNG || { tail -30 /tmp/firefox.log; false; }",
   "pkill pipewire; pkill sway; sleep 1; setpriv --reuid=1000 --regid=1000 --init-groups env HOME=/home/klos XDG_RUNTIME_DIR=/run/user/1000 WLR_BACKENDS=headless WLR_RENDERER=gles2 WLR_LIBINPUT_NO_DEVICES=1 sway -d > /tmp/sway-gl.log 2>&1 & for i in $(seq 30); do grep -q 'GL renderer' /tmp/sway-gl.log && break; sleep 1; done; grep 'GL renderer' /tmp/sway-gl.log | grep -q llvmpipe || { grep -iE 'egl|gl|error' /tmp/sway-gl.log | tail -20; false; }",
 ]

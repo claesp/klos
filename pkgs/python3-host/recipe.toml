@@ -1,5 +1,7 @@
 # Python for the builder, as a host tool. The cross build of the package
-# python3 needs a Python of the same version (--with-build-python).
+# python3 needs a Python of the same version (--with-build-python), and the
+# build of Firefox (mach) needs the curses and sqlite3 modules. ncurses and
+# SQLite are static libraries in this package only.
 [package]
 name = "python3-host"
 version = "3.13.18"
@@ -14,9 +16,35 @@ sha256 = "abb0102e6d4ae027509bcb82327d9dd85515b44a3ba8ad538cfc5e9847029f68"
 signature = "https://www.python.org/ftp/python/3.13.18/Python-3.13.18.tar.xz.asc"
 key = ["python-wouters"]
 
+[[source]]
+url = "https://invisible-island.net/archives/ncurses/ncurses-6.6.tar.gz"
+sha256 = "355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11"
+signature = "https://invisible-island.net/archives/ncurses/ncurses-6.6.tar.gz.asc"
+key = ["ncurses-dickey"]
+dest = "ncurses"
+
+# SQLite does not sign releases. The SHA-256 is pinned; the SHA3-256 value
+# agrees with the value on sqlite.org/download.html.
+[[source]]
+url = "https://www.sqlite.org/2026/sqlite-autoconf-3540100.tar.gz"
+sha256 = "926ef8d3eab93fbf6e06011901273eec076b25594a4e1cdadd50c987f4f6d64e"
+dest = "sqlite"
+
 [build]
 script = '''
-./configure --prefix="$PREFIX" --without-ensurepip --disable-test-modules
+NC="$S/../ncurses-root"
+(cd "$S/../ncurses/ncurses-6.6" && ./configure --prefix="$NC" --without-shared --with-normal \
+	--without-debug --without-ada --without-cxx-binding --without-manpages --without-tests \
+	--enable-widec --disable-db-install --with-terminfo-dirs=/usr/share/terminfo \
+	--with-fallbacks=dumb,linux,vt100,xterm,xterm-256color,foot CFLAGS="-O2 -fPIC" &&
+	make -j"$JOBS" DESTDIR= && make install DESTDIR=)
+SQ="$S/../sqlite-root"
+(cd "$S"/../sqlite/sqlite-autoconf-* && ./configure --prefix="$SQ" --disable-shared --enable-static \
+	CFLAGS="-O2 -fPIC" && make -j"$JOBS" DESTDIR= && make install DESTDIR=)
+./configure --prefix="$PREFIX" --without-ensurepip --disable-test-modules \
+	CPPFLAGS="-I$NC/include -I$NC/include/ncursesw" LDFLAGS="-L$NC/lib" \
+	LIBSQLITE3_CFLAGS="-I$SQ/include" LIBSQLITE3_LIBS="-L$SQ/lib -lsqlite3 -lm"
 make -j"$JOBS"
 make DESTDIR="$DESTDIR" install
+"$DESTDIR/$PREFIX/bin/python3" -c 'import curses, sqlite3'
 '''

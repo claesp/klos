@@ -1,0 +1,16 @@
+Link musl programs dynamically by default, as the upstream FIXME says
+(compiler-team#422) and as the musl distributions do. KLOS links all
+programs with its musl C library; a static program cannot load a shared
+library (for example a build script that loads libclang).
+
+--- a/compiler/rustc_target/src/spec/targets/x86_64_unknown_linux_musl.rs
++++ b/compiler/rustc_target/src/spec/targets/x86_64_unknown_linux_musl.rs
+@@ -17,7 +17,7 @@
+     base.supports_fentry = true;
+     base.supports_xray = true;
+     // FIXME(compiler-team#422): musl targets should be dynamically linked by default.
+-    base.crt_static_default = true;
++    base.crt_static_default = false;
+ 
+     Target {
+         llvm_target: "x86_64-unknown-linux-musl".into(),

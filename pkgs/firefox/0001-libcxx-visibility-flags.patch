@@ -1,0 +1,16 @@
+On Linux, Firefox includes config/gcc_hidden.h (visibility push(hidden))
+and wraps the system headers. With libc++ 23 the visibility attributes of
+the libc++ headers do not match the pushed visibility. KLOS builds with
+Clang and libc++, as FreeBSD does: use the visibility flags of FreeBSD.
+
+--- a/build/moz.configure/toolchain.configure
++++ b/build/moz.configure/toolchain.configure
+@@ -2220,7 +2220,7 @@
+ @depends(target, build_environment)
+ def visibility_flags(target, env):
+     if target.os != "WINNT":
+-        if target.kernel in ("Darwin", "FreeBSD", "OpenBSD"):
++        if target.kernel in ("Darwin", "FreeBSD", "OpenBSD", "Linux"):
+             return ("-fvisibility=hidden", "-fvisibility-inlines-hidden")
+         return (
+             "-I%s/system_wrappers" % os.path.join(env.dist),

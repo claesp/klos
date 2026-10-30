@@ -1,0 +1,15 @@
+ATK alone (atk_only) does not use libxml2. Do not require it for an ATK
+only build, so that the image does not need libxml2.
+
+--- a/meson.build
++++ b/meson.build
+@@ -151,7 +151,8 @@
+   endif
+ endif
+ gmodule_dep = dependency('gmodule-2.0', version: gmodule_req_version)
+-libxml_dep = dependency('libxml-2.0', version: libxml_req_version)
++# ATK alone does not use libxml2.
++libxml_dep = dependency('libxml-2.0', version: libxml_req_version, required: not get_option('atk_only'))
+ 
+ x11_deps = []
+ x11_dep = dependency('x11', required: get_option('x11'))

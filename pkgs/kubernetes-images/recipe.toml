@@ -119,3 +119,6 @@ mkdir -p "$S/root-pause"
 install -m 0755 "$OUT/pause" "$S/root-pause/pause"
 mkimage pause "$PAUSE_VERSION" "$S/root-pause" '["/pause"]'
 '''
+
+[watch]
+url = "https://github.com/kubernetes/kubernetes.git"

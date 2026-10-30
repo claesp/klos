@@ -1,0 +1,34 @@
+# ATK, the accessibility toolkit of GTK 3 (from at-spi2-core, atk_only:
+# without the D-Bus parts).
+[package]
+name = "at-spi2-core"
+version = "2.60.7"
+summary = "Accessibility toolkit (ATK)"
+license = "LGPL-2.1-or-later"
+homepage = "https://gitlab.gnome.org/GNOME/at-spi2-core"
+build-depends = ["glib"]
+
+[package.options]
+run-tools = ["glib-mkenums", "glib-genmarshal"]
+
+# Upstream signs the Git tag. kbuild compares the tarball with the signed
+# Git tree (signature-type git-tag, docs/sources-and-keys.md).
+[[source]]
+url = "https://download.gnome.org/sources/at-spi2-core/2.60/at-spi2-core-2.60.7.tar.xz"
+sha256 = "92893c8188355264ba639ca3d27943437b26ef069971ea9faa4b20de40595b9a"
+signature-type = "git-tag"
+git = "https://gitlab.gnome.org/GNOME/at-spi2-core.git"
+tag = "2.60.7"
+key = ["atspi-mgorse"]
+
+[build]
+script = '''
+kmeson -Datk_only=true -Duse_systemd=false -Dgtk2_atk_adaptor=false -Ddocs=false \
+	-Dintrospection=disabled -Dx11=disabled
+kninja
+kninja_install
+'''
+
+[watch]
+# An odd minor version is a development release.
+ignore = '^[0-9]+\.[0-9]*[13579]\.'

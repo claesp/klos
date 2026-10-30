@@ -12,6 +12,8 @@ The `desktop` flavor is a Wayland desktop. It uses these parts:
 | Seats | `seatd` | Gives the session access to the screen and the input devices. |
 | Devices | `klos devd`, `kmod` | Loads the kernel modules for the hardware. |
 | Fonts | `font-dejavu`, `fontconfig` | The DejaVu fonts. |
+| Sound | `pipewire`, `pipewire-media-session`, `alsa-lib`, `alsa-utils` | The sound server, with the PulseAudio and ALSA interfaces. |
+| Browser | `firefox`, `gtk3` | Firefox ESR (Wayland only). |
 
 There is no udev daemon. `klos devd` loads the modules for the devices, and
 `libudev-zero` supplies the libudev API to libinput and wlroots.
@@ -26,6 +28,35 @@ There is no udev daemon. `klos devd` loads the modules for the devices, and
 
 The sway configuration is in `/etc/sway/config`. Copy it to
 `~/.config/sway/config` to change it.
+
+## Sound
+
+sway starts PipeWire (`/etc/sway/config.d/50-pipewire.conf`). PipeWire
+starts the session manager `pipewire-media-session` and the PulseAudio
+server `pipewire-pulse` (`/etc/pipewire/pipewire.conf.d/50-klos.conf`).
+The session manager finds the sound cards and connects the programs to
+them. ALSA programs (for example `aplay`) play through PipeWire. The user
+must be in the group `audio`.
+
+KLOS does not use WirePlumber, the other session manager: it runs Lua
+scripts, and KLOS images contain no interpreters.
+
+## The web browser
+
+Firefox ESR is built from source with the KLOS toolchain (Rust, Clang,
+libc++ and musl). It is a Wayland-only build (`cairo-gtk3-wayland-only`)
+with GTK 3. It plays sound through ALSA (and thus through PipeWire). It
+has no crash reporter and no updater: KLOS updates it with the OS image.
+The branding is the default (unofficial) branding of the source.
+
+KLOS has these patches for Firefox (in `pkgs/firefox/`):
+
+- The visibility flags of FreeBSD (Clang and libc++), because the
+  visibility attributes of libc++ 23 do not agree with
+  `config/gcc_hidden.h`.
+- bindgen returns "no layout" for a type that it did not keep, and the
+  profiler bindings make all `std` types opaque. Mozilla builds with
+  libstdc++, so its bindgen does not see the headers of libc++ 23.
 
 ## Graphics drivers
 
@@ -94,4 +125,6 @@ firmware only from the verified OS image.
 - There is no Vulkan driver for NVIDIA (NVK needs Rust).
 - The image has firmware only for the drivers in the desktop kernel (see
   Firmware). Other devices that need firmware do not work.
-- There is no sound server and no web browser yet.
+- There is no Bluetooth audio.
+- A login shell on a console is `init_t` (not confined). Only the sway
+  session is `user_t` (read [selinux.md](selinux.md)).

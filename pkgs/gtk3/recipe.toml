@@ -1,0 +1,37 @@
+# GTK 3 with only the Wayland back end: the toolkit of Firefox.
+[package]
+name = "gtk3"
+version = "3.24.52"
+summary = "GTK 3 toolkit (Wayland)"
+license = "LGPL-2.1-or-later"
+homepage = "https://www.gtk.org/"
+build-depends = ["glib", "pango", "cairo", "gdk-pixbuf", "at-spi2-core", "libepoxy",
+  "fribidi", "harfbuzz", "fontconfig", "freetype", "libxkbcommon", "wayland",
+  "wayland-protocols", "mesa", "libdrm", "pixman", "libpng", "expat", "zlib", "libffi"]
+depends = ["glib", "pango", "cairo", "gdk-pixbuf", "at-spi2-core", "libepoxy",
+  "libxkbcommon", "wayland"]
+# Upstream does not sign releases (the tags are not signed). GNOME
+# publishes the same SHA-256 value (gtk-3.24.52.sha256sum).
+
+[package.options]
+run-tools = ["glib-mkenums", "glib-genmarshal", "glib-compile-resources",
+  "glib-compile-schemas", "wayland-scanner", "gdk-pixbuf-query-loaders"]
+
+[[source]]
+url = "https://download.gnome.org/sources/gtk/3.24/gtk-3.24.52.tar.xz"
+sha256 = "80931fa472a77b9a164f6740e3c0b444fac6770054632d35a7ff9d679e5e7b9f"
+
+[build]
+script = '''
+kmeson -Dx11_backend=false -Dwayland_backend=true -Dbroadway_backend=false \
+	-Dwin32_backend=false -Dquartz_backend=false -Dxinerama=no -Dcloudproviders=false \
+	-Dprofiler=false -Dtracker3=false -Dprint_backends=file -Dcolord=no -Dgtk_doc=false \
+	-Dman=false -Dintrospection=false -Ddemos=false -Dexamples=false -Dtests=false \
+	-Dinstalled_tests=false
+kninja
+kninja_install
+'''
+
+[watch]
+# GTK 4 is a different package.
+ignore = '^([4-9]|3\.9)'

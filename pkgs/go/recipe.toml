@@ -20,3 +20,7 @@ script = '''
 mkdir -p "$DESTDIR/opt/klos"
 cp -a "$S" "$DESTDIR/opt/klos/go"
 '''
+
+[watch]
+url = "https://go.dev/dl/"
+regex = 'go([0-9]+\.[0-9]+(?:\.[0-9]+)?)\.linux-amd64\.tar\.gz'

@@ -87,6 +87,14 @@ in the recipes (`key = ["musl"]` is `keys/musl.asc`).
 | gnome-pwithnall.asc | Philip Withnall (GLib tags) | 923B 7025 EE03 C1C5 9F42 684C F094 2E89 4B2E AFA0 | keyserver.ubuntu.com |
 | slirp-sthibault.asc | Samuel Thibault (libslirp tags) | 900C B024 B679 31D4 0F82 304B D017 8C76 7D06 9EE6 | keys.openpgp.org |
 | libpng-ctruta.asc | Cosmin Truta (libpng tags) | 1FED 507E 3236 B4A6 E53E 922B B292 C648 43FF 5BCF | github.com/ctruta.gpg |
+| alsa-release.asc | ALSA Release Team | F04D F507 37AC 1A88 4C4B 3D71 8380 596D A6E5 9C91 | keyserver.ubuntu.com |
+| dbus-smcv.asc | Simon McVittie (D-Bus) | DA98 F25C 0871 C49A 59EA FF2C 4DE8 FF2A 63C7 CC90 | keyserver.ubuntu.com |
+| jansson-akheron.asc | Petri Lehtinen (jansson) | B5D6 953E 6D50 59ED 7ADA 0F2F D365 7D24 D058 434C | github.com/akheron.gpg |
+| etcd-ivanvc.asc | Ivan Valdes (etcd tags) | 67A9 5D46 D983 86A2 D31E F773 4037 D377 41ED 0CC5 | github.com/ivanvc.gpg |
+| atspi-mgorse.asc | Mike Gorse (at-spi2-core tags) | 276B FDAF B362 12F8 DB09 5E21 4082 3A05 6FD6 D4B3 | keyserver.ubuntu.com |
+| ncurses-dickey.asc | Thomas E. Dickey (ncurses) | 1988 2D92 DDA4 C400 C22C 0D56 CC2A F447 2167 BE03 | invisible-island.net, compared with keyserver.ubuntu.com |
+| nodejs-aduh95.asc | Antoine du Hamel (Node.js releases) | 5BE8 A3F6 C8A5 C01D 106C 0AD8 20B1 A390 B168 D356 | github.com/nodejs/release-keys, compared with the README of Node.js |
+| mozilla-releases.asc | Mozilla Software Releases | 14F2 6682 D091 6CDD 81E3 7B6D 61B7 B526 D98F 0353 | archive.mozilla.org (KEY), compared with keys.openpgp.org |
 | sigstore-trusted-root.json | Sigstore (Fulcio CA and Rekor log keys) | SHA-256 6494 e21e a73f a7ee 769f 85f5 7d5a 3e6a 0872 5eae 1e38 c755 fc35 17c9 e6bc 0b66 | github.com/sigstore/root-signing (targets/trusted_root.json) |
 | klos-seed.pub | The KLOS seed key (minisign) | key ID 59FA6379CFDC7319 | this repository (`./klos seed-keygen`) |
 
@@ -181,6 +189,10 @@ a weak key. Their recipes have only a pinned SHA-256 value:
   not accept keys that weak)
 - mako and PyYAML (PyPI has no attestations for these releases), and
   setuptools (only the Git tag is signed, not the wheel)
+- PipeWire, pipewire-media-session, libepoxy, GTK 3, gdk-pixbuf and
+  cbindgen (the tags are not signed; GNOME publishes the SHA-256 values of
+  GTK and gdk-pixbuf, crates.io the value of cbindgen)
+- SQLite (in python3-host; the SHA3-256 value agrees with sqlite.org)
 - the Mozilla CA bundle from curl.se (served with HTTPS only)
 - the Microsoft Secure Boot certificates (served with HTTPS only)
 

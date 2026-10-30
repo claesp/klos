@@ -18,3 +18,6 @@
 /dev/snd			-d	system_u:object_r:device_t:s0
 /dev/tty[0-9]+			-c	system_u:object_r:tty_device_t:s0
 /var/cache/fontconfig(/.*)?		system_u:object_r:fonts_cache_t:s0
+
+# The programs of Firefox (in /usr/lib/firefox, which is lib_t).
+/usr/lib/firefox/(firefox|firefox-bin|glxtest|pingsender|vaapitest|vulkantest)	--	system_u:object_r:bin_t:s0

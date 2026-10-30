@@ -23,3 +23,6 @@ cargo build --release --locked --offline
 install -D -m 0755 target/release/cbindgen "$DESTDIR/$PREFIX/bin/cbindgen"
 "$DESTDIR/$PREFIX/bin/cbindgen" --version
 '''
+
+[watch]
+url = "https://github.com/mozilla/cbindgen.git"

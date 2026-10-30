@@ -1,0 +1,41 @@
+The vendored bindgen (0.72.0) panics ("Not an item") when it computes the
+layout of a type whose inner type it did not keep. This occurs with the
+headers of libc++ 23 (Mozilla builds with libstdc++). A type without a
+known layout is normal for bindgen (the function returns None): return
+None in this case too (also for the fields of a union). The recipe
+updates .cargo-checksum.json.
+
+--- a/third_party/rust/bindgen/ir/ty.rs
++++ b/third_party/rust/bindgen/ir/ty.rs
+@@ -223,7 +223,10 @@
+                 TypeKind::Comp(ref ci) => ci.layout(ctx),
+                 TypeKind::Array(inner, 0) => Some(Layout::new(
+                     0,
+-                    ctx.resolve_type(inner).layout(ctx)?.align,
++                    ctx.resolve_item_fallible(inner)?
++                        .as_type()?
++                        .layout(ctx)?
++                        .align,
+                 )),
+                 // FIXME(emilio): This is a hack for anonymous union templates.
+                 // Use the actual pointer size!
+@@ -232,7 +235,7 @@
+                     ctx.target_pointer_size(),
+                 )),
+                 TypeKind::ResolvedTypeRef(inner) => {
+-                    ctx.resolve_type(inner).layout(ctx)
++                    ctx.resolve_item_fallible(inner)?.as_type()?.layout(ctx)
+                 }
+                 _ => None,
+             }
+--- a/third_party/rust/bindgen/ir/comp.rs
++++ b/third_party/rust/bindgen/ir/comp.rs
+@@ -203,7 +203,7 @@
+         match *self {
+             Field::Bitfields(BitfieldUnit { layout, .. }) => Some(layout),
+             Field::DataMember(ref data) => {
+-                ctx.resolve_type(data.ty).layout(ctx)
++                ctx.resolve_item_fallible(data.ty)?.as_type()?.layout(ctx)
+             }
+         }
+     }

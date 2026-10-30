@@ -8,7 +8,10 @@ This document shows what works now and what is planned. "Tested" means that
 | Function | State |
 |----------|-------|
 | LLVM 23 cross toolchain, musl 1.2.6, libc++ (hardened) | Works |
-| Verified sources (SHA-256 for all, OpenPGP or published values for most) | Works |
+| Verified sources (SHA-256 for all; OpenPGP, Sigstore, PyPI attestations or signed Git tags for most) | Works |
+| Release and vulnerability check (`./klos outdated`, OSV.dev for Go, Rust and Python dependencies) | Works |
+| Signed seed export (`./klos seed-export`, minisign) and `./klos bootstrap <dir>` | Works |
+| Nightly check of all functions (`./klos nightly`, systemd user timer) | Works |
 | Reproducible packages and images (input hashes, fixed time stamps, sorted archives) | Checked: `./klos verify` gave the same images as the lock files for all three flavors |
 | Server flavor: install, LUKS2, LVM, erofs + dm-verity, `/etc` overlay | Tested |
 | Signed update bundles, trial boot with watchdog, bless, rollback | Tested |
@@ -22,9 +25,14 @@ This document shows what works now and what is planned. "Tested" means that
 | No setuid programs, no scripts except the shell and the dhcpcd hook | Tested (build check and test) |
 | KLOS builds itself: the KLOS builder (only KLOS packages, with QEMU, swtpm and OVMF for the tests) builds the next KLOS builder | Checked: `./klos builder` gives a builder that is byte-identical to the seed (a fixed point). With only this builder, all three flavors pass `./klos test` and `./klos verify` |
 | The first builder was checked with two independent bootstrap distributions (Alpine with Clang and musl, Arch Linux with GCC and glibc): the same images, packages and toolchain for all three flavors | Checked (diverse double compiling); the bootstrap distributions are no longer in the repository |
-| SELinux in enforcing mode (KLOS policy, labeled erofs image, no mode or policy change after boot, W^X, confined dhcpcd and chronyd) | Tested (no denials in the test) |
-| Kubernetes flavor: containerd, crun, CNI plugins, kubelet, kubeadm | Tested (preflight, not a full cluster) |
+| SELinux in enforcing mode (KLOS policy, labeled erofs image, no mode or policy change after boot, W^X, confined dhcpcd, chronyd and sshd) | Tested (no denials in the test) |
+| SELinux on the desktop: confined seatd, devd and the sway session (user_t) | Tested (no denials in the test) |
+| SELinux on Kubernetes: containers in container_t with MCS categories for each pod, the control plane in kube_control_plane_t | Tested (no denials in the test) |
+| Rust 1.99 built from source (bootstrapped from the signed stage 0), Go modules and Rust crates checked with go.sum and Cargo.lock | Works |
+| Kubernetes flavor: containerd, crun, CNI plugins, kubelet, kubeadm, control plane images built from source | Tested (a one-node cluster with kubeadm init and a pod) |
 | Desktop flavor: sway, foot, seatd, devd | Tested (headless sway) |
+| Sound: PipeWire with pipewire-media-session, PulseAudio and ALSA interfaces | Tested (aplay through PipeWire to an HDA sound card) |
+| Web browser: Firefox ESR (Wayland only), built from source | Tested (headless screenshot in the confined session) |
 | Vulkan: radv, anv, lavapipe, venus, the Vulkan loader, vulkaninfo | Built; lavapipe tested (vulkaninfo) |
 | Desktop firmware (linux-firmware subset, wireless-regdb) | Built; regulatory.db load tested (firmware loading through LoadPin) |
 | Mesa with LLVM: iris, crocus, radeonsi, nouveau, virgl, llvmpipe, softpipe | Built; llvmpipe tested (sway with GLES2 on llvmpipe). The hardware drivers are not tested (no hardware in QEMU). |
@@ -33,9 +41,9 @@ This document shows what works now and what is planned. "Tested" means that
 
 | Function | Notes |
 |----------|-------|
-| NVK, Rust | The NVIDIA Vulkan driver needs a Rust toolchain. |
-| SELinux domains for more services | sshd, containerd, kubelet and the desktop services are unconfined (`init_t`). |
-| Sound server, browser | The desktop has no sound server and no web browser yet. |
+| NVK | The NVIDIA Vulkan driver (Mesa) can now use the KLOS Rust compiler. |
+| Confined console logins | A login shell on a console is `init_t`; only the sway session is `user_t`. |
+| CoreDNS and kube-proxy images | The flavor has the control plane images, but not these two. |
 | Other architectures | Only x86-64 now. |
 
 ## Known limits
